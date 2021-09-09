@@ -42,6 +42,7 @@ library
       Smartchain.Contract.CLAP.MonetaryPolicy.ScriptFileGenerator
       Smartchain.Contract.CLAP.MonetaryPolicy.Trace
       Smartchain.Contract.CLAP.MonetaryPolicy
+      Smartchain.Contract.Vesting
     build-depends:
       base >= 4.9 && < 5,
       lens,
@@ -72,7 +73,8 @@ test-suite smartchain-tests
   main-is: Spec.hs
   hs-source-dirs: test
   other-modules:
-    Smartchain.Contract.CLAP.MonetaryPolicySpec
+    Spec.Smartchain.Contract.CLAP.MonetaryPolicy
+    Spec.Smartchain.Contract.Vesting
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,
@@ -84,7 +86,9 @@ test-suite smartchain-tests
     tasty -any,
     tasty-hunit -any,
     tasty-hedgehog >=0.2.0.0,
-    freer-simple -any
+    freer-simple -any,
+    data-default
+
 
 executable clap-cli 
   import: lang
