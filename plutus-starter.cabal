@@ -85,3 +85,18 @@ test-suite smartchain-tests
     tasty-hunit -any,
     tasty-hedgehog >=0.2.0.0,
     freer-simple -any
+
+executable clap-cli 
+  import: lang
+  main-is: Main.hs
+  hs-source-dirs: clap-cli
+  ghc-options:
+    -threaded
+  build-depends:
+    base >= 4.9 && < 5,
+    shh,
+    data-default -any,
+    aeson -any,
+    freer-simple -any,
+    prettyprinter -any,
+    freer-extras -any,
