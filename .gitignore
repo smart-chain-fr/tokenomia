@@ -2,7 +2,7 @@ dist
 dist-*
 cabal-dev
 ## cTags 
-tags/
+tags
 ## Miscelleanous
 *.o
 *.hi
