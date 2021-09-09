@@ -1,9 +1,6 @@
 dist
 dist-*
 cabal-dev
-## Intellij
-.idea/
-*.iml
 ## cTags 
 tags/
 ## Miscelleanous
