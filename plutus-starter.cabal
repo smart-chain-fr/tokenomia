@@ -95,6 +95,7 @@ executable clap-cli
   build-depends:
     base >= 4.9 && < 5,
     shh,
+    bytestring,
     data-default -any,
     aeson -any,
     freer-simple -any,
