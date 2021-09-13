@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Main(main) where
+module Spec(main) where
 
 import qualified Spec.Smartchain.Contract.CLAP.MonetaryPolicy (tests)
 import qualified Spec.Smartchain.Contract.Vesting (tests)
