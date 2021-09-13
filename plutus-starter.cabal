@@ -39,8 +39,8 @@ common lang
 library
     import: lang
     exposed-modules:
-      Smartchain.Contract.CLAP.MonetaryPolicy.ScriptFileGenerator
       Smartchain.Contract.CLAP.MonetaryPolicy.Trace
+      Smartchain.Contract.CLAP.MonetaryPolicy.ScriptFileGenerator
       Smartchain.Contract.CLAP.MonetaryPolicy
       Smartchain.Contract.Vesting
     build-depends:
@@ -60,7 +60,6 @@ library
       serialise,
       freer-extras,
       playground-common,
-      plutus-use-cases,
       plutus-contract,
       plutus-tx-plugin,
       plutus-tx,
