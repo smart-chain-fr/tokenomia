@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-module Smartchain.Contract.CLAP.MonetaryPolicySpec (tests) where
+module Spec.Smartchain.Contract.CLAP.MonetaryPolicy (tests) where
 
 import           Control.Monad             (void)
 import qualified Ledger

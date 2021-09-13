@@ -12,32 +12,21 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 {-# LANGUAGE EmptyCase #-}
-module Smartchain.Contract.CLAP.MonetaryPolicy.Trace (main) where
+module Smartchain.Contract.CLAP.MonetaryPolicy.Trace  where
 
-
-import           Control.Monad                     (void)
+import Control.Monad (void)                   
 import           Control.Monad.Freer.Error         (throwError)
 import qualified Data.Semigroup                    as Semigroup
-import           Ledger ( pubKeyHash, POSIXTime,PubKeyHash, CurrencySymbol, TokenName, Value, txId )
+import           Ledger ( TokenName , pubKeyHash, POSIXTime, CurrencySymbol, Value, txId )
 import Ledger.Constraints ( mustPayToPubKey )
 import Ledger.Value as Value
     ( singleton )
 import Plutus.Contract
     ( EmptySchema,
-      awaitTxConfirmed,
-      ownPubKey, 
+      awaitTxConfirmed, 
       submitTx,
-      waitNSlots,
       Contract,
       tell)
-import qualified Plutus.Contracts.Currency         as Currency
-import Plutus.Contracts.Vesting as Vesting
-    ( vestingContract,
-      VestingError,
-      VestingParams(..),
-      VestingSchema,
-      VestingTranche(VestingTranche, vestingTrancheDate,
-                     vestingTrancheAmount) )
 
 import           Plutus.Trace.Emulator             (EmulatorRuntimeError (GenericError), EmulatorTrace,runEmulatorTraceIO)
 import qualified Plutus.Trace.Emulator             as Emulator
@@ -48,13 +37,23 @@ import Ledger.TimeSlot ()
 import Data.Text ( Text )
 import Plutus.Trace.Effects.EmulatedWalletAPI ()
 
-import Control.Monad.Freer.Reader ( ask, runReader, Reader )
+import Control.Monad.Freer.Reader ( ask, Reader,runReader )
 import Control.Monad.Freer ( Eff, Members )
 import Plutus.Trace.Effects.RunContract ( RunContract )
 import qualified Plutus.Trace.Effects.Waiting as EffectsW
 import qualified Ledger.TimeSlot          as TimeSlot  
 import           Data.Default             (Default (def))
+import           Data.Semigroup         (Last (..))     
+import Smartchain.Contract.CLAP.MonetaryPolicy
+    ( mintCLAPContract, CLAPMonetaryPolicyError )
 
+import Smartchain.Contract.Vesting as Vesting
+    ( vestingContract,
+      VestingError,
+      VestingParams(..),
+      VestingSchema,
+      VestingTranche(VestingTranche, vestingTrancheDate,
+                     vestingTrancheAmount) )
 type TokenId = (CurrencySymbol ,TokenName)
 type TokenSupplyAmount = Integer
 
@@ -62,14 +61,13 @@ main :: IO ()
 main = do
     print @String "Welcome to the Simulator"
     runEmulatorTraceIO $ do
-        let clapTokenName  = "CLAP"
-            clapSupplyAmount = 10^(9 :: Integer) 
-            minterWallet = getSCWallet Minter
+        let clapTokenName :: TokenName = "CLAP"
+            clapSupplyAmount :: TokenSupplyAmount = 10^(12 :: Integer)
+        let minterWallet = getSCWallet Minter
 
 
         -- Minting CLAPs    
-        policyHash <- mintTokenS minterWallet clapTokenName clapSupplyAmount
-
+        policyHash <- mintTokenS minterWallet
         -- Distributing CLAPs to Wallets
         runReader (policyHash,clapTokenName)
             . runReader minterWallet
@@ -78,23 +76,23 @@ main = do
             moveBudgetDirectlyTo PrivateSale     
             moveBudgetDirectlyTo PublicSale 
 
-            vestBudgetS     Team Lock24MonthsThenRelease25PercentQuartlyTwice
+            vestBudgetS  Team Lock24MonthsThenRelease25PercentQuartlyTwice
+            vestBudgetS  Team Lock30MonthsThenRelease25PercentQuartlyTwice
+            vestBudgetS  Treasury Lock50Percent6Months50Percent12Months
+            vestBudgetS  Partnerships Lock50Percent6Months50Percent12Months
+            vestBudgetS  Ambassadors Lock50Percent6Months50Percent12Months
+            vestBudgetS  Communication Lock50Percent6Months50Percent12Months
+
+
+            retrieveBudgetS Treasury Lock50Percent6Months50Percent12Months
+            retrieveBudgetS Partnerships Lock50Percent6Months50Percent12Months
+            retrieveBudgetS Ambassadors Lock50Percent6Months50Percent12Months
+            retrieveBudgetS Communication Lock50Percent6Months50Percent12Months
+
+            retrieveBudgetS Team Lock30MonthsThenRelease25PercentQuartlyTwice
             retrieveBudgetS Team Lock24MonthsThenRelease25PercentQuartlyTwice
 
-            vestBudgetS     Team Lock30MonthsThenRelease25PercentQuartlyTwice
-            retrieveBudgetS Team Lock30MonthsThenRelease25PercentQuartlyTwice
 
-            vestBudgetS     Treasury Lock50Percent6Months50Percent12Months
-            retrieveBudgetS Treasury Lock50Percent6Months50Percent12Months
-
-            vestBudgetS     Partnerships Lock50Percent6Months50Percent12Months
-            retrieveBudgetS Partnerships Lock50Percent6Months50Percent12Months
-
-            vestBudgetS     Ambassadors Lock50Percent6Months50Percent12Months
-            retrieveBudgetS Ambassadors Lock50Percent6Months50Percent12Months
-
-            vestBudgetS  Communication Lock50Percent6Months50Percent12Months
-            retrieveBudgetS Communication Lock50Percent6Months50Percent12Months
 
     print @String "End of the Simulator"
 
@@ -157,19 +155,21 @@ getBudget account = do
             Ambassadors -> 0.04
             Communication -> 0.001
 
+
+
 getVestingParams
     :: (Members '[RunContract,Reader TokenId,Reader TokenSupplyAmount] effs)
     => VestingScheme -> Account
     -> Eff effs Vesting.VestingParams
 getVestingParams scheme account = do
     budget <- getBudget account
-    let _0_month = TimeSlot.scSlotZeroTime def
-        _6_months = TimeSlot.scSlotZeroTime def
-        _12_month = TimeSlot.scSlotZeroTime def
-        _27_months = TimeSlot.scSlotZeroTime def
-        _24_months = TimeSlot.scSlotZeroTime def
-        _30_months = TimeSlot.scSlotZeroTime def
-        _36_months = TimeSlot.scSlotZeroTime def
+    let _0_month = TimeSlot.scSlotZeroTime def + 10000
+        _6_months = TimeSlot.scSlotZeroTime def + 11000
+        _12_month = TimeSlot.scSlotZeroTime def + 12000
+        _27_months = TimeSlot.scSlotZeroTime def + 13000
+        _24_months = TimeSlot.scSlotZeroTime def + 14000
+        _30_months = TimeSlot.scSlotZeroTime def + 15000
+        _36_months = TimeSlot.scSlotZeroTime def + 16000
         wallet = getSCWallet account
     _0_percent_budget   <- valueOfCLAP 0
     _25_percent_budget  <- valueOfCLAP $ budget `div` 4
@@ -196,7 +196,7 @@ getVestingParams scheme account = do
                 _0_percent_budget
 
 
-vestBudgetS :: (Members '[RunContract,Reader Wallet,Reader TokenId,Reader TokenSupplyAmount] effs)
+vestBudgetS :: (Members '[EffectsW.Waiting,RunContract,Reader Wallet,Reader TokenId,Reader TokenSupplyAmount] effs)
     => Account
     -> VestingScheme
     -> Eff effs ()
@@ -206,7 +206,7 @@ vestBudgetS account vestingScheme = do
         let  contract :: Contract () VestingSchema Vesting.VestingError () = Vesting.vestingContract vestingsParams
         cid1 <- Emulator.activateContractWallet tokenCreatorWallet contract
         _ <- Emulator.callEndpoint @"vest funds" cid1 ()
-
+        _ <- Emulator.waitNSlots 5 
         pure ()
 
 
@@ -217,42 +217,32 @@ retrieveBudgetS :: (Members '[EffectsW.Waiting, RunContract,Reader Wallet,Reader
 retrieveBudgetS
     account
     vestingScheme = do
-        vestingparams@(VestingParams (VestingTranche slot1 tranche1) (VestingTranche slot2 tranche2) _) <- getVestingParams vestingScheme account
+        vestingparams@(VestingParams (VestingTranche _ tranche1) (VestingTranche _ tranche2) _) <- getVestingParams vestingScheme account
         let  contract   = Vesting.vestingContract vestingparams
         cid2 <- Emulator.activateContractWallet (getSCWallet account)  contract
-        _ <- Emulator.waitNSlots (fromIntegral slot1)
+        _ <- Emulator.waitNSlots 5
         _ <-Emulator.callEndpoint @"retrieve funds" cid2 tranche1
-        _ <-Emulator.waitNSlots (fromIntegral slot2)
+        _ <-Emulator.waitNSlots 5
         Emulator.callEndpoint @"retrieve funds" cid2 tranche2
+        void $ Emulator.waitNSlots 5
 
 
-mintTokenS :: Wallet -> TokenName -> Integer -> EmulatorTrace CurrencySymbol
-mintTokenS tokenCreator tokenName tokenAmount =  do
-    mintByOwnerHandle <- Emulator.activateContract tokenCreator (mintByOwner tokenName tokenAmount)  "minting CLAPs"
-    _ <- Emulator.waitNSlots 10
-    Emulator.observableState mintByOwnerHandle >>= \case
+mintTokenS :: Wallet -> EmulatorTrace CurrencySymbol
+mintTokenS tokenCreator =  do
+    mintByOwnerHandle <- Emulator.activateContract tokenCreator (mintCLAPContract' tokenCreator) "Minting Claps" 
+    _ <- Emulator.waitNSlots 2
+    r <- Emulator.observableState mintByOwnerHandle >>= \case
                 Just (Semigroup.Last monetaryPolicyId) -> pure monetaryPolicyId
                 _                                      -> throwError $ GenericError "failed to create currency"
+    _ <- Emulator.waitNSlots 2
+    pure r            
 
-mintByOwner
-    :: TokenName
-    -> Integer
-    -> Contract (Maybe (Semigroup.Last CurrencySymbol)) Currency.CurrencySchema Currency.CurrencyError ()
-mintByOwner tokenNameGiven amountGiven =
-     ownPubKey >>= mint' tokenNameGiven amountGiven . pubKeyHash
-        >>= tell . Just . Semigroup.Last
-        >> void (waitNSlots 10) -- not necessary in newer versions (to be removed)
+mintCLAPContract' :: Wallet -> Contract (Maybe (Semigroup.Last CurrencySymbol)) EmptySchema CLAPMonetaryPolicyError CurrencySymbol
+mintCLAPContract' w = do 
+    result <- fst <$> mintCLAPContract (Ledger.pubKeyHash $ walletPubKey w)
+    (tell . Just . Last) result
+    pure result
 
-
-mint'
-    :: forall w s e.
-    ( Currency.AsCurrencyError e
-    )
-    => TokenName
-    -> Integer
-    -> PubKeyHash
-    -> Contract w s e CurrencySymbol
-mint' tokenName amount pk = Currency.currencySymbol <$> Currency.mintContract pk [(tokenName,amount)]
 
 mkVestingScheme :: Wallet -> POSIXTime-> Value -> POSIXTime -> Value ->  Vesting.VestingParams
 mkVestingScheme wallet slot1 amount1 slot2 amount2
@@ -269,3 +259,4 @@ valueOfCLAP
 valueOfCLAP amount = do
     (policyHash,tokenName) <- ask @(CurrencySymbol,TokenName)
     return $ Value.singleton policyHash tokenName amount
+
