@@ -30,7 +30,7 @@ import Plutus.Contract
 
 import           Plutus.Trace.Emulator             (EmulatorRuntimeError (GenericError), EmulatorTrace,runEmulatorTraceIO)
 import qualified Plutus.Trace.Emulator             as Emulator
-import           Wallet.Emulator.Types             (Wallet (..), walletPubKey)
+import           Wallet.Emulator
 import Data.Time ()
 import Data.Time.Clock.POSIX ()
 import Ledger.TimeSlot ()
@@ -129,14 +129,14 @@ data VestingScheme =
 
 getSCWallet :: Account -> Wallet
 getSCWallet = \case
- Minter -> Wallet 1
- PrivateSale -> Wallet 2
- PublicSale -> Wallet 3
- Team  -> Wallet 4
- Treasury  -> Wallet 5
- Partnerships -> Wallet 6
- Ambassadors -> Wallet 7
- Communication -> Wallet 8
+ Minter -> knownWallet 1
+ PrivateSale -> knownWallet 2
+ PublicSale -> knownWallet 3
+ Team  -> knownWallet 4
+ Treasury  -> knownWallet 5
+ Partnerships -> knownWallet 6
+ Ambassadors -> knownWallet 7
+ Communication -> knownWallet 8
 
 getBudget
     :: (Members '[Reader TokenSupplyAmount] effs)

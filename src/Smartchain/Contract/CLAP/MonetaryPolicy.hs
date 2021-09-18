@@ -46,8 +46,8 @@ import PlutusTx.Prelude
 import Plutus.Contract as Contract
     ( awaitTxConfirmed,
       submitTxConstraintsWith,
-      utxoAt,
       mapError,
+      utxosAt,
       Endpoint,
       type (.\/),
       Contract,
@@ -153,7 +153,7 @@ burnCLAPContract burnerPK txOutRef amount =
     mapError (review _CLAPMonetaryPolicyError) $ do
     let clapPolicyHash = (scriptCurrencySymbol . mkCLAPMonetaryPolicyScript) txOutRef
         clapMonetaryPolicyScript = mkCLAPMonetaryPolicyScript txOutRef
-    utxosInBurnerWallet <- utxoAt (pubKeyHashAddress burnerPK)
+    utxosInBurnerWallet <- Contract.utxosAt (pubKeyHashAddress burnerPK)
     submitTxConstraintsWith
             @Scripts.Any
             (Constraints.mintingPolicy clapMonetaryPolicyScript <> Constraints.unspentOutputs utxosInBurnerWallet)
@@ -175,7 +175,7 @@ mintCLAPContract pk =
             Haskell.id
             mkCLAPMonetaryPolicyScript
             (scriptCurrencySymbol . mkCLAPMonetaryPolicyScript) <$> getUnspentOutput
-    utxosInWallet <- utxoAt (pubKeyHashAddress pk)
+    utxosInWallet <- utxosAt (pubKeyHashAddress pk)
     submitTxConstraintsWith
             @Scripts.Any
             (Constraints.mintingPolicy clapMonetaryPolicyScript <> Constraints.unspentOutputs utxosInWallet)
