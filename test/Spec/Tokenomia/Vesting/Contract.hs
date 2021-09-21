@@ -7,7 +7,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns -fno-warn-unused-do-bind #-}
-module Spec.Smartchain.Contract.Vesting (tests, retrieveFundsTrace, vesting) where
+module Spec.Tokenomia.Vesting.Contract (tests, retrieveFundsTrace, vesting) where
 
 import           Control.Monad            (void)
 import           Data.Default             (Default (def))
@@ -21,15 +21,12 @@ import qualified Ledger.TimeSlot          as TimeSlot
 import           Plutus.Contract.Test
 import           Plutus.Trace.Emulator    (EmulatorTrace)
 import qualified Plutus.Trace.Emulator    as Trace
--- import qualified PlutusTx
+
 import qualified PlutusTx.Numeric         as Numeric
 import           Prelude                  hiding (not)
 
-import           Smartchain.Contract.Vesting 
+import           Tokenomia.Vesting.Contract 
 
-w1, w2 :: Wallet 
-w1 = Wallet 1
-w2 = Wallet 2
 
 tests :: TestTree
 tests =

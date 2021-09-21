@@ -12,7 +12,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 {-# LANGUAGE EmptyCase #-}
-module Smartchain.Contract.CLAP.MonetaryPolicy.Trace  where
+module Tokenomia.Tokenomic.CLAP.Simulation  where
 
 import Control.Monad (void)                   
 import           Control.Monad.Freer.Error         (throwError)
@@ -30,12 +30,12 @@ import Plutus.Contract
 
 import           Plutus.Trace.Emulator             (EmulatorRuntimeError (GenericError), EmulatorTrace,runEmulatorTraceIO)
 import qualified Plutus.Trace.Emulator             as Emulator
-import           Wallet.Emulator
+import Wallet.Emulator ( knownWallet, walletPubKey, Wallet )
 import Data.Time ()
 import Data.Time.Clock.POSIX ()
 import Ledger.TimeSlot ()
 import Data.Text ( Text )
-import Plutus.Trace.Effects.EmulatedWalletAPI ()
+import Plutus.Trace.Effects.EmulatedWalletAPI () 
 
 import Control.Monad.Freer.Reader ( ask, Reader,runReader )
 import Control.Monad.Freer ( Eff, Members )
@@ -44,10 +44,10 @@ import qualified Plutus.Trace.Effects.Waiting as EffectsW
 import qualified Ledger.TimeSlot          as TimeSlot  
 import           Data.Default             (Default (def))
 import           Data.Semigroup         (Last (..))     
-import Smartchain.Contract.CLAP.MonetaryPolicy
-    ( mintCLAPContract, CLAPMonetaryPolicyError )
+import Tokenomia.Token.CLAPStyle.MonetaryPolicy
+    ( mintContract, CLAPMonetaryPolicyError )
 
-import Smartchain.Contract.Vesting as Vesting
+import Tokenomia.Vesting.Contract as Vesting
     ( vestingContract,
       VestingError,
       VestingParams(..),
@@ -67,7 +67,7 @@ main = do
 
 
         -- Minting CLAPs    
-        policyHash <- mintTokenS minterWallet
+        policyHash <- mintTokenS minterWallet clapTokenName clapSupplyAmount
         -- Distributing CLAPs to Wallets
         runReader (policyHash,clapTokenName)
             . runReader minterWallet
@@ -227,9 +227,9 @@ retrieveBudgetS
         void $ Emulator.waitNSlots 5
 
 
-mintTokenS :: Wallet -> EmulatorTrace CurrencySymbol
-mintTokenS tokenCreator =  do
-    mintByOwnerHandle <- Emulator.activateContract tokenCreator (mintCLAPContract' tokenCreator) "Minting Claps" 
+mintTokenS :: Wallet -> TokenName -> TokenSupplyAmount ->  EmulatorTrace CurrencySymbol
+mintTokenS tokenCreator tokenName tokenSupplyAmount =  do
+    mintByOwnerHandle <- Emulator.activateContract tokenCreator (mintCLAPContract' tokenCreator tokenName tokenSupplyAmount) "Minting Claps" 
     _ <- Emulator.waitNSlots 2
     r <- Emulator.observableState mintByOwnerHandle >>= \case
                 Just (Semigroup.Last monetaryPolicyId) -> pure monetaryPolicyId
@@ -237,9 +237,9 @@ mintTokenS tokenCreator =  do
     _ <- Emulator.waitNSlots 2
     pure r            
 
-mintCLAPContract' :: Wallet -> Contract (Maybe (Semigroup.Last CurrencySymbol)) EmptySchema CLAPMonetaryPolicyError CurrencySymbol
-mintCLAPContract' w = do 
-    result <- fst <$> mintCLAPContract (Ledger.pubKeyHash $ walletPubKey w)
+mintCLAPContract' :: Wallet -> TokenName -> TokenSupplyAmount -> Contract (Maybe (Semigroup.Last CurrencySymbol)) EmptySchema CLAPMonetaryPolicyError CurrencySymbol
+mintCLAPContract' w tokenName tokenSupplyAmount = do 
+    result <- fst <$> mintContract (Ledger.pubKeyHash $ walletPubKey w) tokenName tokenSupplyAmount
     (tell . Just . Last) result
     pure result
 

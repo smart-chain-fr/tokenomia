@@ -2,14 +2,15 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-module Spec.Smartchain.Contract.CLAP.MonetaryPolicy (tests) where
+
+module Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy (tests) where
 
 import           Control.Monad             (void)
 import qualified Ledger
 import           Plutus.Contract hiding (throwError)
 import           Plutus.Contract.Test
-import           Ledger.Value           (CurrencySymbol)
-import           Smartchain.Contract.CLAP.MonetaryPolicy
+import           Ledger.Value           (CurrencySymbol,TokenName (..))
+import           Tokenomia.Token.CLAPStyle.MonetaryPolicy
 import qualified Plutus.Trace.Emulator     as Trace
 import qualified Ledger.Ada                           as Ada
 import           Test.Tasty
@@ -27,7 +28,7 @@ import           Control.Monad.Freer.Error         (throwError)
 
 -- State Machine for Mint and Burn
 -- Burning CLAPs is open to anyone owning CLAPs
--- The script size is reasonable and is X 
+-- The script size is reasonable and is X  
 -- Script hash is XXXXXX in mainnet
 
 tests :: TestTree
@@ -47,10 +48,10 @@ tests = testGroup "Monetary CLAP Policy"
         $ do
             cid <- Trace.activateContractWallet w1 (void mintCLAPContract')
             void $ Trace.waitNSlots 2
-            (_,txOutRef) <- Trace.observableState cid >>= \case
+            (_,params) <- Trace.observableState cid >>= \case
                                                             Just (Last v) -> pure v
                                                             _ -> throwError $ GenericError "initialisation failed"                                                                                             
-            _ <- Trace.activateContractWallet w1 (void $ burnCLAPContract' w1 txOutRef (-1000)) 
+            _ <- Trace.activateContractWallet w1 (void $ burnContract' w1 params (-1000)) 
             void $ Trace.waitNSlots 2
     , checkPredicate
         "script size is reasonable"
@@ -58,23 +59,23 @@ tests = testGroup "Monetary CLAP Policy"
           ((30000 >=)
             . Ledger.scriptSize
             . Ledger.unMintingPolicyScript
-            . mkCLAPMonetaryPolicyScript . snd) "script too large")
+            . mkMonetaryPolicyScript . snd) "script too large")
         $ do
             _ <- Trace.activateContractWallet w1 (void mintCLAPContract')
             void $ Trace.waitNSlots 2
 
     ]
 
-w1 :: Wallet
-w1 = Wallet 1
 
 -- genesis :: (InitialDistribution  -> )
 
-burnCLAPContract' ::  Wallet -> Ledger.TxOutRef ->  Integer -> Contract () EmptySchema CLAPMonetaryPolicyError ()
-burnCLAPContract' wallet = burnCLAPContract  (Ledger.pubKeyHash $ walletPubKey wallet)
+burnContract' ::  Wallet -> Params -> Integer -> Contract () EmptySchema CLAPMonetaryPolicyError ()
+burnContract' wallet params amountGiven
+    = void $ burnContract  @() @EmptySchema @CLAPMonetaryPolicyError
+        (Ledger.pubKeyHash $ walletPubKey wallet) params amountGiven
 
-mintCLAPContract' :: Contract (Maybe (Last (CurrencySymbol,Ledger.TxOutRef))) EmptySchema CLAPMonetaryPolicyError (CurrencySymbol,Ledger.TxOutRef)
+mintCLAPContract' :: Contract (Maybe (Last (CurrencySymbol,Params))) EmptySchema CLAPMonetaryPolicyError (CurrencySymbol,Params)
 mintCLAPContract' = do 
-    result <- mintCLAPContract (Ledger.pubKeyHash $ walletPubKey w1)
+    result <- mintContract (Ledger.pubKeyHash $ walletPubKey w1) (TokenName "CLAP") (1000000000000 :: Integer)
     (tell . Just . Last) result
     pure result

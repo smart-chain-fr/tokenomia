@@ -15,7 +15,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-specialise #-}
-module Smartchain.Contract.Vesting (
+module Tokenomia.Vesting.Contract (
     -- $vesting
     VestingParams(..),
     VestingSchema,
@@ -28,7 +28,7 @@ module Smartchain.Contract.Vesting (
     vestingScript
     ) where
 
-import           Control.Lens
+import Control.Lens ( view, makeClassyPrisms, review )
 import           Control.Monad            (void, when)
 import           Data.Aeson               (FromJSON, ToJSON)
 import qualified Data.Map                 as Map
@@ -45,10 +45,36 @@ import           Ledger.Typed.Scripts     (ValidatorTypes (..))
 import qualified Ledger.Typed.Scripts     as Scripts
 import           Ledger.Value             (Value)
 import qualified Ledger.Value             as Value
-import           Plutus.Contract
+import Plutus.Contract
+    ( ContractError,
+      AsContractError(_ContractError),
+      type (.\/),
+      Endpoint,
+      Contract,
+      awaitTime,
+      endpoint,
+      submitTxConstraints,
+      submitTxConstraintsSpending,
+      utxosAt,
+      mapError,
+      selectList,
+      throwError,
+      Promise(awaitPromise) )
 import qualified Plutus.Contract.Typed.Tx as Typed
 import qualified PlutusTx
-import           PlutusTx.Prelude         hiding (Semigroup (..), fold)
+import PlutusTx.Prelude
+    ( return,
+      Bool,
+      (.),
+      (&&),
+      ($),
+      Applicative(pure),
+      Foldable(foldMap),
+      Monoid(mempty),
+      AdditiveGroup((-)),
+      AdditiveMonoid(zero),
+      AdditiveSemigroup((+)),
+      Ord((>=)) )
 import qualified Prelude                  as Haskell
 
 {- |
