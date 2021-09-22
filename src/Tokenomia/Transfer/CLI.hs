@@ -14,10 +14,8 @@ import Shh
       (|>),
       ExecReference(SearchPath) )
 
-import Tokenomia.Adapter.Cardano.CardanoCLI
-    ( run_tx,
-      query_utxo,
-      query_tip ) 
+import Tokenomia.Adapter.Cardano.CLI
+ 
       
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -41,7 +39,8 @@ run = do
     senderAddr      <- echo "-n" "> Sender address : "    >>  getLine
     receiverAddr    <- echo "-n" "> Receiver address : "  >>  getLine
 
-    echo "Sender Wallet Content :" |> query_utxo senderAddr
+    echo "Sender Wallet Content :" 
+    __ <- print <$> getUTxOs senderAddr
     
     tokenPolicyHash <- echo "-n" "> Token policy hash : " >>  getLine
     tokenName       <- echo "-n" "> Token Name : "        >>  getLine

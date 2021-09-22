@@ -40,7 +40,7 @@ library
     import: lang
     exposed-modules:
       Tokenomia.CLI
-      Tokenomia.Adapter.Cardano.CardanoCLI
+      Tokenomia.Adapter.Cardano.CLI
       Tokenomia.Token.Burn.CLI
       Tokenomia.Token.CLAPStyle.Mint.CLI
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
@@ -48,6 +48,10 @@ library
       Tokenomia.Transfer.CLI
       Tokenomia.Vesting.Contract
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.Adapter.Cardano.CLI.UTxO
+      Tokenomia.Adapter.Cardano.CLI.Value
+      Tokenomia.Adapter.Cardano.CLI.Serialise
+      Tokenomia.Adapter.Cardano.CLI.Internal
     build-depends:
       base >= 4.9 && < 5,
       lens,
@@ -57,6 +61,7 @@ library
       shh,
       byline,
       split,
+      exceptions,
       utf8-string,
       freer-simple,
       data-default,
@@ -83,11 +88,14 @@ test-suite tokenomia-tests
   other-modules:
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
+    Spec.Tokenomia.Adapter.Cardano.CLI.UTxO
+    Spec.Tokenomia.Adapter.Cardano.CLI.Value
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,
     plutus-contract -any,
     plutus-ledger -any,
+    plutus-ledger-api,
     tokenomia -any
   build-depends:
     base >=4.9 && <5,
@@ -95,6 +103,9 @@ test-suite tokenomia-tests
     tasty-hunit -any,
     tasty-hedgehog >=0.2.0.0,
     freer-simple -any,
+    bytestring,
+    text,
+    interpolatedstring-perl6,
     data-default
 
 

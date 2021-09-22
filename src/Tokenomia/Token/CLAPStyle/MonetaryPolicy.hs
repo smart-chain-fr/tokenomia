@@ -87,7 +87,7 @@ import PlutusTx.Builtins.Internal ()
 -- /////////////////
 
 data Params = Params
-  { txOutRef     :: TxOutRef
+  { txOutRefToConsume :: TxOutRef
   , amount    :: Integer
   , tokenName :: TokenName }
   deriving stock (Generic, Haskell.Show, Haskell.Eq)
@@ -108,7 +108,7 @@ monetaryPolicy a b c =  burningPolicy a b c || mintingPolicy a b c
 
 {-# INLINABLE mintingPolicy #-}
 mintingPolicy :: Params -> BuiltinData -> V.ScriptContext -> Bool
-mintingPolicy Params{ txOutRef = (TxOutRef refHash refIdx),..} _ ctx@V.ScriptContext{V.scriptContextTxInfo=txinfo}
+mintingPolicy Params{ txOutRefToConsume = (TxOutRef refHash refIdx),..} _ ctx@V.ScriptContext{V.scriptContextTxInfo=txinfo}
     =  traceIfFalse "E1" {- Value minted different from expected" -}
         (singleton (V.ownCurrencySymbol ctx) tokenName  amount == V.txInfoMint txinfo)
     && traceIfFalse "E2" {- Pending transaction does not spend the designated transaction output (necessary for one-time minting Policy) -}
@@ -173,7 +173,7 @@ mintContract
     -> Contract w s e (CurrencySymbol,Params)
 mintContract pk tokenName amount =
     mapError (review _CLAPMonetaryPolicyError) $ do
-    txOutRef <- getUnspentOutput    
+    txOutRefToConsume <- getUnspentOutput    
     let monetaryPolicyParams = Params {..}
         policyHash = (scriptCurrencySymbol . mkMonetaryPolicyScript) monetaryPolicyParams
         monetaryPolicyScript = mkMonetaryPolicyScript monetaryPolicyParams
@@ -182,7 +182,7 @@ mintContract pk tokenName amount =
     submitTxConstraintsWith
             @Scripts.Any
             (Constraints.mintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInWallet)
-            (Constraints.mustSpendPubKeyOutput txOutRef     <> Constraints.mustMintValue valueToMint)
+            (Constraints.mustSpendPubKeyOutput txOutRefToConsume <> Constraints.mustMintValue valueToMint)
      >>= awaitTxConfirmed . txId
      >>  pure (policyHash,monetaryPolicyParams)
 
