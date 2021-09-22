@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Spec(main) where
 
-import qualified Spec.Smartchain.Contract.CLAP.MonetaryPolicy (tests)
-import qualified Spec.Smartchain.Contract.Vesting (tests)
+import qualified Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy (tests)
+import qualified Spec.Tokenomia.Vesting.Contract (tests)
 import           Test.Tasty
 import           Test.Tasty.Hedgehog       (HedgehogTestLimit (..))
 
@@ -18,6 +18,6 @@ limit = HedgehogTestLimit (Just 5)
 
 tests :: TestTree
 tests = localOption limit $ testGroup "use cases" [
-    Spec.Smartchain.Contract.CLAP.MonetaryPolicy.tests,
-    Spec.Smartchain.Contract.Vesting.tests
+    Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy.tests,
+    Spec.Tokenomia.Vesting.Contract.tests
     ]

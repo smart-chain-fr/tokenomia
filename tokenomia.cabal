@@ -1,5 +1,5 @@
 cabal-version:      2.4
-name:               plutus-starter
+name:               tokenomia
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
@@ -39,16 +39,25 @@ common lang
 library
     import: lang
     exposed-modules:
-      Smartchain.Contract.CLAP.MonetaryPolicy.Trace
-      Smartchain.Contract.CLAP.MonetaryPolicy.ScriptFileGenerator
-      Smartchain.Contract.CLAP.MonetaryPolicy
-      Smartchain.Contract.Vesting
+      Tokenomia.CLI
+      Tokenomia.Adapter.Cardano.CardanoCLI
+      Tokenomia.Token.Burn.CLI
+      Tokenomia.Token.CLAPStyle.Mint.CLI
+      Tokenomia.Token.CLAPStyle.MonetaryPolicy
+      Tokenomia.Wallet.CLI
+      Tokenomia.Transfer.CLI
+      Tokenomia.Vesting.Contract
+      Tokenomia.Tokenomic.CLAP.Simulation
     build-depends:
       base >= 4.9 && < 5,
       lens,
       aeson,
       text,
       time,
+      shh,
+      byline,
+      split,
+      utf8-string,
       freer-simple,
       data-default,
       unordered-containers,
@@ -66,20 +75,20 @@ library
       plutus-ledger
     hs-source-dirs: src 
 
-test-suite smartchain-tests
+test-suite tokenomia-tests
   import: lang
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   hs-source-dirs: test
   other-modules:
-    Spec.Smartchain.Contract.CLAP.MonetaryPolicy
-    Spec.Smartchain.Contract.Vesting
+    Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
+    Spec.Tokenomia.Vesting.Contract
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,
     plutus-contract -any,
     plutus-ledger -any,
-    plutus-starter -any
+    tokenomia -any
   build-depends:
     base >=4.9 && <5,
     tasty -any,
@@ -89,17 +98,12 @@ test-suite smartchain-tests
     data-default
 
 
-executable clap-cli 
+executable tokenomia-cli 
   import: lang
   main-is: Main.hs
-  hs-source-dirs: clap-cli
+  hs-source-dirs: app
   ghc-options:
     -threaded
   build-depends:
     base >= 4.9 && < 5,
-    shh,
-    data-default -any,
-    aeson -any,
-    freer-simple -any,
-    prettyprinter -any,
-    freer-extras -any,
+    tokenomia

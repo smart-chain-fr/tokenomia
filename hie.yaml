@@ -1,8 +1,8 @@
 cradle:
   cabal:
     - path : "src"
-      component : "lib:plutus-starter"
+      component : "lib:tokenomia"
     - path : "test"
-      component : "plutus-starter:test:smartchain-tests"
-    - path : "clap-cli"
-      component : "plutus-starter:exe:clap-cli"
+      component : "tokenomia:test:tokenomia-tests"
+    - path : "app"
+      component : "tokenomia:exe:tokenomia-cli"
