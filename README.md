@@ -1,5 +1,3 @@
-# Tokenomia
-
 ![](./tokenomia-logo.png)
 
 ## Table of content
@@ -19,24 +17,22 @@ nix-shell
 ```
 It will read each instruction within the `shell.nix` file and execute it.
 
-<details><summary>Slow building ?</summary>
-	<ul>
-		<li>
-			If you have a slow building, maybe your nix cache isn't setup properly. To do so:
-			 On non-NixOS, edit <code>/etc/nix/nix.conf</code> and add the following lines
-   		 	<code>substituters        = https://hydra.iohk.io https://iohk.cachix.org 	https://cache.nixos.org/
-				trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=</code>
-		</li>
-		<li>
-			On NixOS, set the following NixOS options:
-    		<code>nix = {
-			  	binaryCaches          = [ "https://hydra.iohk.io" "https://iohk.cachix.org" ];
-      	  		binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=" ];
-    		};</code>
-		</li>
-	</ul>
+> :bulb: Slow building ?
 
-</details>
+If you have a slow building, maybe your nix cache isn't setup properly. To do so:
+* On non-NixOS, edit `/etc/nix/nix.conf` and add the following lines :
+```bash
+substituters        = https://hydra.iohk.io https://iohk.cachix.org 	https://cache.nixos.org/
+trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=</code>
+```
+
+* On NixOS, set the following NixOS options:
+```bash
+nix = {
+	binaryCaches = [ "https://hydra.iohk.io" "https://iohk.cachix.org" ];
+      	binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=" ];
+}
+```
 
 ## Run the project
 
@@ -45,41 +41,32 @@ Then, to run the project :
 ```shell
 cabal run tokenomia:exe:tokenomia-cli
 ```
-> `tokenomia` is the name of the project, `exe` is here to mention that you want to run an executable, and `tokenomia-cli` is the name of this one.
+> :bulb: `tokenomia` is the name of the project, `exe` is here to mention that you want to run an executable, and `tokenomia-cli` is the name of this one.
    You can find the name of the executable on the `tokenomia.cabal`.
 
-<details><summary>Fails ?</summary>
-	<ul>
-		<li>
-			If you have the following traceback :
-			<samp>
-				src/Tokenomia/Adapter/Cardano/CardanoCLI.hs:1:1: error:
-						Exception when trying to run compile-time code:
-							  Attempted to load 'cardano-cli', but it is not executable
-									CallStack (from HasCallStack):
-									  error, called at src/Shh/Internal.hs:801:20 in shh-0.7.1.4-5zfKxJG0cmAE4nnSSaQsoW:Shh.Internal
-										Code: load SearchPath ["cat", "echo", "mkdir", "md5sum", ....]
-									  |
-									1 | {-# LANGUAGE LambdaCase #-}
-									  | ^
-									cabal: Failed to build tokenomia-0.1.0.0 (which is required by
-									exe:tokenomia-cli from tokenomia-0.1.0.0).</samp>
-			It may occurs because of a wrong cardano-cli version ; there is indeed one version that is archived. In order to download the newest version, please follow those instructions : 
-				<ul>
-					<li>
-						Download the <a href="https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli">Cardano project</a> by doing :
-						<code> git clone https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli </code>
-					</li>
-					<li>
-						Go in the cardano-cli folder : <code> cd cardano-node/cardano-cli </code>
-					</li>
-					<li>
-						Run : <code> cabal build && cabal install</code>
-					</li>
-				</ul>
-		</li>
-	</ul>
-</details>
+> Fails ?
+
+If you have the following traceback :
+```haskell
+src/Tokenomia/Adapter/Cardano/CardanoCLI.hs:1:1: error:
+	Exception when trying to run compile-time code:
+	Attempted to load 'cardano-cli', but it is not executable
+	CallStack (from HasCallStack):
+		error, called at src/Shh/Internal.hs:801:20 in shh-0.7.1.4-5zfKxJG0cmAE4nnSSaQsoW:Shh.Internal
+		Code: load SearchPath ["cat", "echo", "mkdir", "md5sum", ....]
+		  |
+		1 | {-# LANGUAGE LambdaCase #-}
+		  | ^
+		cabal: Failed to build tokenomia-0.1.0.0 (which is required by
+		exe:tokenomia-cli from tokenomia-0.1.0.0).
+```
+
+It may occurs because of a wrong cardano-cli version ; there is indeed one version that is archived. In order to download the newest version, please follow those instructions : 
+* Download the <a href="https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli">Cardano project</a> by doing :
+	`git clone https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli`
+* Go in the cardano-cli folder : `cd cardano-node/cardano-cli`
+* Run : `cabal build && cabal install`
+
 
 ## How to use it
 
