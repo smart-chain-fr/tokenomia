@@ -36,4 +36,4 @@ Please run the `  . /home/$(whoami)/.nix-profile/etc/profile.d/nix.sh` line in o
 
 [More about Nix commands.](https://nix-tutorial.gitlabpages.inria.fr/nix-tutorial/getting-started.html)
 
-Go back to [[README.md]]
+Go back to [README.md](./README.md)
