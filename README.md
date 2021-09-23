@@ -24,24 +24,17 @@ It will read each instruction within the `shell.nix` file and execute it.
 		<li>
 			If you have a slow building, maybe your nix cache isn't setup properly. To do so:
 			 On non-NixOS, edit <code>/etc/nix/nix.conf</code> and add the following lines
-   		 	<code>
-				
-    			substituters        = https://hydra.iohk.io https://iohk.cachix.org 	https://cache.nixos.org/
-				trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-			</code>
+   		 	<code>substituters        = https://hydra.iohk.io https://iohk.cachix.org 	https://cache.nixos.org/
+				trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=</code>
 		</li>
 		<li>
 			On NixOS, set the following NixOS options:
-    		<code>
-				
-				nix = {
+    		<code>nix = {
 			  	binaryCaches          = [ "https://hydra.iohk.io" "https://iohk.cachix.org" ];
       	  		binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=" ];
-    		};
-			</code>
+    		};</code>
 		</li>
 	</ul>
-	Then, retry the <code>nix-shell</code> command.
 
 </details>
 
@@ -59,10 +52,8 @@ cabal run tokenomia:exe:tokenomia-cli
 	<ul>
 		<li>
 			If you have the following traceback :
-			
-			<code>
-				
-					src/Tokenomia/Adapter/Cardano/CardanoCLI.hs:1:1: error:
+			<samp>
+				src/Tokenomia/Adapter/Cardano/CardanoCLI.hs:1:1: error:
 						Exception when trying to run compile-time code:
 							  Attempted to load 'cardano-cli', but it is not executable
 									CallStack (from HasCallStack):
@@ -72,8 +63,7 @@ cabal run tokenomia:exe:tokenomia-cli
 									1 | {-# LANGUAGE LambdaCase #-}
 									  | ^
 									cabal: Failed to build tokenomia-0.1.0.0 (which is required by
-									exe:tokenomia-cli from tokenomia-0.1.0.0).
-			</code>
+									exe:tokenomia-cli from tokenomia-0.1.0.0).</samp>
 			It may occurs because of a wrong cardano-cli version ; there is indeed one version that is archived. In order to download the newest version, please follow those instructions : 
 				<ul>
 					<li>
