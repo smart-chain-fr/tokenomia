@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Spec(main) where
 
-import qualified Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy (tests)
-import qualified Spec.Tokenomia.Vesting.Contract (tests)
+-- import qualified Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy 
+-- import qualified Spec.Tokenomia.Vesting.Contract 
+import qualified Spec.Tokenomia.Adapter.Cardano.CLI.UTxO
+import qualified Spec.Tokenomia.Adapter.Cardano.CLI.Value
 import           Test.Tasty
 import           Test.Tasty.Hedgehog       (HedgehogTestLimit (..))
 
@@ -18,6 +20,8 @@ limit = HedgehogTestLimit (Just 5)
 
 tests :: TestTree
 tests = localOption limit $ testGroup "use cases" [
-    Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy.tests,
-    Spec.Tokenomia.Vesting.Contract.tests
+    -- Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy.tests,
+    -- Spec.Tokenomia.Vesting.Contract.tests,
+    Spec.Tokenomia.Adapter.Cardano.CLI.UTxO.tests ,
+    Spec.Tokenomia.Adapter.Cardano.CLI.Value.tests
     ]

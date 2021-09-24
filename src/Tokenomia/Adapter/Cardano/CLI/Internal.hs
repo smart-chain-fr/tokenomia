@@ -13,7 +13,7 @@
      To be less error prone we have chosen this alternative over using bash scripts for example.
      It allows you to use a part of your Off chain codebase in Haskell basically. 
 -}
-module Tokenomia.Adapter.Cardano.CardanoCLI
+module Tokenomia.Adapter.Cardano.CLI.Internal
     ( -- Write 
       run_tx
     , register_minting_script_file
@@ -43,7 +43,13 @@ import           Codec.Serialise ( serialise )
 import qualified Cardano.Api as Script
 import qualified Cardano.Api.Shelley  as Script
 import Ledger ( unMintingPolicyScript, MintingPolicy )
-import Data.List.NonEmpty hiding (head)
+import Data.List.NonEmpty ( NonEmpty, fromList )
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
+import Control.Monad.IO.Class ( MonadIO(..) )
+
+
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls" ]
@@ -62,23 +68,18 @@ instance Show Wallet where
     show Wallet {..} = ">> " <> name <> " :" <> paymentAddress 
 
 
-
-query_registered_wallets :: IO (Maybe (NonEmpty Wallet))
+query_registered_wallets :: (MonadIO m ) => m [Wallet]
 query_registered_wallets = do 
-   keyPath <- getFolderPath Keys
-   walletNames <- (fmap.fmap) C.unpack (ls keyPath |> captureWords)
+   keyPath <- liftIO $ getFolderPath Keys
+   walletNames <- liftIO $ (fmap.fmap) C.unpack (ls keyPath |> captureWords)
    mapM (\name -> 
         do 
         let paymentAddressPath = keyPath <> name <> "/payment.addr"  
             paymentSigningKeyPath = keyPath <> name <> "/payment-signing.skey"  
-        paymentAddress <- C.unpack  <$> (cat paymentAddressPath |> capture ) 
+        paymentAddress <- liftIO $ C.unpack  <$> (cat paymentAddressPath |> capture ) 
         return $ Wallet {..} ) walletNames
-    >>= \case 
-            [] -> return Nothing 
-            a  -> (return . Just . fromList) a    
+     
    
-   
-
 register_shelley_wallet :: WalletName -> IO ()
 register_shelley_wallet walletName = do
     keyPath <- getFolderPath Keys
@@ -105,8 +106,8 @@ register_shelley_wallet walletName = do
 query_tip :: Cmd
 query_tip = cardano_cli "query" "tip" "--testnet-magic" (1097911063::Integer)
 
-query_utxo :: WalletAddress -> Cmd
-query_utxo = cardano_cli "query" "utxo" "--testnet-magic" (1097911063::Integer) "--address"
+query_utxo :: WalletAddress -> IO T.Text
+query_utxo walletAddress = (TL.toStrict . TLE.decodeUtf8) <$> (cardano_cli "query" "utxo" "--testnet-magic" (1097911063::Integer) "--address" walletAddress |> capture)
 
 -- | Build a Tx , Sign it with the private key path provided and Submit it
 --   Temporary Files are persisted into ~/.cardano-cli/ folder 
@@ -180,13 +181,13 @@ getFolderPath folder
   
 getFolderPath' ::  String -> IO FilePath
 getFolderPath' s = do 
-    a <- ( <> "/"<> s<>"/") <$> getCardanoCLIFolder
+    a <- ( <> "/"<> s<>"/") <$> getRootCLIFolder
     mkdir "-p" a
     return a
 
-getCardanoCLIFolder :: IO FilePath
-getCardanoCLIFolder = do
-    a <- ( <> "/.cardano-cli/") <$> getEnv "HOME"
+getRootCLIFolder :: IO FilePath
+getRootCLIFolder = do
+    a <- ( <> "/.tokenomia-cli/") <$> getEnv "HOME"
     mkdir "-p" a
     return a
 
