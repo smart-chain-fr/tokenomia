@@ -94,7 +94,7 @@ instance ToStylizedText Action where
   toStylizedText item = case item of
     WalletList   -> "[Wallet] - List Registered Ones" 
     WalletAdd    -> "[Wallet] - Add "
-    WalletRemove -> "[Wallet] - Remove (TODO)"
+    WalletRemove -> "[Wallet] - Remove"
     WalletReceiveByFaucet -> "[Wallet] - Ask ADAs from Faucet (Testnet Only)"
     TokenMint    -> "[Token]  - Mint (Fix Total Supply | one-time Minting and open Burning Policy )"
     TokenBurn    -> "[Token]  - Burn (TODO)"
