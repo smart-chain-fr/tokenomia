@@ -16,7 +16,8 @@ module Tokenomia.Wallet.CLI
   , selectUTxO
   , createAndRegister
   , receiveADAsByFaucet
-  , list) 
+  , list
+  , remove) 
   where
 
 import Shh 
@@ -130,4 +131,14 @@ list = do
             ) wallets
            echo "-----------------------------------"
   
-  
+remove :: IO ()
+remove = do
+  echo "-----------------------------------"
+  echo "Select the Wallet to remove :"
+    >> select
+    >>= \case
+        Nothing ->
+          echo "No Wallet Registered !"
+        Just Wallet {..} -> CardanoCLI.remove_shelley_wallet name
+
+  echo "-----------------------------------"

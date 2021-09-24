@@ -15,6 +15,7 @@ import Shh
 import Data.Function ((&))
 import  qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Mint
 import  qualified Tokenomia.Transfer.CLI as Transfer
+import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 import Byline.Menu
     ( runBylineT,
@@ -28,7 +29,7 @@ import Byline.Menu
 import Data.Text ( Text )
 import Data.Maybe ( fromJust )
 import Byline.Internal.Stylized ()
-import qualified Tokenomia.Wallet.CLI as Wallet 
+import qualified Tokenomia.Wallet.CLI as Wallet
 
 load SearchPath ["echo","ssh","cat","curl"]
 
@@ -39,18 +40,19 @@ main = do
     echo "----------------------"
     showActionMenu >>=
      \case
-        WalletList -> Wallet.list 
+        WalletList -> Wallet.list
         WalletAdd  -> Wallet.createAndRegister
-        WalletRemove  -> echo "TODO"
-        WalletReceiveByFaucet -> Wallet.receiveADAsByFaucet  
+        WalletRemove  -> Wallet.remove
+        WalletReceiveByFaucet -> Wallet.receiveADAsByFaucet
         TokenMint  -> 
           echo "Select the Minter Wallet :"
-          >>  Wallet.select 
+          >>  Wallet.select
           >>= \case 
               Nothing -> echo "No Wallet Registered !"
               Just wallet -> Mint.mintI wallet 
         TokenBurn  ->  echo "TODO"
         Transfer   -> Transfer.run 
+ 
     main
 
 
@@ -90,9 +92,9 @@ data Action
 
 instance ToStylizedText Action where
   toStylizedText item = case item of
-    WalletList      -> "[Wallet] - List Registered Ones" 
-    WalletAdd       -> "[Wallet] - Add "
-    WalletRemove    -> "[Wallet] - Remove (TODO)"
+    WalletList   -> "[Wallet] - List Registered Ones" 
+    WalletAdd    -> "[Wallet] - Add "
+    WalletRemove -> "[Wallet] - Remove"
     WalletReceiveByFaucet -> "[Wallet] - Ask ADAs from Faucet (Testnet Only)"
     TokenMint    -> "[Token]  - Mint (Fix Total Supply | one-time Minting and open Burning Policy )"
     TokenBurn    -> "[Token]  - Burn (TODO)"

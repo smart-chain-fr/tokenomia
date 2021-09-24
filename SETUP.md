@@ -7,6 +7,7 @@ Here is the Setup guide to help you download the depencies in order to build the
 ## Table of content
 * [Cabal](./SETUP.md#cabal)
 * [Nix](./SETUP.md#nix)
+* [Setup vsCode plugins](./SETUP.md#setup-vscode-plugins-(optional))
 
 ### Cabal
 ```sh
@@ -35,5 +36,23 @@ in your shell.
 Please run the `  . /home/$(whoami)/.nix-profile/etc/profile.d/nix.sh` line in order to load nix environment variables.
 
 [More about Nix commands.](https://nix-tutorial.gitlabpages.inria.fr/nix-tutorial/getting-started.html)
+
+### Setup vscode plugins (optional)
+If you want to see the code of this project on VsCode, please make sure you have the following plugins installed :
+
+* Haskell, with the extension id: haskell.haskell
+* Haskell syntax Highlighting, with the extension id : justusadam.language-haskell
+* haskell-linter, with the extension id : hoovercj.haskell-linter
+
+If you have any trouble with indexing the files, please download this extension : jtanx.ctagsx,
+and run : 
+
+```bash
+cabal install haskdogs hasktags
+```
+Then on the `tokenomia` source folder, run : 
+```bash
+haskdogs
+```
 
 Go back to [README.md](./README.md)
