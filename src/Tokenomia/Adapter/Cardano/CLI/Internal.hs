@@ -18,6 +18,7 @@ module Tokenomia.Adapter.Cardano.CLI.Internal
       run_tx
     , register_minting_script_file
     , register_shelley_wallet
+    , remove_shelley_wallet
       -- Read 
     , query_registered_wallets  
     , query_utxo
@@ -27,7 +28,6 @@ module Tokenomia.Adapter.Cardano.CLI.Internal
 
 import Shh.Internal
 import Data.String
-
 import System.Environment (getEnv)
 import qualified Data.ByteString.Lazy.Char8 as C
 import Ledger.Contexts ( scriptCurrencySymbol )
@@ -43,11 +43,11 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 import Control.Monad.IO.Class ( MonadIO(..) )
-import Data.List.NonEmpty hiding (head, (<|))
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls", "cardano-address" ]
+load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls", "rm", "cardano-address" ]
+
 
 type TxOutRef = String
 type WalletAddress = String
@@ -71,9 +71,9 @@ query_registered_wallets = do
         do 
         let paymentAddressPath = keyPath <> name <> "/payment.addr"  
             paymentSigningKeyPath = keyPath <> name <> "/payment-signing.skey"  
-        paymentAddress <- liftIO $ C.unpack  <$> (cat paymentAddressPath |> capture ) 
-        return $ Wallet {..} ) walletNames
-     
+        paymentAddress <- liftIO $ C.unpack  <$> (cat paymentAddressPath |> capture) 
+        return $ Wallet {..} ) walletNames  
+
    
 register_shelley_wallet :: WalletName -> IO ()
 register_shelley_wallet walletName = do
@@ -98,6 +98,14 @@ register_shelley_wallet walletName = do
         &> (Truncate . fromString) paymentAddress
     return ()
 
+
+remove_shelley_wallet :: WalletName -> IO ()
+remove_shelley_wallet walletName = do
+    keyPath <- getFolderPath Keys
+    let walletKeyPath = keyPath <> walletName <> "/"
+
+    rm "-rf" walletKeyPath
+   
 
 query_tip :: Cmd
 query_tip = cardano_cli "query" "tip" "--testnet-magic" (1097911063::Integer)
