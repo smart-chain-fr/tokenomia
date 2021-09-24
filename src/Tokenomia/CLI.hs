@@ -42,7 +42,7 @@ main = do
      \case
         WalletList -> listWallet 
         WalletAdd  -> addWallet
-        WalletRemove  -> echo "TODO"
+        WalletRemove  -> removeWallet
         TokenMint  -> 
           echo "Select the Minter Wallet :"
           >>  selectWallet 
@@ -142,7 +142,7 @@ instance ToStylizedText Action where
   toStylizedText item = case item of
     WalletList   -> "[Wallet] - List Registered Ones" 
     WalletAdd    -> "[Wallet] - Add "
-    WalletRemove -> "[Wallet] - Remove (TODO)"
+    WalletRemove -> "[Wallet] - Remove"
     TokenMint    -> "[Token]  - Mint (Fix Total Supply | one-time Minting and open Burning Policy )"
     TokenBurn    -> "[Token]  - Burn (TODO)"
     Transfer     -> "Transfer "
