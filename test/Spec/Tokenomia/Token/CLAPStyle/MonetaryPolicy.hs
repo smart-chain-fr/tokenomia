@@ -2,12 +2,8 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-<<<<<<< HEAD:test/Spec/Tokenomia/Token/CLAPStyle/MonetaryPolicy.hs
 
 module Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy (tests) where
-=======
-module Spec.Smartchain.Contract.CLAP.MonetaryPolicy (tests) where
->>>>>>> main:test/Spec/Smartchain/Contract/CLAP/MonetaryPolicy.hs
 
 import           Control.Monad             (void)
 import qualified Ledger

@@ -18,6 +18,7 @@ module Tokenomia.Adapter.Cardano.CardanoCLI
       run_tx
     , register_minting_script_file
     , register_shelley_wallet
+    , remove_shelley_wallet
       -- Read 
     , query_registered_wallets  
     , query_utxo
@@ -43,10 +44,10 @@ import           Codec.Serialise ( serialise )
 import qualified Cardano.Api as Script
 import qualified Cardano.Api.Shelley  as Script
 import Ledger ( unMintingPolicyScript, MintingPolicy )
-import Data.List.NonEmpty hiding (head)
+import Data.List.NonEmpty ( NonEmpty, fromList )
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls" ]
+load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls", "rm" ]
 
 type TxOutRef = String
 type WalletAddress = String
@@ -75,7 +76,15 @@ query_registered_wallets = do
         return $ Wallet {..} ) walletNames
     >>= \case 
             [] -> return Nothing 
-            a  -> (return . Just . fromList) a    
+            a  -> (return . Just . fromList) a   
+
+
+remove_shelley_wallet :: WalletName -> IO ()
+remove_shelley_wallet walletName = do
+    keyPath <- getFolderPath Keys
+    let walletKeyPath = keyPath <> walletName <> "/"
+
+    rm "-rf" walletKeyPath
    
    
 

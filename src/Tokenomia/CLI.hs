@@ -64,6 +64,18 @@ addWallet = do
   echo "Wallet Created and Registered!"
   echo "-----------------------------------"
 
+removeWallet :: IO ()
+removeWallet = do
+  echo "-----------------------------------"
+  echo "Select the Wallet to remove :"
+    >> selectWallet
+    >>= \case
+        Nothing ->
+          echo "No Wallet Registered !"
+        Just Wallet {..} -> CardanoCLI.remove_shelley_wallet name
+
+  echo "-----------------------------------"
+
 receiveByFaucet :: IO ()
 receiveByFaucet = do 
   echo "-----------------------------------"
