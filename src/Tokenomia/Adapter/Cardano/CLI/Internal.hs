@@ -26,12 +26,7 @@ module Tokenomia.Adapter.Cardano.CLI.Internal
     , WalletAddress) where
 
 import Shh.Internal
-    ( Cmd,
-      ExecArg(asArg),
-      captureWords,
-      load,
-      (|>),
-      ExecReference(SearchPath), capture )
+import Data.String
 
 import System.Environment (getEnv)
 import qualified Data.ByteString.Lazy.Char8 as C
@@ -48,11 +43,11 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 import Control.Monad.IO.Class ( MonadIO(..) )
-
+import Data.List.NonEmpty hiding (head, (<|))
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls" ]
+load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls", "cardano-address" ]
 
 type TxOutRef = String
 type WalletAddress = String
@@ -84,24 +79,25 @@ register_shelley_wallet :: WalletName -> IO ()
 register_shelley_wallet walletName = do
     keyPath <- getFolderPath Keys
     let walletKeyPath = keyPath <> walletName <> "/"
+        mnemonics = walletKeyPath <> "mnemonics.txt"
         paymentSigning = walletKeyPath <> "payment-signing.skey"
         paymentVerification = walletKeyPath <> "payment-verification.vkey"
-        stakeSigning = walletKeyPath <> "stake-signing.skey"
         stakeVerification = walletKeyPath <> "stake-verification.vkey"
         paymentAddress = walletKeyPath <> "payment.addr"
 
     mkdir "-p" walletKeyPath
-    cardano_cli "address" "key-gen"
-        "--verification-key-file" paymentVerification
-        "--signing-key-file" paymentSigning
-    cardano_cli "stake-address" "key-gen" 
-        "--verification-key-file" stakeVerification 
-        "--signing-key-file" stakeSigning
-    cardano_cli "address" "build" 
-        "--payment-verification-key-file" paymentVerification 
-        "--stake-verification-key-file" stakeVerification 
-        "--out-file" paymentAddress
-        "--testnet-magic" (1097911063::Integer)
+    cardano_address "recovery-phrase" "generate" "--size" "24"                
+        &> (Truncate . fromString) mnemonics
+    (cat mnemonics |> cardano_address "key" "from-recovery-phrase" "Shelley")
+        &> (Truncate . fromString) paymentSigning
+    (cat paymentSigning |> cardano_address "key" "child" "1852H/1815H/0H/0/0") |> cardano_address "key" "public" "--with-chain-code"
+        &> (Truncate . fromString) paymentVerification
+    (cat paymentSigning |> cardano_address "key" "child" "1852H/1815H/0H/2/0") |> cardano_address "key" "public" "--with-chain-code"
+        &> (Truncate . fromString) stakeVerification
+    (cat paymentVerification |> cardano_address "address" "payment" "--network-tag" "testnet")
+        &> (Truncate . fromString) paymentAddress
+    return ()
+
 
 query_tip :: Cmd
 query_tip = cardano_cli "query" "tip" "--testnet-magic" (1097911063::Integer)
