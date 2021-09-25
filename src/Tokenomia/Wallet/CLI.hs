@@ -15,7 +15,6 @@ module Tokenomia.Wallet.CLI
   ( select
   , selectUTxO
   , createAndRegister
-  , receiveADAsByFaucet
   , list
   , remove) 
   where
@@ -41,7 +40,7 @@ import Data.List.NonEmpty
 import qualified Data.Text as T 
 import Control.Monad.Catch ( MonadMask )
 
-load SearchPath ["echo","ssh","cat","curl"]
+load SearchPath ["echo","ssh","cat"]
 
 select :: (MonadIO m , MonadMask m) => m (Maybe Wallet)
 select = do
@@ -98,19 +97,6 @@ createAndRegister = do
   echo "Wallet Created and Registered!"
   echo "-----------------------------------"
 
-receiveADAsByFaucet :: IO ()
-receiveADAsByFaucet = do 
-  echo "-----------------------------------"
-  echo "Select the Wallet for receiving Money :"
-    >>  select 
-    >>= \case 
-        Nothing -> 
-          echo "No Wallet Registered !"
-        Just Wallet {..} -> 
-          curl "-v" "-XPOST" 
-            ("https://faucet.alonzo-purple.dev.cardano.org/send-money/" <> paymentAddress <>"?apiKey=jv3NBtZeaL0lZUxgqq8slTttX3BzViI7")  
-  
-  echo "-----------------------------------"
 
 list :: IO ()
 list = do

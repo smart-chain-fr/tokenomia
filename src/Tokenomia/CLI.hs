@@ -42,7 +42,6 @@ main = do
         WalletList -> Wallet.list
         WalletAdd  -> Wallet.createAndRegister
         WalletRemove  -> Wallet.remove
-        WalletReceiveByFaucet -> Wallet.receiveADAsByFaucet
         TokenMint  -> 
           echo "Select the Minter Wallet :"
           >>  Wallet.select
@@ -72,7 +71,6 @@ actions = NonEmpty.fromList [
     WalletList,
     WalletAdd,
     WalletRemove,
-    WalletReceiveByFaucet,
     TokenMint,
     TokenBurn,
     Transfer
@@ -82,7 +80,6 @@ data Action
   = WalletList
   | WalletAdd
   | WalletRemove
-  | WalletReceiveByFaucet
   | TokenMint
   | TokenBurn
   | Transfer
@@ -94,7 +91,6 @@ instance ToStylizedText Action where
     WalletList   -> "[Wallet] - List Registered Ones" 
     WalletAdd    -> "[Wallet] - Add "
     WalletRemove -> "[Wallet] - Remove"
-    WalletReceiveByFaucet -> "[Wallet] - Ask ADAs from Faucet (Testnet Only)"
     TokenMint    -> "[Token]  - Mint (Fix Total Supply | one-time Minting and open Burning Policy )"
     TokenBurn    -> "[Token]  - Burn (TODO)"
     Transfer     -> "Transfer "
