@@ -15,7 +15,6 @@ import Shh
 import Data.Function ((&))
 import  qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Mint
 import  qualified Tokenomia.Transfer.CLI as Transfer
-import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 import Byline.Menu
     ( runBylineT,

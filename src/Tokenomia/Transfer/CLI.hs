@@ -11,7 +11,6 @@ module Tokenomia.Transfer.CLI
 
 import Shh
     ( load,
-      (|>),
       ExecReference(SearchPath) )
 
 import Tokenomia.Adapter.Cardano.CLI

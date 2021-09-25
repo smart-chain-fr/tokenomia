@@ -20,6 +20,7 @@ import Tokenomia.Adapter.Cardano.CLI.Serialise
 import Tokenomia.Adapter.Cardano.CLI.Value ()
 import Data.Foldable ( Foldable(fold) )
 
+
 data UTxO = UTxO 
               { txOutRef :: TxOutRef
               , value :: Value} deriving (Eq)
@@ -59,10 +60,10 @@ instance FromCLI [UTxO] where
                   , a L.!! 1
                   , (filterEmptyLines . L.drop 2) a ))
           .  map T.words 
-          .  (filterEmptyLines .  removeHeader . T.lines) 
+          .  (removeHeader . filterEmptyLines . T.lines) 
 
       removeHeader :: [Text] -> [Text]
-      removeHeader = L.drop 3
+      removeHeader = L.drop 2
 
       filterEmptyLines :: [Text] -> [Text]
       filterEmptyLines = L.filter (\a -> T.strip a /= mempty )
