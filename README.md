@@ -61,11 +61,15 @@ src/Tokenomia/Adapter/Cardano/CardanoCLI.hs:1:1: error:
 		exe:tokenomia-cli from tokenomia-0.1.0.0).
 ```
 
-It may occurs because of a wrong cardano-cli version ; there is indeed one version that is archived. In order to download the newest version, please follow those instructions : 
-* Download the <a href="https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli">Cardano project</a> by doing :
-	`git clone https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli`
-* Go in the cardano-cli folder : `cd cardano-node/cardano-cli`
-* Run : `cabal build && cabal install`
+If you have already installed cardano-cli be sure that you have reloaded your path.
+eg ```sh
+   source ~/.bashrc
+   ```
+or ```sh
+   export PATH="$HOME/.cabal/bin:$PATH"
+   ```
+
+The same goes for cardano-address.
 
 
 ## How to use it

@@ -37,6 +37,29 @@ Please run the `  . /home/$(whoami)/.nix-profile/etc/profile.d/nix.sh` line in o
 
 [More about Nix commands.](https://nix-tutorial.gitlabpages.inria.fr/nix-tutorial/getting-started.html)
 
+
+### cardano-cli
+* Download the <a href="https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli">Cardano project</a> by doing :
+	`git clone https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli`
+* Go in the cardano-cli folder : `cd cardano-node/cardano-cli`
+* Run : `cabal build && cabal install`
+
+
+### cardano-addresses
+* Download the <a href="https://github.com/input-output-hk/cardano-addresses/releases">latest</a> archive version of cardano-addresses binary
+* Extract the archive
+eg : ```sh
+     tar -xvzf cardano-addresses-3.6.0-linux64.tar.gz --one-top-level
+     ```
+* Copy the binary on cabal binaries folder alongside cardano-cli
+```sh
+cp cardano-addresses-3.6.0-linux64/bin/cardano-address ~/.cabal/bin
+```
+* Make the binary executable
+```sh
+chmod +x ~/.cabal/bin/cardano-address
+```
+
 ### Setup vscode plugins (optional)
 If you want to see the code of this project on VsCode, please make sure you have the following plugins installed :
 
