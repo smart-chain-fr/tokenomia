@@ -1,86 +1,100 @@
-![](./tokenomia-logo.png)
 
-## Table of content
-* [Setup](./README.md#setup)
-* [Build](./README.md#build)
-* [Run the project](./README.md#run-the-project)
-* [How to use it](./README.md#how-to-use-it)
+<img src="./tokenomia-logo.png" width="500"  />
 
-## Setup
 
-Please follow the instructions in the [SETUP.md](./SETUP.md) file.
+Tokenomia aims to simplify the use of Native Tokens and Smart Contracts above the Cardano Platform for the needs of [Smart Chain](https://smart-chain.fr/en/) Developments.
 
-## Build
-Go to the Tokenomia source folder and run :
-```sh
-nix-shell
-```
-It will read each instruction within the `shell.nix` file and execute it.
+This Project is still in an early stage and the first goal here is to simplify the production of tokens with some vesting logic (Our fisrt tokenomic over the Cardano Platform). This implies the following capabilities : 
+- Automating the creation of organisational wallets
+- Minting and Burning tokens over a specific monetary Policy
+- Applying Some Custom Vesting Logic   
 
-> :bulb: Slow building ?
+## Technical Approach 
 
-If you have a slow building, maybe your nix cache isn't setup properly. To do so:
-* On non-NixOS, edit `/etc/nix/nix.conf` and add the following lines :
-```bash
-substituters        = https://hydra.iohk.io https://iohk.cachix.org 	https://cache.nixos.org/
-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=</code>
-```
+we are providing `tokenomia-cli` as a first artefact :
+- it pilots `cardano-cli` thanks to the haskell `shh` library. 
+- Generate some "wallets" (so far we are only generating payment adressesses via `cardano-cli` but we'll use `cardano-adresses` evntually)
+- Progressively uses plutus codebase (Minting Policies,TxOutRef,Value...) over `cardano-cli`
 
-* On NixOS, set the following NixOS options:
-```bash
-nix = {
-	binaryCaches = [ "https://hydra.iohk.io" "https://iohk.cachix.org" ];
-      	binaryCachePublicKeys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=" ];
-}
-```
+For the visual people, here is a simple view of `tokenomia-cli` :
 
-## Run the project
+<img src="./schema.png" width="500"  />
 
-Then, to run the project :
+
+`tokenomia-cli` is saving information at `~/.tokenomia-cli/`, here is a simple example of the structure : 
 
 ```shell
-cabal run tokenomia:exe:tokenomia-cli
+.
+|-- keys
+|   |-- Athena
+|   |   |-- payment-signing.skey
+|   |   |-- payment-verification.vkey
+|   |   |-- payment.addr
+|   |   |-- stake-signing.skey
+|   |   `-- stake-verification.vkey
+|   `-- Zeus
+|       |-- payment-signing.skey
+|       |-- payment-verification.vkey
+|       |-- payment.addr
+|       |-- stake-signing.skey
+|       `-- stake-verification.vkey
+|-- parameters
+|   `-- parameters-testnet.json
+`-- transactions
+    |-- 0e10fd80e44172d0ec31dce1d537fe0c.raw
+    |-- 0e10fd80e44172d0ec31dce1d537fe0c.signed
+    |-- 10cef34466ccbe574e91abdce3b462662d5ca88b3836b286d6eaf577.plutus
+    |-- 43f4b575a39a885c0bbfd2e787d0d4ee343ab9dd410fee970fcd9969.plutus
+    |-- 666abb9219aa12f199b403e263ab8107.raw
+    |-- 666abb9219aa12f199b403e263ab8107.signed
+    |-- 6681340d7ea6804b8fb7fac624a21bfa.raw
+    |-- 6681340d7ea6804b8fb7fac624a21bfa.signed
+    |-- 7ab273056996bcc9479ace89941d02dae115b0d96ee5ce2da34b2774.plutus
+    |-- 94cb16873c5f858a0c3f61b2ffe1b57c5d303a8c8a995f034030c861.plutus
+    |-- a4fe55f29156a7f74812fc5f181bce7986322345da17e5b44ff38652.plutus
+    |-- b5cb3f28d92493a68d904ec8df0927e3.raw
+    |-- cfe139b73748cc0343a6711f517b024a.raw
+    `-- cfe139b73748cc0343a6711f517b024a.signed
+
 ```
-> :bulb: `tokenomia` is the name of the project, `exe` is here to mention that you want to run an executable, and `tokenomia-cli` is the name of this one.
-   You can find the name of the executable on the `tokenomia.cabal`.
+- `Zeus` and `Athena` are 2 "wallets" generated into the `/keys` folders.
+- The `transaction` folder is used for building transactions (minting policy scripts,raw and signed transations)
 
-> Fails ?
+## What you can do with it so far
 
-If you have the following traceback :
-```haskell
-src/Tokenomia/Adapter/Cardano/CardanoCLI.hs:1:1: error:
-	Exception when trying to run compile-time code:
-	Attempted to load 'cardano-cli', but it is not executable
-	CallStack (from HasCallStack):
-		error, called at src/Shh/Internal.hs:801:20 in shh-0.7.1.4-5zfKxJG0cmAE4nnSSaQsoW:Shh.Internal
-		Code: load SearchPath ["cat", "echo", "mkdir", "md5sum", ....]
-		  |
-		1 | {-# LANGUAGE LambdaCase #-}
-		  | ^
-		cabal: Failed to build tokenomia-0.1.0.0 (which is required by
-		exe:tokenomia-cli from tokenomia-0.1.0.0).
+|Wallet Management 
+---------- | 
+List registered wallets
+Add a wallet
+Remove a wallet 
+
+|Native Token
+---------- | 
+Mint a token
+Burn a token (coming soon)
+Transfer a token
+
+## "Roadmap" 
+- add `waitTxConfirmation` to submitted transaction 
+- add the creation of a collateral utxos into a wallet
+- add Vesting capabilities (only minting token is implemented so far)
+- use `cardano-adresses` to have "real" wallets and being able to restore them in deadalus
+- use directly `cardano api` instead of using `cardano-cli` 
+- options for testnet/mainnet 
+
+## Development Tasks (Only tested on Ubuntu)
+
+### Environment Setup
+
+- The same used in the  [plutus starter project](https://github.com/input-output-hk/plutus-starter).
+- You need to install `cardano-cli` 1.29.0  as well, see [cardano-node project](https://github.com/input-output-hk/cardano-node)  
+
+### Run tokenomia-cli
+
+```shell
+nhenin@ubuntu ~/d/tokenomia (main)> nix-shell 
+...
+[nix-shell:~/dev/tokenomia]$ cabal run tokenomia:exe:tokenomia-cli
 ```
 
-It may occurs because of a wrong cardano-cli version ; there is indeed one version that is archived. In order to download the newest version, please follow those instructions : 
-* Download the <a href="https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli">Cardano project</a> by doing :
-	`git clone https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli`
-* Go in the cardano-cli folder : `cd cardano-node/cardano-cli`
-* Run : `cabal build && cabal install`
 
-
-## How to use it
-
-Command | Description
----------- | ---------
-`WalletList` | List registered wallets
-`WalletAdd` | Add a wallet
-`WalletRemove` | Remove a wallet (TODO)
-`TokenMint` | Mint a token
-`TokenBurn` | Burn a token (TODO)
-`Transfer` | Transfer a token
-`ReceiveByFaucet` | Retrieve testnet ADAs
-
-## Contributors
-
-| [<img src="https://github.com/nhenin.png?size=85" width=85><br><sub>Nicolas Henin</sub>](https://github.com/nhenin) | [<img src="https://github.com/NaadiQmmr.png?size=85" width=85><br><sub>Adina Cazalens</sub>](https://github.com/NaadiQmmr) | [<img src="https://github.com/augucharles.png?size=85" width=85><br><sub>Charles Augu</sub>](https://github.com/augucharles) |
-| :---: | :---: | :---: |
