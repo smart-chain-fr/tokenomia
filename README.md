@@ -75,13 +75,26 @@ Burn a token (coming soon)
 Transfer a token
 
 ## "Roadmap" 
-- pass directly on `cardano api` instead of `cardano-cli` to avoid unecessary serialization/deserialisation...
-- add `waitTxConfirmation` to submitted transactions 
+
+- fee calculation when submitting transactions
 - add the creation of a collateral utxos into a wallet
+- redeeming tokens
 - add Vesting capabilities (only minting token is implemented so far)
 - use `cardano-adresses` to have "real" wallets and being able to restore them in deadalus
-- use directly `cardano api` instead of using `cardano-cli` 
 - options for testnet/mainnet 
+- add `waitTxConfirmation` to submitted transactions 
+
+## Debates
+
+- passing directly on `cardano api` vs `cardano-cli` over `shh` 
+    - directly on `cardano api`  
+        - Avoid unecessary serialization/deserialisation over `cardano-cli`
+        - can we do more than `cardano-cli` is doing ? 
+        - Less IO processing (maybe easier for testing)
+    - `cardano-cli` over `shh`
+        - Once the serialisation logic is done, using shh gives us some interesting velocity
+        - Code logic is simple despite the fragility of wrapping command line.      
+
 
 ## Development Tasks (Only tested on Ubuntu)
 
