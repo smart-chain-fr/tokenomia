@@ -1,6 +1,7 @@
 
 <img src="./tokenomia-logo.png" width="500"  />
 
+Link of the video for the Plutus Pioneer Capstone : https://youtu.be/afWjFIoCgA8
 
 Tokenomia aims to simplify the use of Native Tokens and Smart Contracts above the Cardano Platform for the needs of [Smart Chain](https://smart-chain.fr/en/) Developments.
 
