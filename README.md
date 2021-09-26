@@ -75,7 +75,8 @@ Burn a token (coming soon)
 Transfer a token
 
 ## "Roadmap" 
-- add `waitTxConfirmation` to submitted transaction 
+- pass directly on `cardano api` instead of `cardano-cli` to avoid unecessary serialization/deserialisation...
+- add `waitTxConfirmation` to submitted transactions 
 - add the creation of a collateral utxos into a wallet
 - add Vesting capabilities (only minting token is implemented so far)
 - use `cardano-adresses` to have "real" wallets and being able to restore them in deadalus
