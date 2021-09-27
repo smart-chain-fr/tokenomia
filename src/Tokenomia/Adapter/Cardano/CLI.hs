@@ -4,6 +4,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -24,15 +25,21 @@ module Tokenomia.Adapter.Cardano.CLI
     , getUTxOs
     , Internal.query_tip
     , Internal.Wallet (..)
-    , Internal.WalletAddress) where
+    , Internal.WalletAddress
+    , Internal.Environment (..)) where
 
+
+import           Control.Monad.Reader
 
 import qualified Tokenomia.Adapter.Cardano.CLI.Internal as Internal
-import Tokenomia.Adapter.Cardano.CLI.UTxO 
-import Tokenomia.Adapter.Cardano.CLI.Serialise ( FromCLI(fromCLI) )
-import Control.Monad.IO.Class ( MonadIO(..) )
+import           Tokenomia.Adapter.Cardano.CLI.UTxO 
+import           Tokenomia.Adapter.Cardano.CLI.Serialise ( FromCLI(fromCLI) )
 
 
-getUTxOs :: MonadIO m => Internal.WalletAddress -> m [UTxO]
-getUTxOs  a = fromCLI <$> liftIO (Internal.query_utxo a)
+getUTxOs 
+  :: ( MonadIO m 
+     , MonadReader Internal.Environment m )
+  => Internal.WalletAddress 
+  -> m [UTxO]
+getUTxOs  a = fromCLI <$> (Internal.query_utxo a)
 

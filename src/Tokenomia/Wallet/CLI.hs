@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
@@ -19,9 +20,16 @@ module Tokenomia.Wallet.CLI
   , remove) 
   where
 
-import Shh 
 import Data.Function ((&))
-import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
+import Control.Monad.Catch ( MonadMask )
+import Control.Monad.Reader
+import qualified Data.Text as T 
+import Data.Text ( Text,pack )
+import Data.Maybe ( fromJust )
+
+import Data.List.NonEmpty
+
+import Shh 
 import Byline.Menu
     ( runBylineT,
       text,
@@ -31,14 +39,11 @@ import Byline.Menu
       Stylized,
       ToStylizedText(..),
       Menu )
-import Data.Text ( Text,pack )
-import Data.Maybe ( fromJust )
 import Byline.Internal.Stylized ()
-import Control.Monad.IO.Class ( MonadIO(..) )
+
+
+import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
 import Tokenomia.Adapter.Cardano.CLI.UTxO
-import Data.List.NonEmpty
-import qualified Data.Text as T 
-import Control.Monad.Catch ( MonadMask )
 
 load SearchPath ["echo","ssh","cat"]
 
@@ -62,7 +67,12 @@ select = do
   onError :: Stylized Text
   onError = text "> invalid index provided ! "
 
-selectUTxO :: (MonadIO m , MonadMask m) =>  Wallet ->  m (Maybe UTxO) 
+selectUTxO 
+  ::( MonadIO m 
+    , MonadMask m
+    , MonadReader Environment m) 
+  =>  Wallet 
+  ->  m (Maybe UTxO) 
 selectUTxO Wallet {..}= 
     getUTxOs paymentAddress
       >>=  \case 
@@ -89,42 +99,46 @@ instance ToStylizedText UTxO where
 instance ToStylizedText Wallet where
   toStylizedText Wallet {..} = text . pack $ name
     
-createAndRegister :: IO ()
+createAndRegister 
+  ::( MonadIO m, MonadReader Environment m) 
+  => m ()
 createAndRegister = do
-  echo "-----------------------------------"
-  walletName <- echo "-n" "> Wallet Name : " >>  getLine
+  liftIO $ echo "-----------------------------------"
+  walletName <- liftIO $ echo "-n" "> Wallet Name : " >>  getLine
   CardanoCLI.register_shelley_wallet walletName
-  echo "Wallet Created and Registered!"
-  echo "-----------------------------------"
+  liftIO $ echo "Wallet Created and Registered!"
+  liftIO $ echo "-----------------------------------"
 
 
-list :: IO ()
+list 
+  ::( MonadIO m, MonadReader Environment m) 
+  => m ()  
 list = do
   CardanoCLI.query_registered_wallets
    >>= \case 
-         [] -> echo "No Wallet Registered!"
+         [] -> liftIO $ echo "No Wallet Registered!"
          wallets -> do 
-           echo "-----------------------------------" 
-           echo "Wallets Registered" 
-           echo "-----------------------------------" 
+           liftIO $ echo "-----------------------------------" 
+           liftIO $ echo "Wallets Registered" 
+           liftIO $ echo "-----------------------------------" 
            mapM_ (\Wallet{..} -> do  
-            echo ("> " <> name)
+            liftIO $ echo ("> " <> name)
               <> echo ("    Payment Address : " <> paymentAddress)
             utxos <- getUTxOs paymentAddress
             case utxos of 
-              [] -> echo "\t(No UTxOs Available)"  
-              a  -> mapM_ (\utxo -> echo ("\t- " <> show utxo)) a  
+              [] -> liftIO $ echo "\t(No UTxOs Available)"  
+              a  -> mapM_ (\utxo -> liftIO $ echo ("\t- " <> show utxo)) a  
             ) wallets
-           echo "-----------------------------------"
+           liftIO $ echo "-----------------------------------"
   
-remove :: IO ()
+remove :: (MonadIO m) => m ()
 remove = do
-  echo "-----------------------------------"
-  echo "Select the Wallet to remove :"
+  liftIO $ echo "-----------------------------------"
+  liftIO $ echo "Select the Wallet to remove :"
     >> select
     >>= \case
         Nothing ->
           echo "No Wallet Registered !"
         Just Wallet {..} -> CardanoCLI.remove_shelley_wallet name
 
-  echo "-----------------------------------"
+  liftIO $ echo "-----------------------------------"

@@ -4,22 +4,25 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Tokenomia.Token.CLAPStyle.Mint.CLI
-    ( mintI ) where
+    ( mint ) where
     
 import           Prelude
 import           Shh
+
+import           Control.Monad.Reader
 
 import qualified Data.Text as T
 
 import qualified Data.ByteString.UTF8 as BSU 
 
-import           Ledger
+
+import           Ledger hiding (mint)
 import qualified Ledger.Value as L
 
 import           Tokenomia.Token.CLAPStyle.MonetaryPolicy
@@ -27,27 +30,38 @@ import           Tokenomia.Adapter.Cardano.CLI
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-
+import qualified Tokenomia.Wallet.CLI as Wallet
+import Control.Monad.Catch ( MonadMask )
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["echo","ssh","cat","scp"]
+load SearchPath ["echo","ssh","cat"]
 
-mintI :: Wallet -> IO ()
-mintI wallet@Wallet {paymentAddress = minterAddr,..} = do
+mint :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
+mint = do
+    Wallet.select
+        >>= \case 
+            Nothing -> liftIO $ print "No Wallet Registered !"
+            Just wallet -> mint' wallet 
 
-    tokenNameToMint  <- echo "-n" "> Token Name : "             >>  L.tokenName . BSU.fromString <$> getLine
-    amountToMint     <- echo "-n" "> Total Supply to Mint : "   >>  read @Integer <$> getLine
+mint' 
+    :: (MonadMask m,MonadIO m, MonadReader Environment m)    
+    => Wallet
+    -> m ()
+mint' wallet@Wallet {paymentAddress = minterAddr,..} = do
 
-    echo "> Select the collateral utxo :" 
+    tokenNameToMint  <- liftIO $ echo "-n" "> Token Name : "             >>  L.tokenName . BSU.fromString <$> getLine
+    amountToMint     <- liftIO $ echo "-n" "> Total Supply to Mint : "   >>  read @Integer <$> getLine
+
+    liftIO $ echo "> Select the collateral utxo :" 
     selectUTxO wallet
         >>= \case 
-            Nothing -> echo "Please, add a collateral to your wallet"
+            Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
             Just utxoWithCollateral -> do 
-                echo "> Select the utxo used for Minting the Token :" 
+                liftIO $ echo "> Select the utxo used for Minting the Token :" 
                 selectUTxO wallet
                 >>= \case  
-                    Nothing -> echo "Please, add a collateral to your wallet"
+                    Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
                     Just utxoForMinting -> do 
                         let monetaryPolicy = mkMonetaryPolicyScript 
                                                 Params { txOutRefToConsume = txOutRef utxoForMinting
@@ -55,9 +69,9 @@ mintI wallet@Wallet {paymentAddress = minterAddr,..} = do
                                                        , tokenName = tokenNameToMint }
                             policyhash = scriptCurrencySymbol monetaryPolicy
 
-                        echo "-------------------------"
-                        echo $ "Policy hash will be : " <> show policyhash
-                        echo "-------------------------"
+                        liftIO $ echo "-------------------------"
+                        liftIO $ echo $ "Policy hash will be : " <> show policyhash
+                        liftIO $ echo "-------------------------"
 
                         monetaryScriptFilePath <- register_minting_script_file monetaryPolicy
                         run_tx paymentSigningKeyPath
@@ -69,6 +83,6 @@ mintI wallet@Wallet {paymentAddress = minterAddr,..} = do
                                 , "--mint-script-file" , monetaryScriptFilePath
                                 , "--mint-redeemer-value",  "[]"]
                                 
-                        echo "------------------------------------------------------"
-                        echo "Done"
-                        echo "------------------------------------------------------"
+                        liftIO $ echo "------------------------------------------------------"
+                        liftIO $ echo "Done"
+                        liftIO $ echo "------------------------------------------------------"

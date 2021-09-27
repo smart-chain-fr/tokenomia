@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
@@ -13,9 +14,10 @@ module Tokenomia.CLI (main) where
 
 import Shh 
 import Data.Function ((&))
-import  qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Mint
+import  qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Token
 import  qualified Tokenomia.Transfer.CLI as Transfer
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
+import Tokenomia.Adapter.Cardano.CLI
 import Byline.Menu
     ( runBylineT,
       text,
@@ -27,34 +29,44 @@ import Byline.Menu
       Menu )
 import Data.Text ( Text )
 import Data.Maybe ( fromJust )
+import Control.Monad.Reader 
 import Byline.Internal.Stylized ()
 import qualified Tokenomia.Wallet.CLI as Wallet
+import Control.Monad.Catch ( MonadMask )
 
-load SearchPath ["echo","ssh","cat","curl"]
+load SearchPath ["echo","cardano-cli"]
 
-main :: IO ()
-main = do
-    echo "----------------------"
-    echo "Select An action"
-    echo "----------------------"
-    showActionMenu >>=
-     \case
-        WalletList -> Wallet.list
-        WalletAdd  -> Wallet.createAndRegister
-        WalletRemove  -> Wallet.remove
-        TokenMint  -> 
-          echo "Select the Minter Wallet :"
-          >>  Wallet.select
-          >>= \case 
-              Nothing -> echo "No Wallet Registered !"
-              Just wallet -> Mint.mintI wallet 
-        TokenBurn  ->  echo "TODO"
-        Transfer   -> Transfer.run 
- 
-    main
+main ::  IO ()
+main = do 
+    echo "#############################"
+    echo "#   Welcome to Tokenomia    #"
+    echo "#############################"
+    echo ""
+    echo "FYI >> you'll operate over the Testnet Network"
+    echo ""
+    runReaderT recursiveMenu (Testnet {magicNumber = 1097911063}) 
+
+    echo "#############################"
+    echo "#   End of Tokenomia        #"
+    echo "#############################"
+
+recursiveMenu :: (MonadMask m,MonadIO m,MonadReader Environment m) =>  m()
+recursiveMenu = do
+  liftIO $ echo "----------------------"
+  liftIO $ echo "  Select an action"
+  liftIO $ echo "----------------------"
+  r <- showActionMenu     
+  case r of
+      WalletList -> Wallet.list
+      WalletAdd  -> Wallet.createAndRegister
+      WalletRemove  -> Wallet.remove
+      TokenMint  -> Token.mint
+      TokenBurn  ->  liftIO $ echo "TODO"
+      Transfer   -> Transfer.run 
+  recursiveMenu
 
 
-showActionMenu :: IO Action
+showActionMenu :: (MonadMask m,MonadIO m) =>  m Action
 showActionMenu = fmap fromJust (runBylineT $ askWithMenuRepeatedly menuConfig prompt onError)
 
 menuConfig :: Menu Action

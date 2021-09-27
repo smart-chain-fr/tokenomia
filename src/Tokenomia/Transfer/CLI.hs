@@ -3,56 +3,61 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
+
 module Tokenomia.Transfer.CLI 
     ( run) where
+
+import Control.Monad.Reader
 
 import Shh
     ( load,
       ExecReference(SearchPath) )
 
 import Tokenomia.Adapter.Cardano.CLI
- 
+import Control.Monad.Catch ( MonadMask ) 
       
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 load SearchPath ["echo","ssh","cat","pwd","awk","grep","mkdir"]
 
-run :: IO ()
+run :: (MonadMask m, MonadIO m, MonadReader Environment m)  => m ()
 run = do
-    echo "------------------------------------------------------"
-    echo "Transferring Native Tokens from a Wallet to another "
-    echo "------------------------------------------------------"
-    echo "Node tip" 
-    echo "---------"
+    liftIO $ echo "------------------------------------------------------"
+    liftIO $ echo "Transferring Native Tokens from a Wallet to another "
+    liftIO $ echo "------------------------------------------------------"
+    liftIO $ echo "Node tip" 
+    liftIO $ echo "---------"
     
-    query_tip
+    output <- query_tip
+    liftIO $ print output
 
-    echo "---------"
-    echo "Collecting inputs for transferring Native Tokens" 
-    echo "---------"
+    liftIO $ echo "---------"
+    liftIO $ echo "Collecting inputs for transferring Native Tokens" 
+    liftIO $ echo "---------"
 
  
-    senderAddr      <- echo "-n" "> Sender address : "    >>  getLine
-    receiverAddr    <- echo "-n" "> Receiver address : "  >>  getLine
+    senderAddr      <- liftIO $ echo "-n" "> Sender address : "    >>  getLine
+    receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
 
-    echo "Sender Wallet Content :" 
+    liftIO $ echo "Sender Wallet Content :" 
     __ <- print <$> getUTxOs senderAddr
     
-    tokenPolicyHash <- echo "-n" "> Token policy hash : " >>  getLine
-    tokenName       <- echo "-n" "> Token Name : "        >>  getLine
-    amount          <- echo "-n" "> Amount of Token : "   >>  read @Int <$> getLine
+    tokenPolicyHash <- liftIO $ echo "-n" "> Token policy hash : " >>  getLine
+    tokenName       <- liftIO $ echo "-n" "> Token Name : "        >>  getLine
+    amount          <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Int <$> getLine
     
 
-    utxoWithToken                  <- echo "-n" "> UTxO(TxHash#TxIx) to send (containinng your tokens) :" >> getLine
-    totalTokenAmountFromUtxoToken  <- echo "-n" "> Total amount in its UTxO :"                            >> read @Int <$> getLine
-    utxoWithFees                   <- echo "-n" "> UTxO(TxHash#TxIx) to pay fees :"                       >> getLine 
-    utxiWithCollateral             <- echo "-n" "> UTxO(TxHash#TxIx) for collateral :"                    >> getLine  
+    utxoWithToken                  <- liftIO $ echo "-n" "> UTxO(TxHash#TxIx) to send (containinng your tokens) :" >> getLine
+    totalTokenAmountFromUtxoToken  <- liftIO $ echo "-n" "> Total amount in its UTxO :"                            >> read @Int <$> getLine
+    utxoWithFees                   <- liftIO $ echo "-n" "> UTxO(TxHash#TxIx) to pay fees :"                       >> getLine 
+    utxiWithCollateral             <- liftIO $ echo "-n" "> UTxO(TxHash#TxIx) for collateral :"                    >> getLine  
     
 
-    privateKeyPath <- echo "-n" "> Sender Private key path : "  >> getLine 
+    privateKeyPath <- liftIO $ echo "-n" "> Sender Private key path : "  >> getLine 
    
     run_tx privateKeyPath 
             [ "--tx-in"  , utxoWithToken 
@@ -62,6 +67,6 @@ run = do
             , "--tx-in-collateral", utxiWithCollateral 
             , "--change-address"  , senderAddr]
 
-    echo "------------------------------------------------------"
-    echo "Done"
-    echo "------------------------------------------------------"
+    liftIO $ echo "------------------------------------------------------"
+    liftIO $ echo "Done"
+    liftIO $ echo "------------------------------------------------------"
