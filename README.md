@@ -10,6 +10,32 @@ This Project is still in an early stage and the first goal here is to simplify t
 - Minting and Burning tokens over a specific monetary Policy
 - Applying Some Custom Vesting Logic   
 
+## What you can do with it so far
+
+|Wallet Management 
+---------- | 
+List registered wallets
+Add a wallet
+Remove a wallet 
+
+|Native Token
+---------- | 
+Mint a token
+Burn a token (coming soon)
+Transfer a token
+
+see [demonstration video](https://youtu.be/afWjFIoCgA8)
+
+## Roadmap 
+
+- fee calculation when submitting transactions
+- add the creation of a collateral utxos into a wallet
+- redeeming tokens
+- add Vesting capabilities (only minting token is implemented so far)
+- use `cardano-adresses` to have "real" wallets and being able to restore them in deadalus
+- options for testnet/mainnet 
+- add `waitTxConfirmation` to submitted transactions 
+
 ## Technical Approach 
 
 we are providing `tokenomia-cli` as a first artefact :
@@ -60,30 +86,6 @@ For the visual people, here is a simple view of `tokenomia-cli` :
 ```
 - `Zeus` and `Athena` are 2 "wallets" generated into the `/keys` folders.
 - The `transaction` folder is used for building transactions (minting policy scripts,raw and signed transations)
-
-## What you can do with it so far
-
-|Wallet Management 
----------- | 
-List registered wallets
-Add a wallet
-Remove a wallet 
-
-|Native Token
----------- | 
-Mint a token
-Burn a token (coming soon)
-Transfer a token
-
-## "Roadmap" 
-
-- fee calculation when submitting transactions
-- add the creation of a collateral utxos into a wallet
-- redeeming tokens
-- add Vesting capabilities (only minting token is implemented so far)
-- use `cardano-adresses` to have "real" wallets and being able to restore them in deadalus
-- options for testnet/mainnet 
-- add `waitTxConfirmation` to submitted transactions 
 
 ## Debates
 
