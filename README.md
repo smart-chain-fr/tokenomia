@@ -24,10 +24,9 @@ Mint a token
 Burn a token (coming soon)
 Transfer a token
 
-see [demonstration video](https://youtu.be/afWjFIoCgA8)
-
 ## Roadmap 
-- move on freer-simple 
+- move on freer-simple
+- use deeper `cardano api` and less `cardano-cli` progressively 
 - fee calculation when submitting transactions
 - add the creation of a collateral utxos into a wallet
 - redeeming tokens
