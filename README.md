@@ -27,7 +27,7 @@ Transfer a token
 see [demonstration video](https://youtu.be/afWjFIoCgA8)
 
 ## Roadmap 
-
+- move on freer-simple 
 - fee calculation when submitting transactions
 - add the creation of a collateral utxos into a wallet
 - redeeming tokens
@@ -86,18 +86,6 @@ For the visual people, here is a simple view of `tokenomia-cli` :
 ```
 - `Zeus` and `Athena` are 2 "wallets" generated into the `/keys` folders.
 - The `transaction` folder is used for building transactions (minting policy scripts,raw and signed transations)
-
-## Debates
-
-- passing directly on `cardano api` vs `cardano-cli` over `shh` 
-    - directly on `cardano api`  
-        - Avoid unecessary serialization/deserialisation over `cardano-cli`
-        - can we do more than `cardano-cli` is doing ? 
-        - Less IO processing (maybe easier for testing)
-    - `cardano-cli` over `shh`
-        - Once the serialisation logic is done, using shh gives us some interesting velocity
-        - Code logic is simple despite the fragility of wrapping command line.      
-
 
 ## Development Tasks (Only tested on Ubuntu)
 
