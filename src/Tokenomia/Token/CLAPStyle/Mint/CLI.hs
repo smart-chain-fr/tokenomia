@@ -16,6 +16,7 @@ import           Prelude
 import           Shh
 
 import           Control.Monad.Reader
+import           Control.Monad.Catch ( MonadMask )
 
 import qualified Data.Text as T
 
@@ -31,7 +32,6 @@ import           Tokenomia.Wallet.CLI
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
 import qualified Tokenomia.Wallet.CLI as Wallet
-import Control.Monad.Catch ( MonadMask )
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -61,7 +61,7 @@ mint' wallet@Wallet {paymentAddress = minterAddr,..} = do
                 liftIO $ echo "> Select the utxo used for Minting the Token :" 
                 selectUTxO wallet
                 >>= \case  
-                    Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
+                    Nothing -> liftIO $ echo "Please, add a tokens to your wallet"
                     Just utxoForMinting -> do 
                         let monetaryPolicy = mkMonetaryPolicyScript 
                                                 Params { txOutRefToConsume = txOutRef utxoForMinting

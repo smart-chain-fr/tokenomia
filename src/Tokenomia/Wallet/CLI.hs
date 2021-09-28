@@ -15,6 +15,7 @@
 module Tokenomia.Wallet.CLI 
   ( select
   , selectUTxO
+  , selectUTxOFilterBy
   , createAndRegister
   , list
   , remove) 
@@ -27,7 +28,7 @@ import qualified Data.Text as T
 import Data.Text ( Text,pack )
 import Data.Maybe ( fromJust )
 
-import Data.List.NonEmpty
+import Data.List.NonEmpty hiding (filter)
 
 import Shh 
 import Byline.Menu
@@ -67,31 +68,41 @@ select = do
   onError :: Stylized Text
   onError = text "> invalid index provided ! "
 
+
 selectUTxO 
   ::( MonadIO m 
     , MonadMask m
     , MonadReader Environment m) 
   =>  Wallet 
   ->  m (Maybe UTxO) 
-selectUTxO Wallet {..}= 
-    getUTxOs paymentAddress
+selectUTxO = selectUTxOFilterBy (const True)
+      
+selectUTxOFilterBy 
+  ::( MonadIO m 
+    , MonadMask m
+    , MonadReader Environment m) 
+  => (UTxO -> Bool)  
+  -> Wallet
+  ->  m (Maybe UTxO) 
+selectUTxOFilterBy predicate  Wallet {..}  = 
+    filter predicate <$> (getUTxOs paymentAddress)
       >>=  \case 
             Nothing -> return Nothing 
             Just a -> Just <$> showMenu a
           . nonEmpty
-      
-  where           
-  showMenu :: (MonadIO m , MonadMask m) =>  NonEmpty UTxO -> m UTxO
-  showMenu a =  fmap fromJust (runBylineT $ askWithMenuRepeatedly (menuConfig a) prompt onError)
 
-  menuConfig :: NonEmpty UTxO -> Menu UTxO
-  menuConfig a = menu a & menuSuffix "- "
+  where            
+    showMenu :: (MonadIO m , MonadMask m) =>  NonEmpty UTxO -> m UTxO
+    showMenu a =  fmap fromJust (runBylineT $ askWithMenuRepeatedly (menuConfig a) prompt onError)
 
-  prompt :: Stylized Text
-  prompt = text "> please choose an utxo (provide the index) : "
+    menuConfig :: NonEmpty UTxO -> Menu UTxO
+    menuConfig a = menu a & menuSuffix "- "
 
-  onError :: Stylized Text
-  onError = text "> invalid index provided ! "
+    prompt :: Stylized Text
+    prompt = text "> please choose an utxo (provide the index) : "
+
+    onError :: Stylized Text
+    onError = text "> invalid index provided ! "
 
 instance ToStylizedText UTxO where
   toStylizedText = text . T.pack . show 

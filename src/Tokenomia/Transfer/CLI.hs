@@ -4,12 +4,14 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 
 module Tokenomia.Transfer.CLI 
-    ( run) where
+    ( transfer) where
 
 import Control.Monad.Reader
 
@@ -19,54 +21,68 @@ import Shh
 
 import Tokenomia.Adapter.Cardano.CLI
 import Control.Monad.Catch ( MonadMask ) 
-      
+import qualified Tokenomia.Wallet.CLI as Wallet
+import qualified Data.Text as T
+import           Tokenomia.Adapter.Cardano.CLI.Serialise
+import           Tokenomia.Adapter.Cardano.CLI.UTxO 
+import Plutus.V1.Ledger.Api (CurrencySymbol,TokenName)
+import Ledger.Value
+import Plutus.V1.Ledger.Ada
+
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 load SearchPath ["echo","ssh","cat","pwd","awk","grep","mkdir"]
 
-run :: (MonadMask m, MonadIO m, MonadReader Environment m)  => m ()
-run = do
-    liftIO $ echo "------------------------------------------------------"
-    liftIO $ echo "Transferring Native Tokens from a Wallet to another "
-    liftIO $ echo "------------------------------------------------------"
-    liftIO $ echo "Node tip" 
-    liftIO $ echo "---------"
-    
-    output <- query_tip
-    liftIO $ print output
+transfer :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
+transfer = do
+    liftIO $ echo "Select the sender's wallet" 
+    Wallet.select
+        >>= \case 
+            Nothing -> liftIO $ print "No Wallet Registered !"
+            Just wallet -> transfer' wallet 
 
-    liftIO $ echo "---------"
-    liftIO $ echo "Collecting inputs for transferring Native Tokens" 
-    liftIO $ echo "---------"
 
+transfer' 
+    :: (MonadMask m, MonadIO m, MonadReader Environment m)  
+    => Wallet
+    -> m ()
+transfer' senderWallet@Wallet {paymentAddress = senderAddr,..} = do 
  
-    senderAddr      <- liftIO $ echo "-n" "> Sender address : "    >>  getLine
     receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
-
-    liftIO $ echo "Sender Wallet Content :" 
-    __ <- print <$> getUTxOs senderAddr
     
-    tokenPolicyHash <- liftIO $ echo "-n" "> Token policy hash : " >>  getLine
-    tokenName       <- liftIO $ echo "-n" "> Token Name : "        >>  getLine
-    amount          <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Int <$> getLine
-    
+    liftIO $ echo "> Select the collateral utxo :" 
+    Wallet.selectUTxO senderWallet
+        >>= \case 
+            Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
+            Just utxoWithCollateral -> do 
+                liftIO $ echo "> Select the utxo containing ADAs for fees  :" 
+                Wallet.selectUTxO senderWallet
+                >>= \case 
+                    Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
+                    Just utxoWithFees -> do 
+                        liftIO $ echo "> Select the utxo containing the token to transfer  :" 
+                        Wallet.selectUTxOFilterBy utxoWithContainingOneToken senderWallet 
+                            >>= \case  
+                                Nothing -> liftIO $ echo "Tokens not found in your wallet."
+                                Just utxoWithToken  -> do
+                                    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
+                                    amount          <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
+                                    run_tx paymentSigningKeyPath 
+                                            [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
+                                            , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
+                                            , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                                            , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                                            , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
+                                            , "--change-address"  , senderAddr]
 
-    utxoWithToken                  <- liftIO $ echo "-n" "> UTxO(TxHash#TxIx) to send (containinng your tokens) :" >> getLine
-    totalTokenAmountFromUtxoToken  <- liftIO $ echo "-n" "> Total amount in its UTxO :"                            >> read @Int <$> getLine
-    utxoWithFees                   <- liftIO $ echo "-n" "> UTxO(TxHash#TxIx) to pay fees :"                       >> getLine 
-    utxiWithCollateral             <- liftIO $ echo "-n" "> UTxO(TxHash#TxIx) for collateral :"                    >> getLine  
-    
+                                    liftIO $ echo "------------------------------------------------------"
+                                    liftIO $ echo "Done"
+                                    liftIO $ echo "------------------------------------------------------"
 
-    privateKeyPath <- liftIO $ echo "-n" "> Sender Private key path : "  >> getLine 
-   
-    run_tx privateKeyPath 
-            [ "--tx-in"  , utxoWithToken 
-            , "--tx-in"  , utxoWithFees 
-            , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> tokenPolicyHash <> "." <> tokenName 
-            , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalTokenAmountFromUtxoToken - amount) <> " " <> tokenPolicyHash <> "." <> tokenName 
-            , "--tx-in-collateral", utxiWithCollateral 
-            , "--change-address"  , senderAddr]
 
-    liftIO $ echo "------------------------------------------------------"
-    liftIO $ echo "Done"
-    liftIO $ echo "------------------------------------------------------"
+getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
+getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value -- should contains only one native token (filtering ADAs) 
+
+utxoWithContainingOneToken :: UTxO -> Bool
+utxoWithContainingOneToken UTxO {..} 
+    = 1 == (length . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value

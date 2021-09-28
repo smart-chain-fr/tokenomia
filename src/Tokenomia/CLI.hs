@@ -15,7 +15,7 @@ module Tokenomia.CLI (main) where
 import Shh 
 import Data.Function ((&))
 import  qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Token
-import  qualified Tokenomia.Transfer.CLI as Transfer
+import  qualified Tokenomia.Transfer.CLI as Token
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 import Tokenomia.Adapter.Cardano.CLI
 import Byline.Menu
@@ -42,7 +42,7 @@ main = do
     echo "#   Welcome to Tokenomia    #"
     echo "#############################"
     echo ""
-    echo "FYI >> you'll operate over the Testnet Network"
+    echo "FYI >> you'll operate over the Testnet Network (magic number = 1097911063)"
     echo ""
     runReaderT recursiveMenu (Testnet {magicNumber = 1097911063}) 
 
@@ -62,7 +62,7 @@ recursiveMenu = do
       WalletRemove  -> Wallet.remove
       TokenMint  -> Token.mint
       TokenBurn  ->  liftIO $ echo "TODO"
-      Transfer   -> Transfer.run 
+      TokenTransfer   -> Token.transfer 
   recursiveMenu
 
 
@@ -85,7 +85,7 @@ actions = NonEmpty.fromList [
     WalletRemove,
     TokenMint,
     TokenBurn,
-    Transfer
+    TokenTransfer
     ]
 
 data Action
@@ -94,15 +94,15 @@ data Action
   | WalletRemove
   | TokenMint
   | TokenBurn
-  | Transfer
+  | TokenTransfer
   deriving (Show)
 
 
 instance ToStylizedText Action where
   toStylizedText item = case item of
-    WalletList   -> "[Wallet] - List Registered Ones" 
-    WalletAdd    -> "[Wallet] - Add "
-    WalletRemove -> "[Wallet] - Remove"
-    TokenMint    -> "[Token]  - Mint (Fix Total Supply | one-time Minting and open Burning Policy )"
-    TokenBurn    -> "[Token]  - Burn (TODO)"
-    Transfer     -> "Transfer "
+    WalletList    -> "[Wallet] - List Registered Ones" 
+    WalletAdd     -> "[Wallet] - Add "
+    WalletRemove  -> "[Wallet] - Remove"
+    TokenMint     -> "[Token]  - Mint (Fix Total Supply | one-time Minting and open Burning Policy )"
+    TokenBurn     -> "[Token]  - Burn (TODO)"
+    TokenTransfer -> "[Token]  - Transfer "
