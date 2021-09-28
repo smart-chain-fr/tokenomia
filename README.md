@@ -20,7 +20,7 @@ Remove a wallet
 
 |Native Token
 ---------- | 
-Mint and Burn with the following policy (Fix Total Supply, one-time Minting and open Burning Policy) 
+Mint and Burn (Fix Total Supply, one-time Minting and open Burning Policy) 
 Transfer tokens
 
 ## Roadmap 
