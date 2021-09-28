@@ -12,12 +12,18 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 module Tokenomia.CLI (main) where
 
-import Shh 
 import Data.Function ((&))
-import  qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Token
-import  qualified Tokenomia.Transfer.CLI as Token
+import Data.Text ( Text )
+import Data.Maybe ( fromJust )
+
+import Control.Monad.Reader 
+import Control.Monad.Catch ( MonadMask )
+
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
-import Tokenomia.Adapter.Cardano.CLI
+
+import Shh 
+
+import Byline.Internal.Stylized ()
 import Byline.Menu
     ( runBylineT,
       text,
@@ -27,17 +33,18 @@ import Byline.Menu
       Stylized,
       ToStylizedText(..),
       Menu )
-import Data.Text ( Text )
-import Data.Maybe ( fromJust )
-import Control.Monad.Reader 
-import Byline.Internal.Stylized ()
+
+import           Tokenomia.Adapter.Cardano.CLI
 import qualified Tokenomia.Wallet.CLI as Wallet
-import Control.Monad.Catch ( MonadMask )
+import qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Token
+import qualified Tokenomia.Token.CLAPStyle.Burn.CLI as Token
+import qualified Tokenomia.Transfer.CLI as Token
 
 load SearchPath ["echo","cardano-cli"]
 
 main ::  IO ()
 main = do 
+    echo ""
     echo "#############################"
     echo "#   Welcome to Tokenomia    #"
     echo "#############################"
@@ -57,12 +64,12 @@ recursiveMenu = do
   liftIO $ echo "----------------------"
   r <- showActionMenu     
   case r of
-      WalletList -> Wallet.list
-      WalletAdd  -> Wallet.createAndRegister
+      WalletList    -> Wallet.list
+      WalletAdd     -> Wallet.createAndRegister
       WalletRemove  -> Wallet.remove
-      TokenMint  -> Token.mint
-      TokenBurn  ->  liftIO $ echo "TODO"
-      TokenTransfer   -> Token.transfer 
+      TokenMint     -> Token.mint
+      TokenBurn     -> Token.burn
+      TokenTransfer -> Token.transfer 
   recursiveMenu
 
 
@@ -103,6 +110,6 @@ instance ToStylizedText Action where
     WalletList    -> "[Wallet] - List Registered Ones" 
     WalletAdd     -> "[Wallet] - Add "
     WalletRemove  -> "[Wallet] - Remove"
-    TokenMint     -> "[Token]  - Mint (Fix Total Supply | one-time Minting and open Burning Policy )"
-    TokenBurn     -> "[Token]  - Burn (TODO)"
+    TokenMint     -> "[Token]  - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy )"
+    TokenBurn     -> "[Token]  - Burn Tokens with CLAP type policy"
     TokenTransfer -> "[Token]  - Transfer "

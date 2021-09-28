@@ -41,8 +41,8 @@ library
     exposed-modules:
       Tokenomia.CLI
       Tokenomia.Adapter.Cardano.CLI
-      Tokenomia.Token.Burn.CLI
       Tokenomia.Token.CLAPStyle.Mint.CLI
+      Tokenomia.Token.CLAPStyle.Burn.CLI
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
       Tokenomia.Wallet.CLI
       Tokenomia.Transfer.CLI
@@ -62,6 +62,7 @@ library
       shh,
       byline,
       split,
+      directory,
       exceptions,
       utf8-string,
       freer-simple,

@@ -21,7 +21,7 @@ Remove a wallet
 |Native Token
 ---------- | 
 Mint a token
-Burn a token (coming soon)
+Burn a token 
 Transfer a token
 
 ## Roadmap 

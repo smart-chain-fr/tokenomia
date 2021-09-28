@@ -19,6 +19,7 @@ module Tokenomia.Adapter.Cardano.CLI.Internal
     ( -- Write 
       run_tx
     , register_minting_script_file
+    , get_monetary_policy_path
     , register_shelley_wallet
     , remove_shelley_wallet
       -- Read 
@@ -50,11 +51,11 @@ import           System.Environment (getEnv)
 import           Ledger.Contexts ( scriptCurrencySymbol )
 import           Codec.Serialise ( serialise )
 
-import           Ledger ( unMintingPolicyScript, MintingPolicy )
+import           Ledger ( unMintingPolicyScript, MintingPolicy, CurrencySymbol )
 
 import           Cardano.Api ( writeFileTextEnvelope, Error(displayError) )
 import qualified Cardano.Api.Shelley  as Script
-
+import           System.Directory
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
@@ -216,6 +217,20 @@ register_protocol_parameters = do
         "--testnet-magic" magicNumber
         "--out-file" filePath
     return filePath
+
+
+get_monetary_policy_path 
+    :: ( MonadIO m )
+    => CurrencySymbol  
+    -> m (Maybe FilePath)
+get_monetary_policy_path  currencySymbol = do
+    txFolder <- getFolderPath Transactions
+    let monetaryFilePath = txFolder <> show currencySymbol <> ".plutus"
+    liftIO (doesFileExist monetaryFilePath)
+        >>= \case 
+             True ->  (return . Just) monetaryFilePath 
+             False -> return Nothing
+    
 
 register_minting_script_file 
     :: ( MonadIO m )

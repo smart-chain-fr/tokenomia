@@ -18,6 +18,7 @@ module Tokenomia.Adapter.Cardano.CLI
     ( -- Write 
       Internal.run_tx
     , Internal.register_minting_script_file
+    , Internal.get_monetary_policy_path
     , Internal.register_shelley_wallet
     , Internal.remove_shelley_wallet
       -- Read 

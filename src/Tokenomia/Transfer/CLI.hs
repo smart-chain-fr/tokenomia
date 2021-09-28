@@ -39,45 +39,34 @@ transfer = do
     Wallet.select
         >>= \case 
             Nothing -> liftIO $ print "No Wallet Registered !"
-            Just wallet -> transfer' wallet 
-
-
-transfer' 
-    :: (MonadMask m, MonadIO m, MonadReader Environment m)  
-    => Wallet
-    -> m ()
-transfer' senderWallet@Wallet {paymentAddress = senderAddr,..} = do 
- 
-    receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
-    
-    liftIO $ echo "> Select the collateral utxo :" 
-    Wallet.selectUTxO senderWallet
-        >>= \case 
-            Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
-            Just utxoWithCollateral -> do 
-                liftIO $ echo "> Select the utxo containing ADAs for fees  :" 
+            Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do 
+                receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
+                
+                liftIO $ echo "> Select the collateral utxo :" 
                 Wallet.selectUTxO senderWallet
-                >>= \case 
-                    Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
-                    Just utxoWithFees -> do 
-                        liftIO $ echo "> Select the utxo containing the token to transfer  :" 
-                        Wallet.selectUTxOFilterBy utxoWithContainingOneToken senderWallet 
-                            >>= \case  
-                                Nothing -> liftIO $ echo "Tokens not found in your wallet."
-                                Just utxoWithToken  -> do
-                                    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
-                                    amount          <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
-                                    run_tx paymentSigningKeyPath 
-                                            [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
-                                            , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
-                                            , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                                            , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                                            , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
-                                            , "--change-address"  , senderAddr]
+                    >>= \case 
+                        Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
+                        Just utxoWithCollateral -> do 
+                            liftIO $ echo "> Select the utxo containing ADAs for fees  :" 
+                            Wallet.selectUTxO senderWallet
+                            >>= \case 
+                                Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
+                                Just utxoWithFees -> do 
+                                    liftIO $ echo "> Select the utxo containing the token to transfer  :" 
+                                    Wallet.selectUTxOFilterBy utxoWithContainingOneToken senderWallet 
+                                        >>= \case  
+                                            Nothing -> liftIO $ echo "Tokens not found in your wallet."
+                                            Just utxoWithToken  -> do
+                                                let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
+                                                amount          <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
+                                                run_tx paymentSigningKeyPath 
+                                                        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
+                                                        , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
+                                                        , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                                                        , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                                                        , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
+                                                        , "--change-address"  , senderAddr]
 
-                                    liftIO $ echo "------------------------------------------------------"
-                                    liftIO $ echo "Done"
-                                    liftIO $ echo "------------------------------------------------------"
 
 
 getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
