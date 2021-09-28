@@ -20,9 +20,8 @@ Remove a wallet
 
 |Native Token
 ---------- | 
-Mint a token
-Burn a token 
-Transfer a token
+Mint and Burn with the following policy (Fix Total Supply, one-time Minting and open Burning Policy) 
+Transfer tokens
 
 ## Roadmap 
 - move on freer-simple
