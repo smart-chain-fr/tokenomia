@@ -24,7 +24,7 @@ Mint and Burn (Fix Total Supply, one-time Minting and open Burning Policy)
 Transfer tokens
 
 ## Roadmap 
-- move on freer-simple
+- move on freer-simple (the idea was to get a sense of what is required to implement the functionalities to the detriment of quality as a first step... )
 - use deeper `cardano api` and less `cardano-cli` progressively 
 - fee calculation when submitting transactions
 - add the creation of a collateral utxos into a wallet
