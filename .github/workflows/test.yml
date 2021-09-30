@@ -13,10 +13,10 @@ jobs:
       - uses: cachix/install-nix-action@v13
         with:
           nix_path: nixpkgs=channel:nixos-unstable
+      - run: cabal install base-4.13.0.0
       - uses: workflow/nix-shell-action@v1
         with:
           script: |
-            cabal install base-4.13.0.0
             cabal build
       - name: test
         run: |
