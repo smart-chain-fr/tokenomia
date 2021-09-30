@@ -41,11 +41,11 @@ library
     exposed-modules:
       Tokenomia.CLI
       Tokenomia.Adapter.Cardano.CLI
-      Tokenomia.Token.CLAPStyle.Mint.CLI
-      Tokenomia.Token.CLAPStyle.Burn.CLI
+      Tokenomia.Token.CLAPStyle.Mint
+      Tokenomia.Token.CLAPStyle.Burn
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
       Tokenomia.Wallet.CLI
-      Tokenomia.Transfer.CLI
+      Tokenomia.Token.Transfer
       Tokenomia.Vesting.Contract
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Adapter.Cardano.CLI.UTxO

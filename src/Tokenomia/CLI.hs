@@ -36,26 +36,32 @@ import Byline.Menu
 
 import           Tokenomia.Adapter.Cardano.CLI
 import qualified Tokenomia.Wallet.CLI as Wallet
-import qualified Tokenomia.Token.CLAPStyle.Mint.CLI as Token
-import qualified Tokenomia.Token.CLAPStyle.Burn.CLI as Token
-import qualified Tokenomia.Transfer.CLI as Token
+import qualified Tokenomia.Token.CLAPStyle.Mint as Token
+import qualified Tokenomia.Token.CLAPStyle.Burn as Token
+import qualified Tokenomia.Token.Transfer as Token
 
-load SearchPath ["echo","cardano-cli"]
+load SearchPath ["echo","cardano-cli","clear"]
 
 main ::  IO ()
 main = do 
-    echo ""
+    clear
     echo "#############################"
     echo "#   Welcome to Tokenomia    #"
     echo "#############################"
     echo ""
     echo "FYI >> you'll operate over the Testnet Network (magic number = 1097911063)"
     echo ""
+    waitAndClear
     runReaderT recursiveMenu (Testnet {magicNumber = 1097911063}) 
 
     echo "#############################"
     echo "#   End of Tokenomia        #"
     echo "#############################"
+
+waitAndClear :: IO()
+waitAndClear = do 
+   _ <- echo "-n" "> press enter to continue..." >>  getLine
+   clear
 
 recursiveMenu :: (MonadMask m,MonadIO m,MonadReader Environment m) =>  m()
 recursiveMenu = do
@@ -69,7 +75,8 @@ recursiveMenu = do
       WalletRemove  -> Wallet.remove
       TokenMint     -> Token.mint
       TokenBurn     -> Token.burn
-      TokenTransfer -> Token.transfer 
+      TokenTransfer -> Token.transfer
+  liftIO waitAndClear         
   recursiveMenu
 
 

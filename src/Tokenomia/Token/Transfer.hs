@@ -10,7 +10,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 
-module Tokenomia.Transfer.CLI 
+module Tokenomia.Token.Transfer 
     ( transfer) where
 
 import Control.Monad.Reader

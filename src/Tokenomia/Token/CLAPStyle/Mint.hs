@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
-module Tokenomia.Token.CLAPStyle.Mint.CLI
+module Tokenomia.Token.CLAPStyle.Mint
     ( mint ) where
     
 import           Prelude

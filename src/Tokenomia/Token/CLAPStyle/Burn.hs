@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
-module Tokenomia.Token.CLAPStyle.Burn.CLI (burn) where
+module Tokenomia.Token.CLAPStyle.Burn (burn) where
 
 import           Prelude
 import           Shh
@@ -33,10 +33,6 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import qualified Tokenomia.Wallet.CLI as Wallet
 
 
-
-
-
-
 load SearchPath ["echo"]
 
 burn :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
@@ -46,7 +42,7 @@ burn = do
         >>= \case 
             Nothing -> liftIO $ print "No Wallet Registered !"
             Just burnerWallet@Wallet {paymentAddress = burnerAddr,..} -> do 
-                
+
                 liftIO $ echo "> Select the collateral utxo :" 
                 Wallet.selectUTxO burnerWallet
                     >>= \case 
