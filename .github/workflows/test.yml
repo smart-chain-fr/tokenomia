@@ -13,9 +13,7 @@ jobs:
       - name: install dependencies
         run: |
           cabal update
-          whereis cabal
-          export PATH=$PATH:~/.cabal/bin
-          git clone https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli
+          git clone https://github.com/input-output-hk/cardano-node/
           cd cardano-node/cardano-cli
           cabal build && cabal install
       - name: build
