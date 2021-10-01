@@ -13,7 +13,7 @@
 module Tokenomia.Common.Shell.InteractiveMenu
     (askSelect) where
 
-import Data.List.NonEmpty (NonEmpty, (!!))
+import Data.List.NonEmpty (NonEmpty, toList, zip, (!!))
 import Prelude hiding ((!!))
 import Text.Read (readEither)
 import Shh
@@ -21,9 +21,17 @@ import Control.Monad.Reader (liftIO)
 
 load SearchPath ["echo", "clear"]
 
+zipIndex :: Show a => Int -> [a] -> [(Int, a)]
+zipIndex _ [] = []
+zipIndex i (x: xs) = (i, x) : zipIndex (i + 1) xs
+
+echoChoices :: Show a =>  (Int, a) -> Cmd 
+echoChoices (i, x) = echo (show i) "-" (show x) 
+
 askSelectRepeatedly :: Show a => NonEmpty a -> IO Int
 askSelectRepeatedly choices = do
-    mapM_ (liftIO . echo . show) choices
+    let orderedChoices = zipIndex 1 (toList choices)
+    mapM_ (liftIO . echoChoices) orderedChoices
     getLine >>= (
         \case
             Left err -> do

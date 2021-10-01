@@ -31,16 +31,7 @@ import Data.Maybe ( fromJust )
 import Data.List.NonEmpty hiding (filter)
 
 import Shh 
-import Byline.Menu
-    ( runBylineT,
-      text,
-      askWithMenuRepeatedly,
-      menu,
-      menuSuffix,
-      Stylized,
-      ToStylizedText(..),
-      Menu )
-import Byline.Internal.Stylized ()
+import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
 
 
 import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
@@ -57,17 +48,7 @@ select = do
           . nonEmpty
   where           
   showMenu :: (MonadIO m , MonadMask m) => NonEmpty Wallet -> m Wallet
-  showMenu wallets = fmap fromJust (runBylineT $ askWithMenuRepeatedly (menuConfig wallets) prompt onError)
-
-  menuConfig :: NonEmpty Wallet -> Menu Wallet
-  menuConfig wallets = menu wallets & menuSuffix "- "
-
-  prompt :: Stylized Text
-  prompt = text "> please choose a wallet (provide the index) : "
-
-  onError :: Stylized Text
-  onError = text "> invalid index provided ! "
-
+  showMenu wallets = liftIO $ askSelect wallets
 
 selectUTxO 
   ::( MonadIO m 
@@ -93,22 +74,8 @@ selectUTxOFilterBy predicate  Wallet {..}  =
 
   where            
     showMenu :: (MonadIO m , MonadMask m) =>  NonEmpty UTxO -> m UTxO
-    showMenu a =  fmap fromJust (runBylineT $ askWithMenuRepeatedly (menuConfig a) prompt onError)
+    showMenu a =  liftIO $ askSelect a
 
-    menuConfig :: NonEmpty UTxO -> Menu UTxO
-    menuConfig a = menu a & menuSuffix "- "
-
-    prompt :: Stylized Text
-    prompt = text "> please choose an utxo (provide the index) : "
-
-    onError :: Stylized Text
-    onError = text "> invalid index provided ! "
-
-instance ToStylizedText UTxO where
-  toStylizedText = text . T.pack . show 
-
-instance ToStylizedText Wallet where
-  toStylizedText Wallet {..} = text . pack $ name
     
 createAndRegister 
   ::( MonadIO m, MonadReader Environment m) 
