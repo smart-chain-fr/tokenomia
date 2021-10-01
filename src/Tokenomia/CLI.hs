@@ -15,6 +15,7 @@ module Tokenomia.CLI (main) where
 import Data.Function ((&))
 import Data.Text ( Text )
 import Data.Maybe ( fromJust )
+import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
 
 import Control.Monad.Reader 
 import Control.Monad.Catch ( MonadMask )
@@ -81,7 +82,7 @@ recursiveMenu = do
 
 
 showActionMenu :: (MonadMask m,MonadIO m) =>  m Action
-showActionMenu = fmap fromJust (runBylineT $ askWithMenuRepeatedly menuConfig prompt onError)
+showActionMenu = askSelect
 
 menuConfig :: Menu Action
 menuConfig = menu actions & menuSuffix "- "
