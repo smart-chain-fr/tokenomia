@@ -42,7 +42,7 @@ askSelectRepeatedly choices = do
                 clear
                 putStrLn  $ show err ++ ": Wrong parse input. Please try again."
                 askSelectRepeatedly choices
-            Right ioIdx -> if ioIdx > length choices || ioIdx < 0 then do
+            Right ioIdx -> if ioIdx > length choices || ioIdx <= 0 then do
                 clear
                 putStrLn $ show ioIdx ++ ": Number selected is incorrect"
                 askSelectRepeatedly choices else return ioIdx) . readEither
