@@ -52,6 +52,7 @@ library
       Tokenomia.Adapter.Cardano.CLI.Value
       Tokenomia.Adapter.Cardano.CLI.Serialise
       Tokenomia.Adapter.Cardano.CLI.Internal
+      Tokenomia.Common.Shell.InteractiveMenu
     build-depends:
       base >= 4.9 && < 5,
       lens,
@@ -60,7 +61,6 @@ library
       time,
       mtl,
       shh,
-      byline,
       split,
       directory,
       exceptions,

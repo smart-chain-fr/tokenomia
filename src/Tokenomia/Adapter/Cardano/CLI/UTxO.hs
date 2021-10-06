@@ -8,6 +8,8 @@
 module Tokenomia.Adapter.Cardano.CLI.UTxO 
     ( UTxO (..)) where
 
+import Tokenomia.Common.Shell.InteractiveMenu
+
 import qualified Data.Text as T
 import Data.Text (Text)
 import Data.List as L
@@ -27,6 +29,9 @@ data UTxO = UTxO
 
 instance Show UTxO where 
   show UTxO {..} = showTxOutRef txOutRef <> " : " <> showValue value
+
+instance DisplayMenuItem UTxO where
+  displayMenuItem UTxO {..} = showTxOutRef txOutRef <> " : " <> showValue value
 
 instance ToCLI TxOutRef where
   toCLI = T.pack .showTxOutRef

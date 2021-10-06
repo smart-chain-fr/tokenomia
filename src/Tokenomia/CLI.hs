@@ -12,27 +12,14 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 module Tokenomia.CLI (main) where
 
-import Data.Function ((&))
-import Data.Text ( Text )
-import Data.Maybe ( fromJust )
+import Tokenomia.Common.Shell.InteractiveMenu
 
 import Control.Monad.Reader 
 import Control.Monad.Catch ( MonadMask )
 
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 
-import Shh 
-
-import Byline.Internal.Stylized ()
-import Byline.Menu
-    ( runBylineT,
-      text,
-      askWithMenuRepeatedly,
-      menu,
-      menuSuffix,
-      Stylized,
-      ToStylizedText(..),
-      Menu )
+import Shh
 
 import           Tokenomia.Adapter.Cardano.CLI
 import qualified Tokenomia.Wallet.CLI as Wallet
@@ -68,7 +55,7 @@ recursiveMenu = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select an action"
   liftIO $ echo "----------------------"
-  r <- showActionMenu     
+  r <- liftIO $ askSelect actions
   case r of
       WalletList    -> Wallet.list
       WalletAdd     -> Wallet.createAndRegister
@@ -78,19 +65,6 @@ recursiveMenu = do
       TokenTransfer -> Token.transfer
   liftIO waitAndClear         
   recursiveMenu
-
-
-showActionMenu :: (MonadMask m,MonadIO m) =>  m Action
-showActionMenu = fmap fromJust (runBylineT $ askWithMenuRepeatedly menuConfig prompt onError)
-
-menuConfig :: Menu Action
-menuConfig = menu actions & menuSuffix "- "
-
-prompt :: Stylized Text
-prompt = text "> please choose an action (provide the index) : "
-
-onError :: Stylized Text
-onError = text "> please choose an action (provide the index) : "
 
 actions :: NonEmpty Action
 actions = NonEmpty.fromList [
@@ -109,11 +83,9 @@ data Action
   | TokenMint
   | TokenBurn
   | TokenTransfer
-  deriving (Show)
 
-
-instance ToStylizedText Action where
-  toStylizedText item = case item of
+instance DisplayMenuItem Action where
+  displayMenuItem item = case item of
     WalletList    -> "[Wallet] - List Registered Ones" 
     WalletAdd     -> "[Wallet] - Add "
     WalletRemove  -> "[Wallet] - Remove"

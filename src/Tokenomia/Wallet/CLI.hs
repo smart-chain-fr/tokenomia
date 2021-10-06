@@ -11,36 +11,24 @@
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Tokenomia.Wallet.CLI 
+module Tokenomia.Wallet.CLI
   ( select
   , selectUTxO
   , selectUTxOFilterBy
   , createAndRegister
   , list
-  , remove) 
+  , remove)
   where
 
-import Data.Function ((&))
 import Control.Monad.Catch ( MonadMask )
 import Control.Monad.Reader
-import qualified Data.Text as T 
-import Data.Text ( Text,pack )
-import Data.Maybe ( fromJust )
 
 import Data.List.NonEmpty hiding (filter)
 
-import Shh 
-import Byline.Menu
-    ( runBylineT,
-      text,
-      askWithMenuRepeatedly,
-      menu,
-      menuSuffix,
-      Stylized,
-      ToStylizedText(..),
-      Menu )
-import Byline.Internal.Stylized ()
+import Shh
+import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
 
 
 import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
@@ -51,67 +39,43 @@ load SearchPath ["echo","ssh","cat"]
 select :: (MonadIO m , MonadMask m) => m (Maybe Wallet)
 select = do
     query_registered_wallets
-      >>=  \case 
-            Nothing -> return Nothing 
+      >>=  \case
+            Nothing -> return Nothing
             Just a -> Just <$> showMenu a
           . nonEmpty
-  where           
+  where
   showMenu :: (MonadIO m , MonadMask m) => NonEmpty Wallet -> m Wallet
-  showMenu wallets = fmap fromJust (runBylineT $ askWithMenuRepeatedly (menuConfig wallets) prompt onError)
+  showMenu wallets = liftIO $ askSelect wallets
 
-  menuConfig :: NonEmpty Wallet -> Menu Wallet
-  menuConfig wallets = menu wallets & menuSuffix "- "
-
-  prompt :: Stylized Text
-  prompt = text "> please choose a wallet (provide the index) : "
-
-  onError :: Stylized Text
-  onError = text "> invalid index provided ! "
-
-
-selectUTxO 
-  ::( MonadIO m 
+selectUTxO
+  ::( MonadIO m
     , MonadMask m
-    , MonadReader Environment m) 
-  =>  Wallet 
-  ->  m (Maybe UTxO) 
+    , MonadReader Environment m)
+  =>  Wallet
+  ->  m (Maybe UTxO)
 selectUTxO = selectUTxOFilterBy (const True)
-      
-selectUTxOFilterBy 
-  ::( MonadIO m 
+
+selectUTxOFilterBy
+  ::( MonadIO m
     , MonadMask m
-    , MonadReader Environment m) 
-  => (UTxO -> Bool)  
+    , MonadReader Environment m)
+  => (UTxO -> Bool)
   -> Wallet
-  ->  m (Maybe UTxO) 
-selectUTxOFilterBy predicate  Wallet {..}  = 
-    filter predicate <$> (getUTxOs paymentAddress)
-      >>=  \case 
-            Nothing -> return Nothing 
+  ->  m (Maybe UTxO)
+selectUTxOFilterBy predicate  Wallet {..}  =
+    filter predicate <$> getUTxOs paymentAddress
+      >>=  \case
+            Nothing -> return Nothing
             Just a -> Just <$> showMenu a
           . nonEmpty
 
-  where            
+  where
     showMenu :: (MonadIO m , MonadMask m) =>  NonEmpty UTxO -> m UTxO
-    showMenu a =  fmap fromJust (runBylineT $ askWithMenuRepeatedly (menuConfig a) prompt onError)
+    showMenu a =  liftIO $ askSelect a
 
-    menuConfig :: NonEmpty UTxO -> Menu UTxO
-    menuConfig a = menu a & menuSuffix "- "
 
-    prompt :: Stylized Text
-    prompt = text "> please choose an utxo (provide the index) : "
-
-    onError :: Stylized Text
-    onError = text "> invalid index provided ! "
-
-instance ToStylizedText UTxO where
-  toStylizedText = text . T.pack . show 
-
-instance ToStylizedText Wallet where
-  toStylizedText Wallet {..} = text . pack $ name
-    
-createAndRegister 
-  ::( MonadIO m, MonadReader Environment m) 
+createAndRegister
+  ::( MonadIO m, MonadReader Environment m)
   => m ()
 createAndRegister = do
   liftIO $ echo "-----------------------------------"
@@ -121,27 +85,27 @@ createAndRegister = do
   liftIO $ echo "-----------------------------------"
 
 
-list 
-  ::( MonadIO m, MonadReader Environment m) 
-  => m ()  
+list
+  ::( MonadIO m, MonadReader Environment m)
+  => m ()
 list = do
   CardanoCLI.query_registered_wallets
-   >>= \case 
+   >>= \case
          [] -> liftIO $ echo "No Wallet Registered!"
-         wallets -> do 
-           liftIO $ echo "-----------------------------------" 
-           liftIO $ echo "Wallets Registered" 
-           liftIO $ echo "-----------------------------------" 
-           mapM_ (\Wallet{..} -> do  
+         wallets -> do
+           liftIO $ echo "-----------------------------------"
+           liftIO $ echo "Wallets Registered"
+           liftIO $ echo "-----------------------------------"
+           mapM_ (\Wallet{..} -> do
             liftIO $ echo ("> " <> name)
               <> echo ("    Payment Address : " <> paymentAddress)
             utxos <- getUTxOs paymentAddress
-            case utxos of 
-              [] -> liftIO $ echo "\t(No UTxOs Available)"  
-              a  -> mapM_ (\utxo -> liftIO $ echo ("\t- " <> show utxo)) a  
+            case utxos of
+              [] -> liftIO $ echo "\t(No UTxOs Available)"
+              a  -> mapM_ (\utxo -> liftIO $ echo ("\t- " <> show utxo)) a
             ) wallets
            liftIO $ echo "-----------------------------------"
-  
+
 remove :: (MonadIO m) => m ()
 remove = do
   liftIO $ echo "-----------------------------------"
