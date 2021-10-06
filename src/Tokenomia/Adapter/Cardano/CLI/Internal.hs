@@ -35,10 +35,13 @@ import Shh.Internal
       captureWords,
       load,
       (|>),
+      (&>),
+      Stream(Truncate),
       ExecReference(SearchPath), capture )
 
 import           Tokenomia.Common.Shell.InteractiveMenu
 import           Control.Monad.Reader
+import           Data.String
 
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -62,7 +65,7 @@ import           System.Directory
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 
-load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls", "rm" ]
+load SearchPath ["cat","echo","mkdir","md5sum","mv","cardano-cli","awk","ls", "rm", "cardano-address" ]
 
 
 type TxOutRef = String
@@ -105,24 +108,46 @@ register_shelley_wallet walletName = do
     Testnet {..} <- ask
     keyPath <- getFolderPath Keys
     let walletKeyPath = keyPath <> walletName <> "/"
-        paymentSigning = walletKeyPath <> "payment-signing.skey"
-        paymentVerification = walletKeyPath <> "payment-verification.vkey"
-        stakeSigning = walletKeyPath <> "stake-signing.skey"
-        stakeVerification = walletKeyPath <> "stake-verification.vkey"
-        paymentAddress = walletKeyPath <> "payment.addr"
+        mnemonics = walletKeyPath <> "mnemonics.txt"
+        root = walletKeyPath <> "root.xsk"
+        paymentSigning = walletKeyPath <> "payment-signing.xsk"
+        paymentVerification = walletKeyPath <> "payment-verification.xvk"
+        stakeVerification = walletKeyPath <> "stake.xvk"
+        shortPaymentAddress = walletKeyPath <> "payment.addr"
 
     liftIO $ mkdir "-p" walletKeyPath
-    liftIO $ cardano_cli "address" "key-gen"
-                "--verification-key-file" paymentVerification
-                "--signing-key-file" paymentSigning
-    liftIO $ cardano_cli "stake-address" "key-gen" 
-                "--verification-key-file" stakeVerification 
-                "--signing-key-file" stakeSigning
-    liftIO $ cardano_cli "address" "build" 
-                "--payment-verification-key-file" paymentVerification 
-                "--stake-verification-key-file" stakeVerification 
-                "--out-file" paymentAddress
-                "--testnet-magic" magicNumber
+    liftIO $ cardano_address "recovery-phrase" "generate" "--size" "24"                
+        &> (Truncate . fromString) mnemonics
+    liftIO $ (cat mnemonics |> cardano_address "key" "from-recovery-phrase" "Shelley")
+        &> (Truncate . fromString) root
+    liftIO $ (cat root |> cardano_address "key" "child" "1852H/1815H/0H/0/0")
+        &> (Truncate . fromString) paymentSigning
+    liftIO $ (cat root |> cardano_address "key" "child" "1852H/1815H/0H/0/0") |> cardano_address "key" "public" "--with-chain-code"
+        &> (Truncate . fromString) paymentVerification
+    liftIO $ (cat root |> cardano_address "key" "child" "1852H/1815H/0H/2/0") |> cardano_address "key" "public" "--with-chain-code"
+        &> (Truncate . fromString) stakeVerification
+    liftIO $ (cat paymentVerification |> cardano_address "address" "payment" "--network-tag" "testnet")
+        &> (Truncate . fromString) shortPaymentAddress
+    convertKeys walletName
+
+convertKeys
+    :: ( MonadIO m 
+       , MonadReader Environment m ) 
+    => WalletName 
+    -> m ()
+convertKeys walletName = do
+    keyPath <- getFolderPath Keys
+    let walletKeyPath = keyPath <> walletName <> "/"
+        paymentSigningConverted = walletKeyPath <> "payment-signing.skey"
+        paymentSigning = walletKeyPath <> "payment-signing.xsk"
+        paymentVerificationConverted = walletKeyPath <> "payment-verification.vkey"
+
+    liftIO $ cardano_cli "key" "convert-cardano-address-key" "--shelley-payment-key" "--signing-key-file" paymentSigning
+        "--out-file" paymentSigningConverted
+    liftIO $ cardano_cli "key" "verification-key" "--signing-key-file" paymentSigningConverted "--verification-key-file"
+        paymentVerificationConverted
+    
+
 
 remove_shelley_wallet :: WalletName -> IO ()
 remove_shelley_wallet walletName = do
