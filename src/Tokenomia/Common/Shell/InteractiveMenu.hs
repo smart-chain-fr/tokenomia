@@ -14,7 +14,8 @@
 
 
 module Tokenomia.Common.Shell.InteractiveMenu
-    (askSelect) where
+    ( askSelect
+    , DisplayMenuItem (..)) where
 
 import Data.List.NonEmpty (NonEmpty, toList, (!!))
 import Prelude hiding ((!!))
@@ -24,14 +25,14 @@ import Control.Monad.Reader (liftIO)
 
 load SearchPath ["echo", "clear", "printf"]
 
-zipIndex :: Show a => Int -> [a] -> [(Int, a)]
+zipIndex :: DisplayMenuItem a => Int -> [a] -> [(Int, a)]
 zipIndex _ [] = []
 zipIndex i (x: xs) = (i, x) : zipIndex (i + 1) xs
 
-echoChoices :: Show a =>  (Int, a) -> Cmd 
-echoChoices (i, x) = echo "    " (show i) "-" (show x) 
+echoChoices :: DisplayMenuItem a =>  (Int, a) -> Cmd 
+echoChoices (i, x) = echo "    " (show i) "-" (displayMenuItem x) 
 
-askSelectRepeatedly :: Show a => NonEmpty a -> IO Int
+askSelectRepeatedly :: DisplayMenuItem a => NonEmpty a -> IO Int
 askSelectRepeatedly choices = do
     let orderedChoices = zipIndex 1 (toList choices)
     mapM_ (liftIO . echoChoices) orderedChoices
@@ -48,5 +49,9 @@ askSelectRepeatedly choices = do
                 askSelectRepeatedly choices else return ioIdx) . readEither
 
 
-askSelect :: Show a => NonEmpty a -> IO a
+askSelect :: DisplayMenuItem a => NonEmpty a -> IO a
 askSelect choices = (\idx -> choices !! (idx - 1)) <$> askSelectRepeatedly choices
+
+class DisplayMenuItem a where
+    displayMenuItem :: a -> String 
+

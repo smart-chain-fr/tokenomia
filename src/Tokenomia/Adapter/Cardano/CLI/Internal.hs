@@ -37,6 +37,7 @@ import Shh.Internal
       (|>),
       ExecReference(SearchPath), capture )
 
+import           Tokenomia.Common.Shell.InteractiveMenu
 import           Control.Monad.Reader
 
 import qualified Data.Text as T
@@ -78,6 +79,9 @@ data Wallet = Wallet
 
 instance Show Wallet where 
     show Wallet {..} = ">> " <> name <> " :" <> paymentAddress 
+
+instance DisplayMenuItem Wallet where 
+    displayMenuItem Wallet {..} = name
 
 
 query_registered_wallets :: (MonadIO m ) => m [Wallet]

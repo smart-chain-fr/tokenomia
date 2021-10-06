@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 module Tokenomia.CLI (main) where
 
-import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
+import Tokenomia.Common.Shell.InteractiveMenu
 
 import Control.Monad.Reader 
 import Control.Monad.Catch ( MonadMask )
@@ -84,8 +84,8 @@ data Action
   | TokenBurn
   | TokenTransfer
 
-instance Show Action where
-  show item = case item of
+instance DisplayMenuItem Action where
+  displayMenuItem item = case item of
     WalletList    -> "[Wallet] - List Registered Ones" 
     WalletAdd     -> "[Wallet] - Add "
     WalletRemove  -> "[Wallet] - Remove"
