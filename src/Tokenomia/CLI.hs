@@ -12,9 +12,6 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 module Tokenomia.CLI (main) where
 
-import Data.Function ((&))
-import Data.Text ( Text )
-import Data.Maybe ( fromJust )
 import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
 
 import Control.Monad.Reader 

@@ -25,7 +25,6 @@ import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Data.Text as T
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import Plutus.V1.Ledger.Api (CurrencySymbol,TokenName)
 import Ledger.Value
 import Plutus.V1.Ledger.Ada
 
