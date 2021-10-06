@@ -21,6 +21,7 @@ module Tokenomia.Adapter.Cardano.CLI
     , Internal.get_monetary_policy_path
     , Internal.register_shelley_wallet
     , Internal.remove_shelley_wallet
+    , Internal.recover_from_seed_phrase
       -- Read 
     , Internal.query_registered_wallets  
     , getUTxOs

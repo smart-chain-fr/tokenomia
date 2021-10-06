@@ -18,6 +18,7 @@ module Tokenomia.Wallet.CLI
   , selectUTxO
   , selectUTxOFilterBy
   , createAndRegister
+  , recover
   , list
   , remove)
   where
@@ -34,7 +35,7 @@ import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
 import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
 import Tokenomia.Adapter.Cardano.CLI.UTxO
 
-load SearchPath ["echo","ssh","cat"]
+load SearchPath ["echo","printf"]
 
 select :: (MonadIO m , MonadMask m) => m (Maybe Wallet)
 select = do
@@ -117,3 +118,21 @@ remove = do
         Just Wallet {..} -> CardanoCLI.remove_shelley_wallet name
 
   liftIO $ echo "-----------------------------------"
+
+getSeedPhrase :: IO String
+getSeedPhrase = do
+  seedPhrase <- liftIO $ echo "-n" "> please enter your 24 words mnemonics then press enter : " >> getLine
+  if Prelude.length (words seedPhrase) /= 24
+    then do
+      liftIO $ printf "\n We said 24 words !\n"
+      getSeedPhrase
+    else return seedPhrase
+
+recover :: (MonadIO m, MonadReader Environment m) => m ()
+recover = do
+  liftIO $ echo "-----------------------------------"
+  walletName <- liftIO $ echo "-n" "> Wallet Name : " >>  getLine
+  seedPhrase <- liftIO getSeedPhrase
+  CardanoCLI.recover_from_seed_phrase walletName seedPhrase
+  liftIO $ echo "-----------------------------------"
+    

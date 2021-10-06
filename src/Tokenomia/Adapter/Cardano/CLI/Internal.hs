@@ -22,8 +22,9 @@ module Tokenomia.Adapter.Cardano.CLI.Internal
     , get_monetary_policy_path
     , register_shelley_wallet
     , remove_shelley_wallet
+    , recover_from_seed_phrase
       -- Read 
-    , query_registered_wallets  
+    , query_registered_wallets
     , query_utxo
     , query_tip
     , Wallet (..)
@@ -75,36 +76,70 @@ type PaymentAddress = String
 
 data Environment = Testnet {magicNumber :: Integer}
 
-data Wallet = Wallet 
+data Wallet = Wallet
               { name :: WalletName
               , paymentAddress :: PaymentAddress
-              , paymentSigningKeyPath :: FilePath } 
+              , paymentSigningKeyPath :: FilePath }
 
-instance Show Wallet where 
-    show Wallet {..} = ">> " <> name <> " :" <> paymentAddress 
+instance Show Wallet where
+    show Wallet {..} = ">> " <> name <> " :" <> paymentAddress
 
-instance DisplayMenuItem Wallet where 
+instance DisplayMenuItem Wallet where
     displayMenuItem Wallet {..} = name
 
 
 query_registered_wallets :: (MonadIO m ) => m [Wallet]
-query_registered_wallets = do 
+query_registered_wallets = do
    keyPath <- liftIO $ getFolderPath Keys
    walletNames <- liftIO $ (fmap.fmap) C.unpack (ls keyPath |> captureWords)
-   mapM (\name -> 
-        do 
-        let paymentAddressPath = keyPath <> name <> "/payment.addr"  
-            paymentSigningKeyPath = keyPath <> name <> "/payment-signing.skey"  
-        paymentAddress <- liftIO $ C.unpack  <$> (cat paymentAddressPath |> capture) 
-        return $ Wallet {..} ) walletNames  
+   mapM (\name ->
+        do
+        let paymentAddressPath = keyPath <> name <> "/payment.addr"
+            paymentSigningKeyPath = keyPath <> name <> "/payment-signing.skey"
+        paymentAddress <- liftIO $ C.unpack  <$> (cat paymentAddressPath |> capture)
+        return $ Wallet {..} ) walletNames
 
-   
-register_shelley_wallet 
-    :: ( MonadIO m 
-       , MonadReader Environment m ) 
-    => WalletName 
+generate_seed_phrase
+    :: ( MonadIO m )
+    => WalletName
+    -> m ()
+generate_seed_phrase walletName = do
+    keyPath <- getFolderPath Keys
+    let walletKeyPath = keyPath <> walletName <> "/"
+        mnemonics = walletKeyPath <> "mnemonics.txt"
+    liftIO $ cardano_address "recovery-phrase" "generate" "--size" "24"
+        &> (Truncate . fromString) mnemonics
+
+
+register_shelley_wallet
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => WalletName
     -> m ()
 register_shelley_wallet walletName = do
+    generate_seed_phrase walletName
+    generate_keys walletName
+
+recover_from_seed_phrase
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => WalletName -> String
+    -> m ()
+recover_from_seed_phrase walletName seedPhrase = do
+    keyPath <- getFolderPath Keys
+    let walletKeyPath = keyPath <> walletName <> "/"
+        mnemonics = walletKeyPath <> "mnemonics.txt"
+    liftIO $ mkdir "-p" walletKeyPath
+    liftIO $ echo seedPhrase
+        &> (Truncate . fromString) mnemonics
+    generate_keys walletName
+
+generate_keys
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => WalletName
+    -> m ()
+generate_keys walletName = do
     Testnet {..} <- ask
     keyPath <- getFolderPath Keys
     let walletKeyPath = keyPath <> walletName <> "/"
@@ -116,8 +151,6 @@ register_shelley_wallet walletName = do
         shortPaymentAddress = walletKeyPath <> "payment.addr"
 
     liftIO $ mkdir "-p" walletKeyPath
-    liftIO $ cardano_address "recovery-phrase" "generate" "--size" "24"                
-        &> (Truncate . fromString) mnemonics
     liftIO $ (cat mnemonics |> cardano_address "key" "from-recovery-phrase" "Shelley")
         &> (Truncate . fromString) root
     liftIO $ (cat root |> cardano_address "key" "child" "1852H/1815H/0H/0/0")
@@ -131,9 +164,8 @@ register_shelley_wallet walletName = do
     convertKeys walletName
 
 convertKeys
-    :: ( MonadIO m 
-       , MonadReader Environment m ) 
-    => WalletName 
+    :: ( MonadIO m )
+    => WalletName
     -> m ()
 convertKeys walletName = do
     keyPath <- getFolderPath Keys
@@ -146,7 +178,7 @@ convertKeys walletName = do
         "--out-file" paymentSigningConverted
     liftIO $ cardano_cli "key" "verification-key" "--signing-key-file" paymentSigningConverted "--verification-key-file"
         paymentVerificationConverted
-    
+
 
 
 remove_shelley_wallet :: WalletName -> IO ()
@@ -155,33 +187,33 @@ remove_shelley_wallet walletName = do
     let walletKeyPath = keyPath <> walletName <> "/"
 
     rm "-rf" walletKeyPath
-   
 
-query_tip 
-    :: ( MonadIO m 
-       , MonadReader Environment m ) 
+
+query_tip
+    :: ( MonadIO m
+       , MonadReader Environment m )
     => m T.Text
-query_tip = do 
+query_tip = do
     Testnet {..} <- ask
     (TL.toStrict . TLE.decodeUtf8) <$> liftIO (cardano_cli "query" "tip" "--testnet-magic" magicNumber |> capture)
 
-query_utxo 
-    :: ( MonadIO m 
+query_utxo
+    :: ( MonadIO m
        , MonadReader Environment m )
-    => WalletAddress 
+    => WalletAddress
     -> m T.Text
-query_utxo walletAddress = do 
+query_utxo walletAddress = do
     Testnet {..} <- ask
     (TL.toStrict . TLE.decodeUtf8) <$> liftIO (cardano_cli "query" "utxo" "--testnet-magic" magicNumber "--address" walletAddress |> capture)
 
 -- | Build a Tx , Sign it with the private key path provided and Submit it
 --   Temporary Files are persisted into ~/.cardano-cli/ folder 
-run_tx 
-    :: ( ExecArg a 
-       , MonadIO m 
+run_tx
+    :: ( ExecArg a
+       , MonadIO m
        , MonadReader Environment m )
-    => FilePath 
-    -> a  
+    => FilePath
+    -> a
     -> m ()
 run_tx privateKeyPath buildTxBody = do
     Testnet {..} <- ask
@@ -206,25 +238,25 @@ run_tx privateKeyPath buildTxBody = do
     (liftIO $ echo "Submitting Tx") >> submit_tx signedHashTx
     liftIO $ echo "Tx sent"
 
-submit_tx 
-    :: ( MonadIO m 
+submit_tx
+    :: ( MonadIO m
        , MonadReader Environment m )
-    => FilePath 
-    ->  m () 
-submit_tx f = do 
+    => FilePath
+    ->  m ()
+submit_tx f = do
     Testnet {..} <- ask
     liftIO $ cardano_cli "transaction" "submit"
          "--testnet-magic" magicNumber
          "--tx-file" f
 
-sign_tx 
-    :: ( MonadIO m 
+sign_tx
+    :: ( MonadIO m
        , MonadReader Environment m )
-    => FilePath 
-    -> FilePath 
-    -> FilePath  
+    => FilePath
+    -> FilePath
+    -> FilePath
     -> m ()
-sign_tx body_file outFile signing_key_file = do 
+sign_tx body_file outFile signing_key_file = do
     Testnet {..} <- ask
     liftIO $ cardano_cli "transaction" "sign"
         "--tx-body-file" body_file
@@ -233,7 +265,7 @@ sign_tx body_file outFile signing_key_file = do
         "--out-file" outFile
 
 register_protocol_parameters
-    :: ( MonadIO m 
+    :: ( MonadIO m
         , MonadReader Environment m )
     => m FilePath
 register_protocol_parameters = do
@@ -248,22 +280,22 @@ register_protocol_parameters = do
     return filePath
 
 
-get_monetary_policy_path 
+get_monetary_policy_path
     :: ( MonadIO m )
-    => CurrencySymbol  
+    => CurrencySymbol
     -> m (Maybe FilePath)
 get_monetary_policy_path  currencySymbol = do
     txFolder <- getFolderPath Transactions
     let monetaryFilePath = txFolder <> show currencySymbol <> ".plutus"
     liftIO (doesFileExist monetaryFilePath)
-        >>= \case 
-             True ->  (return . Just) monetaryFilePath 
+        >>= \case
+             True ->  (return . Just) monetaryFilePath
              False -> return Nothing
-    
 
-register_minting_script_file 
+
+register_minting_script_file
     :: ( MonadIO m )
-    => MintingPolicy 
+    => MintingPolicy
     -> m FilePath
 register_minting_script_file mp = do
     txFolder <- getFolderPath Transactions
@@ -276,16 +308,16 @@ register_minting_script_file mp = do
 
 data Folder = Transactions | Keys | Parameters
 
-getFolderPath :: (MonadIO m) => Folder -> m FilePath 
-getFolderPath folder 
-    =  getFolderPath' 
-            $ case folder of 
+getFolderPath :: (MonadIO m) => Folder -> m FilePath
+getFolderPath folder
+    =  getFolderPath'
+            $ case folder of
                 Transactions -> "transactions"
                 Keys ->  "keys"
-                Parameters -> "parameters"   
-  
+                Parameters -> "parameters"
+
 getFolderPath' :: (MonadIO m) => String -> m FilePath
-getFolderPath' s = do 
+getFolderPath' s = do
     a <- ( <> "/"<> s<>"/") <$> getRootCLIFolder
     liftIO $ mkdir "-p" a
     return a
