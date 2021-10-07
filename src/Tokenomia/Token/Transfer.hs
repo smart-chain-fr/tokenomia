@@ -52,7 +52,7 @@ transfer = do
                                 Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                 Just utxoWithFees -> do 
                                     liftIO $ echo "> Select the utxo containing the token to transfer  :" 
-                                    Wallet.selectUTxOFilterBy utxoWithContainingOneToken senderWallet 
+                                    Wallet.selectUTxOFilterBy utxoContainingOneToken senderWallet 
                                         >>= \case  
                                             Nothing -> liftIO $ echo "Tokens not found in your wallet."
                                             Just utxoWithToken  -> do
@@ -71,6 +71,6 @@ transfer = do
 getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
 getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value -- should contains only one native token (filtering ADAs) 
 
-utxoWithContainingOneToken :: UTxO -> Bool
-utxoWithContainingOneToken UTxO {..} 
+utxoContainingOneToken :: UTxO -> Bool
+utxoContainingOneToken UTxO {..} 
     = 1 == (length . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value

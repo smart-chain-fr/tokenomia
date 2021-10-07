@@ -56,7 +56,6 @@ transfer = do
                                         >>= \case  
                                             Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                             Just utxoWithAda  -> do
-                                                let (_,_,totalAmount) = getTokenFrom utxoWithAda
                                                 amount          <- liftIO $ echo "-n" "> Amount of Ada (in lovelaces) : "   >>  read @Integer <$> getLine
                                                 run_tx paymentSigningKeyPath 
                                                         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithAda
@@ -65,10 +64,6 @@ transfer = do
                                                         , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
                                                         , "--change-address"  , senderAddr]
 
-
-
-getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
-getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c == adaSymbol ) .flattenValue) value -- should contains only ADAs 
 
 utxoContainingOnlyAda :: UTxO -> Bool
 utxoContainingOnlyAda UTxO {..} 

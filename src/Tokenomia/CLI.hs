@@ -26,6 +26,7 @@ import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Tokenomia.Token.CLAPStyle.Mint as Token
 import qualified Tokenomia.Token.CLAPStyle.Burn as Token
 import qualified Tokenomia.Token.Transfer as Token
+import qualified Tokenomia.Ada.Transfer as Ada
 
 load SearchPath ["echo","cardano-cli","clear"]
 
@@ -64,6 +65,7 @@ recursiveMenu = do
       TokenMint     -> Token.mint
       TokenBurn     -> Token.burn
       TokenTransfer -> Token.transfer
+      AdaTransfer   -> Ada.transfer
   liftIO waitAndClear         
   recursiveMenu
 
@@ -75,7 +77,8 @@ actions = NonEmpty.fromList [
     WalletRestore,
     TokenMint,
     TokenBurn,
-    TokenTransfer
+    TokenTransfer,
+    AdaTransfer
     ]
 
 data Action
@@ -86,6 +89,7 @@ data Action
   | TokenMint
   | TokenBurn
   | TokenTransfer
+  | AdaTransfer
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
@@ -96,3 +100,4 @@ instance DisplayMenuItem Action where
     TokenMint     -> "[Token]  - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy )"
     TokenBurn     -> "[Token]  - Burn Tokens with CLAP type policy"
     TokenTransfer -> "[Token]  - Transfer "
+    AdaTransfer   -> "[Ada]    - Transfer "
