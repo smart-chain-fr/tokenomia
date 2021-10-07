@@ -10,7 +10,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 
-module Tokenomia.Token.Transfer 
+module Tokenomia.Ada.Transfer 
     ( transfer) where
 
 import Control.Monad.Reader
@@ -30,7 +30,7 @@ import Plutus.V1.Ledger.Ada
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["echo","ssh","cat","pwd","awk","grep","mkdir"]
+load SearchPath ["echo"]
 
 transfer :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
 transfer = do
@@ -51,26 +51,20 @@ transfer = do
                             >>= \case 
                                 Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                 Just utxoWithFees -> do 
-                                    liftIO $ echo "> Select the utxo containing the token to transfer  :" 
-                                    Wallet.selectUTxOFilterBy utxoContainingOneToken senderWallet 
+                                    liftIO $ echo "> Select the utxo containing Ada to transfer  :" 
+                                    Wallet.selectUTxOFilterBy utxoContainingOnlyAda senderWallet 
                                         >>= \case  
-                                            Nothing -> liftIO $ echo "Tokens not found in your wallet."
-                                            Just utxoWithToken  -> do
-                                                let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
-                                                amount          <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
+                                            Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
+                                            Just utxoWithAda  -> do
+                                                amount          <- liftIO $ echo "-n" "> Amount of Ada (in lovelaces) : "   >>  read @Integer <$> getLine
                                                 run_tx paymentSigningKeyPath 
-                                                        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
+                                                        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithAda
                                                         , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
-                                                        , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                                                        , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                                                        , "--tx-out" , receiverAddr <> " " <> show amount <> " lovelace"
                                                         , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
                                                         , "--change-address"  , senderAddr]
 
 
-
-getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
-getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value -- should contains only one native token (filtering ADAs) 
-
-utxoContainingOneToken :: UTxO -> Bool
-utxoContainingOneToken UTxO {..} 
-    = 1 == (length . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value
+utxoContainingOnlyAda :: UTxO -> Bool
+utxoContainingOnlyAda UTxO {..} 
+    = 1 == (length . filter (\(c,_,_) -> c == adaSymbol ) .flattenValue) value

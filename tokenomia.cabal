@@ -45,6 +45,7 @@ library
       Tokenomia.Token.CLAPStyle.Burn
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
       Tokenomia.Wallet.CLI
+      Tokenomia.Ada.Transfer
       Tokenomia.Token.Transfer
       Tokenomia.Vesting.Contract
       Tokenomia.Tokenomic.CLAP.Simulation
