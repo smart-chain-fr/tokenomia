@@ -18,7 +18,7 @@ module Tokenomia.Wallet.CLI
   , selectUTxO
   , selectUTxOFilterBy
   , createAndRegister
-  , recover
+  , restore
   , list
   , remove)
   where
@@ -128,11 +128,11 @@ getSeedPhrase = do
       getSeedPhrase
     else return seedPhrase
 
-recover :: (MonadIO m, MonadReader Environment m) => m ()
-recover = do
+restore :: (MonadIO m, MonadReader Environment m) => m ()
+restore = do
   liftIO $ echo "-----------------------------------"
   walletName <- liftIO $ echo "-n" "> Wallet Name : " >>  getLine
   seedPhrase <- liftIO getSeedPhrase
-  CardanoCLI.recover_from_seed_phrase walletName seedPhrase
+  CardanoCLI.restore_from_seed_phrase walletName seedPhrase
   liftIO $ echo "-----------------------------------"
     

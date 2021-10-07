@@ -22,7 +22,7 @@ module Tokenomia.Adapter.Cardano.CLI.Internal
     , get_monetary_policy_path
     , register_shelley_wallet
     , remove_shelley_wallet
-    , recover_from_seed_phrase
+    , restore_from_seed_phrase
       -- Read 
     , query_registered_wallets
     , query_utxo
@@ -120,12 +120,12 @@ register_shelley_wallet walletName = do
     generate_seed_phrase walletName
     generate_keys walletName
 
-recover_from_seed_phrase
+restore_from_seed_phrase
     :: ( MonadIO m
        , MonadReader Environment m )
     => WalletName -> String
     -> m ()
-recover_from_seed_phrase walletName seedPhrase = do
+restore_from_seed_phrase walletName seedPhrase = do
     keyPath <- getFolderPath Keys
     let walletKeyPath = keyPath <> walletName <> "/"
         mnemonics = walletKeyPath <> "mnemonics.txt"
