@@ -59,6 +59,7 @@ recursiveMenu = do
   case r of
       WalletList    -> Wallet.list
       WalletAdd     -> Wallet.createAndRegister
+      WalletRestore -> Wallet.restore
       WalletRemove  -> Wallet.remove
       TokenMint     -> Token.mint
       TokenBurn     -> Token.burn
@@ -71,6 +72,7 @@ actions = NonEmpty.fromList [
     WalletList,
     WalletAdd,
     WalletRemove,
+    WalletRestore,
     TokenMint,
     TokenBurn,
     TokenTransfer
@@ -79,6 +81,7 @@ actions = NonEmpty.fromList [
 data Action
   = WalletList
   | WalletAdd
+  | WalletRestore
   | WalletRemove
   | TokenMint
   | TokenBurn
@@ -88,6 +91,7 @@ instance DisplayMenuItem Action where
   displayMenuItem item = case item of
     WalletList    -> "[Wallet] - List Registered Ones" 
     WalletAdd     -> "[Wallet] - Add "
+    WalletRestore -> "[Wallet] - Restore your wallet from your 24 words seed phrase"
     WalletRemove  -> "[Wallet] - Remove"
     TokenMint     -> "[Token]  - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy )"
     TokenBurn     -> "[Token]  - Burn Tokens with CLAP type policy"
