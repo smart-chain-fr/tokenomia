@@ -27,6 +27,8 @@ import qualified Tokenomia.Token.CLAPStyle.Mint as Token
 import qualified Tokenomia.Token.CLAPStyle.Burn as Token
 import qualified Tokenomia.Token.Transfer as Token
 import qualified Tokenomia.Ada.Transfer as Ada
+import qualified Tokenomia.Wallet.Collateral as Wallet
+
 
 load SearchPath ["echo","cardano-cli","clear"]
 
@@ -58,14 +60,15 @@ recursiveMenu = do
   liftIO $ echo "----------------------"
   r <- liftIO $ askSelect actions
   case r of
-      WalletList    -> Wallet.list
-      WalletAdd     -> Wallet.createAndRegister
-      WalletRestore -> Wallet.restore
-      WalletRemove  -> Wallet.remove
-      TokenMint     -> Token.mint
-      TokenBurn     -> Token.burn
-      TokenTransfer -> Token.transfer
-      AdaTransfer   -> Ada.transfer
+      WalletList       -> Wallet.list
+      WalletAdd        -> Wallet.createAndRegister
+      WalletCollateral -> Wallet.createCollateral
+      WalletRestore    -> Wallet.restore
+      WalletRemove     -> Wallet.remove
+      TokenMint        -> Token.mint
+      TokenBurn        -> Token.burn
+      TokenTransfer    -> Token.transfer
+      AdaTransfer      -> Ada.transfer
   liftIO waitAndClear         
   recursiveMenu
 
@@ -73,6 +76,7 @@ actions :: NonEmpty Action
 actions = NonEmpty.fromList [
     WalletList,
     WalletAdd,
+    WalletCollateral,
     WalletRemove,
     WalletRestore,
     TokenMint,
@@ -84,6 +88,7 @@ actions = NonEmpty.fromList [
 data Action
   = WalletList
   | WalletAdd
+  | WalletCollateral
   | WalletRestore
   | WalletRemove
   | TokenMint
@@ -93,11 +98,13 @@ data Action
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
-    WalletList    -> "[Wallet] - List Registered Ones" 
-    WalletAdd     -> "[Wallet] - Add "
-    WalletRestore -> "[Wallet] - Restore your wallet from your 24 words seed phrase"
-    WalletRemove  -> "[Wallet] - Remove"
-    TokenMint     -> "[Token]  - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy )"
-    TokenBurn     -> "[Token]  - Burn Tokens with CLAP type policy"
-    TokenTransfer -> "[Token]  - Transfer "
-    AdaTransfer   -> "[Ada]    - Transfer "
+    WalletList       -> "[Wallet] - List Registered Ones" 
+    WalletAdd        -> "[Wallet] - Add "
+    WalletCollateral -> "[Wallet] - Create a unique collateral for transfer"
+    WalletRestore    -> "[Wallet] - Restore your wallet from your 24 words seed phrase"
+    WalletRemove     -> "[Wallet] - Remove"
+    TokenMint        -> "[Token]  - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy )"
+    TokenBurn        -> "[Token]  - Burn Tokens with CLAP type policy"
+    TokenTransfer    -> "[Token]  - Transfer "
+    AdaTransfer      -> "[Ada]    - Transfer "
+

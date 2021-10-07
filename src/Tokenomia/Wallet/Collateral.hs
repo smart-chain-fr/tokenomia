@@ -10,9 +10,9 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 
-module Tokenomia.Ada.Transfer 
-    ( transfer
-    , utxoContainingOnlyAda) where
+module Tokenomia.Wallet.Collateral 
+    ( createCollateral
+    , getCollateral) where
 
 import Control.Monad.Reader
 
@@ -23,43 +23,61 @@ import Shh
 import Tokenomia.Adapter.Cardano.CLI
 import Control.Monad.Catch ( MonadMask ) 
 import qualified Tokenomia.Wallet.CLI as Wallet
-import qualified Tokenomia.Wallet.Collateral as Wallet
 import qualified Data.Text as T
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
-import           Tokenomia.Adapter.Cardano.CLI.UTxO
+import           Tokenomia.Adapter.Cardano.CLI.UTxO 
+import Ledger.Value
+
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["echo", "printf"]
+load SearchPath ["echo"]
 
-transfer :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
-transfer = do
+createCollateral :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
+createCollateral = do
     liftIO $ echo "Select the sender's wallet" 
     Wallet.select
         >>= \case 
             Nothing -> liftIO $ print "No Wallet Registered !"
-            Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do 
-                Wallet.getCollateral senderWallet
+            Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do
+                getCollateral senderWallet
                     >>= \case
-                        Nothing -> liftIO $ printf "Please create a collateral\n"
-                        Just utxoWithCollateral -> do 
-                            receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
-                            liftIO $ echo "> Select the utxo containing ADAs for fees  :" 
+                        Just _ -> liftIO $ print "You already have a collateral UTxO containing 2 ADA !"
+                        Nothing -> do
+                            liftIO $ echo "> Select the utxo containing ADAs for fees :" 
                             Wallet.selectUTxO senderWallet
                                 >>= \case 
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
-                                    Just utxoWithFees -> do 
-                                        liftIO $ echo "> Select the utxo containing Ada to transfer  :" 
+                                    Just utxoWithFees -> do
+                                        liftIO $ echo "> Select the utxo in order to create the collateral (must contain ONLY ADA and at least 2)  :" 
                                         Wallet.selectUTxOFilterBy utxoContainingOnlyAda senderWallet 
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                                 Just utxoWithAda  -> do
-                                                    amount          <- liftIO $ echo "-n" "> Amount of Ada (in lovelaces) : "   >>  read @Integer <$> getLine
                                                     run_tx paymentSigningKeyPath 
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithAda
-                                                            , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
-                                                            , "--tx-out" , receiverAddr <> " " <> show amount <> " lovelace"
-                                                            , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
+                                                            , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
+                                                            , "--tx-out" , senderAddr <> " 2000000 lovelace"
+                                                            , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithAda 
                                                             , "--change-address"  , senderAddr]
 
 
+getCollateral
+  :: ( MonadIO m
+     , MonadReader Environment m )
+     => Wallet
+    -> m (Maybe UTxO)
+getCollateral Wallet {..} =
+    filter containsCollateral <$> getUTxOs paymentAddress
+        >>= \case
+            [] -> return Nothing
+            (x:_)  -> (return . Just) x
+
+
+containsCollateral :: UTxO -> Bool
+containsCollateral UTxO {..}
+    = 1 == Prelude.length (flattenValue value)
+    && 2000000 == lovelaces
+
+    where 
+      (_, _, lovelaces) = Prelude.head (flattenValue value)

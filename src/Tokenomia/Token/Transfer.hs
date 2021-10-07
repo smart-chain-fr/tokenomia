@@ -22,6 +22,7 @@ import Shh
 import Tokenomia.Adapter.Cardano.CLI
 import Control.Monad.Catch ( MonadMask ) 
 import qualified Tokenomia.Wallet.CLI as Wallet
+import qualified Tokenomia.Wallet.Collateral as Wallet
 import qualified Data.Text as T
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
@@ -30,7 +31,7 @@ import Plutus.V1.Ledger.Ada
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["echo","ssh","cat","pwd","awk","grep","mkdir"]
+load SearchPath ["echo","printf"]
 
 transfer :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
 transfer = do
@@ -39,16 +40,14 @@ transfer = do
         >>= \case 
             Nothing -> liftIO $ print "No Wallet Registered !"
             Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do 
-                receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
-                
-                liftIO $ echo "> Select the collateral utxo :" 
-                Wallet.selectUTxO senderWallet
-                    >>= \case 
-                        Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
-                        Just utxoWithCollateral -> do 
+                Wallet.getCollateral senderWallet
+                    >>= \case
+                        Nothing -> liftIO $ printf "Please create a collateral\n"
+                        Just utxoWithCollateral -> do
+                            receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
                             liftIO $ echo "> Select the utxo containing ADAs for fees  :" 
                             Wallet.selectUTxO senderWallet
-                            >>= \case 
+                                >>= \case 
                                 Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                 Just utxoWithFees -> do 
                                     liftIO $ echo "> Select the utxo containing the token to transfer  :" 
