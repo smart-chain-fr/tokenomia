@@ -20,7 +20,6 @@ import Shh
       ExecReference(SearchPath) )
 
 import Tokenomia.Adapter.Cardano.CLI
-import Control.Monad.Catch ( MonadMask ) 
 import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Tokenomia.Wallet.Collateral as Wallet
 import qualified Data.Text as T
@@ -33,7 +32,7 @@ import Plutus.V1.Ledger.Ada
 
 load SearchPath ["echo","printf"]
 
-transfer :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
+transfer :: (MonadIO m, MonadReader Environment m)  => m ()
 transfer = do
     liftIO $ echo "Select the sender's wallet" 
     Wallet.select
@@ -45,12 +44,12 @@ transfer = do
                         Nothing -> liftIO $ printf "Please create a collateral\n"
                         Just utxoWithCollateral -> do
                             receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
-                            liftIO $ echo "> Select the utxo containing ADAs for fees  :" 
+                            liftIO $ echo "> Select the utxo containing ADAs for fees (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
                             Wallet.selectUTxO senderWallet
                                 >>= \case 
                                 Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                 Just utxoWithFees -> do 
-                                    liftIO $ echo "> Select the utxo containing the token to transfer  :" 
+                                    liftIO $ echo "> Select the utxo containing the token to transfer (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
                                     Wallet.selectUTxOFilterBy utxoContainingOneToken senderWallet 
                                         >>= \case  
                                             Nothing -> liftIO $ echo "Tokens not found in your wallet."

@@ -14,8 +14,7 @@ module Tokenomia.CLI (main) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
 
-import Control.Monad.Reader 
-import Control.Monad.Catch ( MonadMask )
+import Control.Monad.Reader
 
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 
@@ -39,10 +38,7 @@ main = do
     echo "#   Welcome to Tokenomia    #"
     echo "#############################"
     echo ""
-    echo "FYI >> you'll operate over the Testnet Network (magic number = 1097911063)"
-    echo ""
-    waitAndClear
-    runReaderT recursiveMenu (Testnet {magicNumber = 1097911063}) 
+    selectNetwork
 
     echo "#############################"
     echo "#   End of Tokenomia        #"
@@ -53,7 +49,34 @@ waitAndClear = do
    _ <- echo "-n" "> press enter to continue..." >>  getLine
    clear
 
-recursiveMenu :: (MonadMask m,MonadIO m,MonadReader Environment m) =>  m()
+selectNetwork :: IO()
+selectNetwork = do
+  liftIO $ echo "----------------------"
+  liftIO $ echo "  Select a network"
+  liftIO $ echo "----------------------"
+  r <- liftIO $ askSelect networks
+  clear
+  case r of
+      SelectTestnet     -> runReaderT recursiveMenu (Testnet {magicNumber = 1097911063}) 
+      SelectMainnet     -> runReaderT recursiveMenu (Mainnet {magicNumber = 764824073}) 
+
+networks :: NonEmpty SelectEnvironment
+networks = NonEmpty.fromList [
+  SelectTestnet,
+  SelectMainnet
+  ]
+
+data SelectEnvironment 
+  = SelectTestnet
+  | SelectMainnet
+
+instance DisplayMenuItem SelectEnvironment where
+  displayMenuItem item = case item of
+    SelectTestnet   -> "Testnet (magicNumber 1097911063)" 
+    SelectMainnet   -> "Mainnet (magicNumber 764824073)"
+
+
+recursiveMenu :: (MonadIO m,MonadReader Environment m) =>  m()
 recursiveMenu = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select an action"
