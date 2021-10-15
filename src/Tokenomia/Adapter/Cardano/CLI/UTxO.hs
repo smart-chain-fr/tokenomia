@@ -6,7 +6,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Tokenomia.Adapter.Cardano.CLI.UTxO 
-    ( UTxO (..)) where
+    ( UTxO (..)
+    , utxoContainingStrictlyADAs) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
 
@@ -21,6 +22,7 @@ import Data.String
 import Tokenomia.Adapter.Cardano.CLI.Serialise 
 import Tokenomia.Adapter.Cardano.CLI.Value ()
 import Data.Foldable ( Foldable(fold) )
+import Plutus.V1.Ledger.Ada
 
 
 data UTxO = UTxO 
@@ -73,5 +75,6 @@ instance FromCLI [UTxO] where
       filterEmptyLines :: [Text] -> [Text]
       filterEmptyLines = L.filter (\a -> T.strip a /= mempty )
 
-
-
+utxoContainingStrictlyADAs :: UTxO -> Bool
+utxoContainingStrictlyADAs UTxO {..} 
+    = 1 == (length . filter (\(c,_,_) -> c == adaSymbol ) .flattenValue) value

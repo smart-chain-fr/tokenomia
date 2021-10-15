@@ -23,7 +23,7 @@ module Tokenomia.Adapter.Cardano.CLI
     , Internal.remove_shelley_wallet
     , Internal.restore_from_seed_phrase
       -- Read 
-    , Internal.query_registered_wallets  
+    , Internal.query_registered_wallets
     , getUTxOs
     , Internal.query_tip
     , Internal.Wallet (..)
@@ -34,14 +34,14 @@ module Tokenomia.Adapter.Cardano.CLI
 import           Control.Monad.Reader
 
 import qualified Tokenomia.Adapter.Cardano.CLI.Internal as Internal
-import           Tokenomia.Adapter.Cardano.CLI.UTxO 
+import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import           Tokenomia.Adapter.Cardano.CLI.Serialise ( FromCLI(fromCLI) )
 
 
-getUTxOs 
-  :: ( MonadIO m 
+getUTxOs
+  :: ( MonadIO m
      , MonadReader Internal.Environment m )
-  => Internal.WalletAddress 
+  => Internal.WalletAddress
   -> m [UTxO]
 getUTxOs  a = fromCLI <$> (Internal.query_utxo a)
 
