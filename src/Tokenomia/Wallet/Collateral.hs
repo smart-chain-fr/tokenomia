@@ -20,13 +20,14 @@ import Shh
     ( load,
       ExecReference(SearchPath) )
 
-import Tokenomia.Adapter.Cardano.CLI
-import Control.Monad.Catch ( MonadMask ) 
+import           Tokenomia.Adapter.Cardano.CLI
+import           Control.Monad.Catch ( MonadMask ) 
 import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Data.Text as T
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import Ledger.Value
+import           Ledger.Value
+import qualified Ledger.Ada as Ada
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
@@ -50,7 +51,7 @@ createCollateral = do
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                     Just utxoWithFees -> do
                                         liftIO $ echo "> Select the utxo in order to create the collateral (must contain ONLY ADA and at least 2)  :" 
-                                        Wallet.selectUTxOFilterBy utxoContainingOnlyAda senderWallet 
+                                        Wallet.selectUTxOFilterBy utxoContainingStrictlyADAs senderWallet 
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                                 Just utxoWithAda  -> do
@@ -76,8 +77,4 @@ getCollateral Wallet {..} =
 
 containsCollateral :: UTxO -> Bool
 containsCollateral UTxO {..}
-    = 1 == Prelude.length (flattenValue value)
-    && 2000000 == lovelaces
-
-    where 
-      (_, _, lovelaces) = Prelude.head (flattenValue value)
+   = Ada.lovelaceValueOf 2000000 == value

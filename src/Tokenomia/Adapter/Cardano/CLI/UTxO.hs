@@ -7,7 +7,7 @@
 
 module Tokenomia.Adapter.Cardano.CLI.UTxO 
     ( UTxO (..)
-    , utxoContainingOnlyAda) where
+    , utxoContainingStrictlyADAs) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
 
@@ -75,6 +75,6 @@ instance FromCLI [UTxO] where
       filterEmptyLines :: [Text] -> [Text]
       filterEmptyLines = L.filter (\a -> T.strip a /= mempty )
 
-utxoContainingOnlyAda :: UTxO -> Bool
-utxoContainingOnlyAda UTxO {..} 
+utxoContainingStrictlyADAs :: UTxO -> Bool
+utxoContainingStrictlyADAs UTxO {..} 
     = 1 == (length . filter (\(c,_,_) -> c == adaSymbol ) .flattenValue) value

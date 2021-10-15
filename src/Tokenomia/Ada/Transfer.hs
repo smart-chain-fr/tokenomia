@@ -11,8 +11,7 @@
 
 
 module Tokenomia.Ada.Transfer 
-    ( transfer
-    , utxoContainingOnlyAda) where
+    ( transfer ) where
 
 import Control.Monad.Reader
 
@@ -50,7 +49,7 @@ transfer = do
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                     Just utxoWithFees -> do 
                                         liftIO $ echo "> Select the utxo containing Ada to transfer  :" 
-                                        Wallet.selectUTxOFilterBy utxoContainingOnlyAda senderWallet 
+                                        Wallet.selectUTxOFilterBy utxoContainingStrictlyADAs senderWallet 
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                                 Just utxoWithAda  -> do
