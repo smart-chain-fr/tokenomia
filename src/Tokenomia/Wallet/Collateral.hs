@@ -20,13 +20,11 @@ import Shh
     ( load,
       ExecReference(SearchPath) )
 
-import           Tokenomia.Adapter.Cardano.CLI
-import           Control.Monad.Catch ( MonadMask ) 
+import Tokenomia.Adapter.Cardano.CLI
 import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Data.Text as T
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import           Ledger.Value
 import qualified Ledger.Ada as Ada
 
 
@@ -34,7 +32,7 @@ import qualified Ledger.Ada as Ada
 
 load SearchPath ["echo"]
 
-createCollateral :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
+createCollateral :: (MonadIO m, MonadReader Environment m)  => m ()
 createCollateral = do
     liftIO $ echo "Select the sender's wallet" 
     Wallet.select

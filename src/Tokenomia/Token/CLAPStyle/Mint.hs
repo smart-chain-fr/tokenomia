@@ -16,7 +16,6 @@ import           Prelude
 import           Shh
 
 import           Control.Monad.Reader
-import           Control.Monad.Catch ( MonadMask )
 
 import qualified Data.Text as T
 
@@ -37,7 +36,7 @@ import qualified Tokenomia.Wallet.Collateral as Wallet
 
 load SearchPath ["echo", "printf"]
 
-mint :: (MonadMask m,MonadIO m, MonadReader Environment m)  => m ()
+mint :: (MonadIO m, MonadReader Environment m)  => m ()
 mint = do
     liftIO $ echo "Select the minter's wallet" 
     Wallet.select

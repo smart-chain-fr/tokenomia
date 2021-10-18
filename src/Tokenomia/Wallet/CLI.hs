@@ -23,7 +23,6 @@ module Tokenomia.Wallet.CLI
   , remove)
   where
 
-import Control.Monad.Catch ( MonadMask )
 import Control.Monad.Reader
 
 import Data.List.NonEmpty hiding (filter)
@@ -38,20 +37,19 @@ import Tokenomia.Adapter.Cardano.CLI.UTxO
 
 load SearchPath ["echo","printf"]
 
-select :: (MonadIO m , MonadMask m) => m (Maybe Wallet)
+select :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
 select = do
-    query_registered_wallets
+    CardanoCLI.query_registered_wallets
       >>=  \case
             Nothing -> return Nothing
             Just a -> Just <$> showMenu a
           . nonEmpty
   where
-  showMenu :: (MonadIO m , MonadMask m) => NonEmpty Wallet -> m Wallet
+  showMenu :: (MonadIO m) => NonEmpty Wallet -> m Wallet
   showMenu wallets = liftIO $ askSelect wallets
 
 selectUTxO
   ::( MonadIO m
-    , MonadMask m
     , MonadReader Environment m)
   =>  Wallet
   ->  m (Maybe UTxO)
@@ -59,7 +57,6 @@ selectUTxO = selectUTxOFilterBy (const True)
 
 selectUTxOFilterBy
   ::( MonadIO m
-    , MonadMask m
     , MonadReader Environment m)
   => (UTxO -> Bool)
   -> Wallet
@@ -72,7 +69,7 @@ selectUTxOFilterBy predicate  Wallet {..}  =
           . nonEmpty
 
   where
-    showMenu :: (MonadIO m , MonadMask m) =>  NonEmpty UTxO -> m UTxO
+    showMenu :: (MonadIO m) =>  NonEmpty UTxO -> m UTxO
     showMenu a =  liftIO $ askSelect a
 
 
@@ -108,14 +105,14 @@ list = do
             ) wallets
            liftIO $ echo "-----------------------------------"
 
-remove :: (MonadIO m) => m ()
+remove :: (MonadIO m, MonadReader Environment m) => m ()
 remove = do
   liftIO $ echo "-----------------------------------"
   liftIO $ echo "Select the Wallet to remove :"
-    >> select
+  select
     >>= \case
         Nothing ->
-          echo "No Wallet Registered !"
+          liftIO $ echo "No Wallet Registered !"
         Just Wallet {..} -> CardanoCLI.remove_shelley_wallet name
 
   liftIO $ echo "-----------------------------------"
