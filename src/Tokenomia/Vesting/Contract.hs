@@ -32,7 +32,7 @@ import Control.Lens ( view, makeClassyPrisms, review )
 import           Control.Monad            (void, when)
 import           Data.Aeson               (FromJSON, ToJSON)
 import qualified Data.Map                 as Map
-import           Prelude                  (Semigroup (..))
+import           Prelude                  (Semigroup (..),Show)
 
 import           GHC.Generics             (Generic)
 import           Ledger                   (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
@@ -109,7 +109,7 @@ instance ValidatorTypes Vesting where
 data VestingTranche = VestingTranche {
     vestingTrancheDate   :: POSIXTime,
     vestingTrancheAmount :: Value
-    } deriving Generic
+    } deriving (Show, Generic,ToJSON,FromJSON,Haskell.Eq)
 
 PlutusTx.makeLift ''VestingTranche
 
@@ -119,7 +119,7 @@ data VestingParams = VestingParams {
     vestingTranche1 :: VestingTranche,
     vestingTranche2 :: VestingTranche,
     vestingOwner    :: PubKeyHash
-    } deriving Generic
+    } deriving (Show, Generic,ToJSON,FromJSON,Haskell.Eq)
 
 PlutusTx.makeLift ''VestingParams
 

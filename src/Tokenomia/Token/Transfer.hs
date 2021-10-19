@@ -26,7 +26,7 @@ import qualified Data.Text as T
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
 import Ledger.Value
-import Plutus.V1.Ledger.Ada
+
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -50,12 +50,12 @@ transfer = do
                                 Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                 Just utxoWithFees -> do 
                                     liftIO $ echo "> Select the utxo containing the token to transfer (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                                    Wallet.selectUTxOFilterBy utxoContainingOneToken senderWallet 
+                                    Wallet.selectUTxOFilterBy containingOneToken senderWallet 
                                         >>= \case  
                                             Nothing -> liftIO $ echo "Tokens not found in your wallet."
                                             Just utxoWithToken  -> do
                                                 let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
-                                                amount          <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
+                                                amount <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
                                                 run_tx paymentSigningKeyPath 
                                                         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
                                                         , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
@@ -66,9 +66,3 @@ transfer = do
 
 
 
-getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
-getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value -- should contains only one native token (filtering ADAs) 
-
-utxoContainingOneToken :: UTxO -> Bool
-utxoContainingOneToken UTxO {..} 
-    = 1 == (length . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value

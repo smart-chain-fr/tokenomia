@@ -69,7 +69,7 @@ mint = do
                                                     liftIO $ echo $ "Policy hash will be : " <> show policyhash
                                                     liftIO $ echo "-------------------------"
 
-                                                    monetaryScriptFilePath <- register_minting_script_file monetaryPolicy
+                                                    monetaryScriptFilePath <- registerMintingScriptFile monetaryPolicy
                                                     run_tx paymentSigningKeyPath
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForMinting 
                                                             , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 

@@ -27,7 +27,10 @@ import qualified Tokenomia.Token.CLAPStyle.Burn as Token
 import qualified Tokenomia.Token.Transfer as Token
 import qualified Tokenomia.Ada.Transfer as Ada
 import qualified Tokenomia.Wallet.Collateral as Wallet
-
+import qualified Tokenomia.Vesting.Vest as Vesting
+import qualified Tokenomia.Vesting.Retrieve as Vesting
+import qualified Tokenomia.Node.Status as Node
+import Tokenomia.Adapter.Cardano.CLI.Environment
 
 load SearchPath ["echo","cardano-cli","clear"]
 
@@ -53,12 +56,12 @@ selectNetwork :: IO()
 selectNetwork = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select a network"
-  liftIO $ echo "----------------------"
-  r <- liftIO $ askSelect networks
+  liftIO $ echo "----------------------"  
+  environment <- liftIO $ askSelect networks >>= \case 
+      SelectTestnet     -> getTestnetEnvironmment 1097911063 
+      SelectMainnet     -> getMainnetEnvironmment 764824073
   clear
-  case r of
-      SelectTestnet     -> runReaderT recursiveMenu (Testnet {magicNumber = 1097911063}) 
-      SelectMainnet     -> runReaderT recursiveMenu (Mainnet {magicNumber = 764824073}) 
+  runReaderT recursiveMenu environment 
 
 networks :: NonEmpty SelectEnvironment
 networks = NonEmpty.fromList [
@@ -92,6 +95,9 @@ recursiveMenu = do
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
       AdaTransfer      -> Ada.transfer
+      VestingVestFunds  -> Vesting.vestFunds
+      VestingRetrieveFunds -> Vesting.retrieveFunds
+      NodeStatus           -> Node.displayStatus
   liftIO waitAndClear         
   recursiveMenu
 
@@ -105,7 +111,10 @@ actions = NonEmpty.fromList [
     TokenMint,
     TokenBurn,
     TokenTransfer,
-    AdaTransfer
+    AdaTransfer,
+    VestingVestFunds,
+    VestingRetrieveFunds,
+    NodeStatus
     ]
 
 data Action
@@ -118,6 +127,9 @@ data Action
   | TokenBurn
   | TokenTransfer
   | AdaTransfer
+  | VestingVestFunds
+  | VestingRetrieveFunds
+  | NodeStatus 
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
@@ -130,4 +142,8 @@ instance DisplayMenuItem Action where
     TokenBurn        -> "[Token]  - Burn Tokens with CLAP type policy"
     TokenTransfer    -> "[Token]  - Transfer "
     AdaTransfer      -> "[Ada]    - Transfer "
+    VestingVestFunds      -> "[Vesting] - Vest Funds"
+    VestingRetrieveFunds  -> "[Vesting] - Retrieve Funds"
+    NodeStatus            -> "[Node]  - See Status "
+
 

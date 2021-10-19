@@ -15,6 +15,7 @@ import Plutus.V1.Ledger.Value
 
 import Data.String
 
+
 instance FromCLI Value  where
    fromCLI = parse . tokenize
      where 
@@ -28,18 +29,18 @@ instance FromCLI Value  where
               , (read @Integer . T.unpack)  c )))
 
       tokenize :: Text ->  [(Text,Text,Text)]
-      tokenize
+      tokenize 
         = tokenizeToken
           . removeDatum
           . map T.words
-          . T.splitOn "+"
+          . T.splitOn "+" 
         where
           tokenizeToken :: [[Text]] -> [(Text,Text,Text)]
-          tokenizeToken
+          tokenizeToken 
             = fmap (\case
                 [a,"lovelace"] -> ("","", a)
                 [a,b] -> case T.splitOn "." b of
                           [ph,tn] -> (ph,tn,a)
                           x -> error $ "unexpected format :" <> show (T.unpack <$> x)
                 x ->  error $ "unexpected format :" <> show (T.unpack <$> x) )
-          removeDatum = L.filter (\a -> 1 /= L.length a)
+          removeDatum = L.filter (\a -> 2 == L.length a)

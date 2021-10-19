@@ -40,6 +40,7 @@ library
     import: lang
     exposed-modules:
       Tokenomia.CLI
+      Tokenomia.Node.Status
       Tokenomia.Adapter.Cardano.CLI
       Tokenomia.Token.CLAPStyle.Mint
       Tokenomia.Token.CLAPStyle.Burn
@@ -49,12 +50,16 @@ library
       Tokenomia.Ada.Transfer
       Tokenomia.Token.Transfer
       Tokenomia.Vesting.Contract
+      Tokenomia.Vesting.Vest
+      Tokenomia.Vesting.Retrieve
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Adapter.Cardano.CLI.UTxO
       Tokenomia.Adapter.Cardano.CLI.Value
       Tokenomia.Adapter.Cardano.CLI.Serialise
       Tokenomia.Adapter.Cardano.CLI.Internal
       Tokenomia.Common.Shell.InteractiveMenu
+      Tokenomia.Adapter.Cardano.CLI.Environment
+      Tokenomia.Adapter.Cardano.CLI.Data
     build-depends:
       base >= 4.9 && < 5,
       lens,
@@ -65,14 +70,18 @@ library
       shh,
       split,
       directory,
+      random,
       exceptions,
       utf8-string,
       freer-simple,
       data-default,
+      iso8601-time,
       unordered-containers,
+      ouroboros-consensus,
       bytestring,
       containers,
       cardano-api,
+      cardano-cli,
       cardano-ledger-alonzo,
       plutus-ledger-api,
       serialise,
