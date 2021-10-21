@@ -87,7 +87,7 @@ recursiveMenu = do
   r <- liftIO $ askSelect actions
   case r of
       WalletList       -> Wallet.list
-      WalletAdd        -> Wallet.createAndRegister
+      WalletCreate        -> Wallet.createAndRegister
       WalletCollateral -> Wallet.createCollateral
       WalletRestore    -> Wallet.restore
       WalletRemove     -> Wallet.remove
@@ -104,7 +104,7 @@ recursiveMenu = do
 actions :: NonEmpty Action
 actions = NonEmpty.fromList [
     WalletList,
-    WalletAdd,
+    WalletCreate,
     WalletCollateral,
     WalletRemove,
     WalletRestore,
@@ -119,7 +119,7 @@ actions = NonEmpty.fromList [
 
 data Action
   = WalletList
-  | WalletAdd
+  | WalletCreate
   | WalletCollateral
   | WalletRestore
   | WalletRemove
@@ -133,17 +133,17 @@ data Action
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
-    WalletList       -> "[Wallet] - List Registered Ones" 
-    WalletAdd        -> "[Wallet] - Add "
-    WalletCollateral -> "[Wallet] - Create a unique collateral for transfer"
-    WalletRestore    -> "[Wallet] - Restore your wallet from your 24 words seed phrase"
-    WalletRemove     -> "[Wallet] - Remove"
-    TokenMint        -> "[Token]  - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy )"
-    TokenBurn        -> "[Token]  - Burn Tokens with CLAP type policy"
-    TokenTransfer    -> "[Token]  - Transfer "
-    AdaTransfer      -> "[Ada]    - Transfer "
-    VestingVestFunds      -> "[Vesting] - Vest Funds"
-    VestingRetrieveFunds  -> "[Vesting] - Retrieve Funds"
-    NodeStatus            -> "[Node]  - See Status "
+    WalletList            -> " [Wallet]  - List Registered Wallets" 
+    WalletRestore         -> " [Wallet]  - Restore Wallets from your 24 words seed phrase (Shelley Wallet)"
+    WalletCreate          -> " [Wallet]  - Create a new Wallet"
+    WalletCollateral      -> " [Wallet]  - Create a unique collateral for transfer"
+    WalletRemove          -> " [Wallet]  - Remove an existing Wallet"
+    TokenMint             -> " [Token]   - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy)"
+    TokenBurn             -> " [Token]   - Burn Tokens with CLAP type policy"
+    TokenTransfer         -> " [Token]   - Transfer Tokens"
+    AdaTransfer           -> " [Ada]     - Transfer ADAs"
+    VestingVestFunds      ->  "[Vesting] - Vest Funds"
+    VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
+    NodeStatus            ->  "[Node]    - Status"
 
 

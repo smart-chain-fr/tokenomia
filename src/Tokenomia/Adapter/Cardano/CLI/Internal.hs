@@ -68,7 +68,7 @@ import qualified Cardano.Api.Shelley  as Shelley
 import           Ledger.Crypto
 
 import           Ledger hiding (Address)
-import Plutus.V1.Ledger.Crypto
+
 import qualified Plutus.V1.Ledger.Scripts as Script
 import           PlutusTx.IsData.Class ( ToData )
 
@@ -362,10 +362,12 @@ getScriptLocation :: ( MonadIO m , MonadReader Environment m )
     => Validator
     -> m ScriptLocation
 getScriptLocation validator = do
-    magicN <- asks magicNumber
+    networkOption <- asks (\case 
+                        Mainnet {} -> asArg ["--mainnet"]
+                        Testnet {magicNumber} ->  asArg ["--testnet-magic", show magicNumber])
     scFolder <- getFolderPath Validators
     let validatorPath =  scFolder <> show (validatorHash validator) <> ".plutus"
-    scriptAddr <- liftIO $ C.unpack  <$> (cardano_cli "address" "build" "--payment-script-file" validatorPath "--testnet-magic" magicN |> capture)
+    scriptAddr <- liftIO $ C.unpack  <$> (cardano_cli "address" "build" "--payment-script-file" validatorPath networkOption |> capture)
     return ScriptLocation {onChain = scriptAddr, offChain = validatorPath}
 
 registerValidatorScriptFile
