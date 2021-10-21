@@ -27,7 +27,10 @@ import qualified Tokenomia.Token.CLAPStyle.Burn as Token
 import qualified Tokenomia.Token.Transfer as Token
 import qualified Tokenomia.Ada.Transfer as Ada
 import qualified Tokenomia.Wallet.Collateral as Wallet
-
+import qualified Tokenomia.Vesting.Vest as Vesting
+import qualified Tokenomia.Vesting.Retrieve as Vesting
+import qualified Tokenomia.Node.Status as Node
+import Tokenomia.Adapter.Cardano.CLI.Environment
 
 load SearchPath ["echo","cardano-cli","clear"]
 
@@ -53,12 +56,12 @@ selectNetwork :: IO()
 selectNetwork = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select a network"
-  liftIO $ echo "----------------------"
-  r <- liftIO $ askSelect networks
+  liftIO $ echo "----------------------"  
+  environment <- liftIO $ askSelect networks >>= \case 
+      SelectTestnet     -> getTestnetEnvironmment 1097911063 
+      SelectMainnet     -> getMainnetEnvironmment 764824073
   clear
-  case r of
-      SelectTestnet     -> runReaderT recursiveMenu (Testnet {magicNumber = 1097911063}) 
-      SelectMainnet     -> runReaderT recursiveMenu (Mainnet {magicNumber = 764824073}) 
+  runReaderT recursiveMenu environment 
 
 networks :: NonEmpty SelectEnvironment
 networks = NonEmpty.fromList [
@@ -84,7 +87,7 @@ recursiveMenu = do
   r <- liftIO $ askSelect actions
   case r of
       WalletList       -> Wallet.list
-      WalletAdd        -> Wallet.createAndRegister
+      WalletCreate        -> Wallet.createAndRegister
       WalletCollateral -> Wallet.createCollateral
       WalletRestore    -> Wallet.restore
       WalletRemove     -> Wallet.remove
@@ -92,25 +95,31 @@ recursiveMenu = do
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
       AdaTransfer      -> Ada.transfer
+      VestingVestFunds  -> Vesting.vestFunds
+      VestingRetrieveFunds -> Vesting.retrieveFunds
+      NodeStatus           -> Node.displayStatus
   liftIO waitAndClear         
   recursiveMenu
 
 actions :: NonEmpty Action
 actions = NonEmpty.fromList [
     WalletList,
-    WalletAdd,
+    WalletCreate,
     WalletCollateral,
     WalletRemove,
     WalletRestore,
     TokenMint,
     TokenBurn,
     TokenTransfer,
-    AdaTransfer
+    AdaTransfer,
+    VestingVestFunds,
+    VestingRetrieveFunds,
+    NodeStatus
     ]
 
 data Action
   = WalletList
-  | WalletAdd
+  | WalletCreate
   | WalletCollateral
   | WalletRestore
   | WalletRemove
@@ -118,16 +127,23 @@ data Action
   | TokenBurn
   | TokenTransfer
   | AdaTransfer
+  | VestingVestFunds
+  | VestingRetrieveFunds
+  | NodeStatus 
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
-    WalletList       -> "[Wallet] - List Registered Ones" 
-    WalletAdd        -> "[Wallet] - Add "
-    WalletCollateral -> "[Wallet] - Create a unique collateral for transfer"
-    WalletRestore    -> "[Wallet] - Restore your wallet from your 24 words seed phrase"
-    WalletRemove     -> "[Wallet] - Remove"
-    TokenMint        -> "[Token]  - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy )"
-    TokenBurn        -> "[Token]  - Burn Tokens with CLAP type policy"
-    TokenTransfer    -> "[Token]  - Transfer "
-    AdaTransfer      -> "[Ada]    - Transfer "
+    WalletList            -> " [Wallet]  - List Registered Wallets" 
+    WalletRestore         -> " [Wallet]  - Restore Wallets from your 24 words seed phrase (Shelley Wallet)"
+    WalletCreate          -> " [Wallet]  - Create a new Wallet"
+    WalletCollateral      -> " [Wallet]  - Create a unique collateral for transfer"
+    WalletRemove          -> " [Wallet]  - Remove an existing Wallet"
+    TokenMint             -> " [Token]   - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy)"
+    TokenBurn             -> " [Token]   - Burn Tokens with CLAP type policy"
+    TokenTransfer         -> " [Token]   - Transfer Tokens"
+    AdaTransfer           -> " [Ada]     - Transfer ADAs"
+    VestingVestFunds      ->  "[Vesting] - Vest Funds"
+    VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
+    NodeStatus            ->  "[Node]    - Status"
+
 

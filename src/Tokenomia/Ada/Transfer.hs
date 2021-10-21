@@ -48,7 +48,7 @@ transfer = do
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                     Just utxoWithFees -> do 
                                         liftIO $ echo "> Select the utxo containing Ada to transfer (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                                        Wallet.selectUTxOFilterBy utxoContainingStrictlyADAs senderWallet 
+                                        Wallet.selectUTxOFilterBy containingStrictlyADAs senderWallet 
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                                 Just utxoWithAda  -> do

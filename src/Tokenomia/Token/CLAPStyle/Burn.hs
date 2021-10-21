@@ -19,11 +19,8 @@ import           Control.Monad.Reader
 
 import qualified Data.Text as T
 
-
-
-import           Ledger hiding (value)
 import           Ledger.Value
-import           Plutus.V1.Ledger.Ada
+
 
 
 import           Tokenomia.Adapter.Cardano.CLI
@@ -52,12 +49,12 @@ burn = do
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                     Just utxoWithFees -> do
                                         liftIO $ echo "> Select the utxo containing the token to burn :" 
-                                        Wallet.selectUTxOFilterBy utxoWithContainingOneToken burnerWallet 
+                                        Wallet.selectUTxOFilterBy containingOneToken burnerWallet 
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "Tokens not found in your wallet."
                                                 Just utxoWithToken  -> do
                                                     let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
-                                                    get_monetary_policy_path tokenPolicyHash
+                                                    getMonetaryPolicyPath tokenPolicyHash
                                                         >>= \case 
                                                         Nothing -> liftIO $ echo "You can only burn token minted via tokenomia (Monetary Policy existing in ~/.tokenomia-cli/transactions/ )"
                                                         Just monetaryScriptFilePath -> do
@@ -72,9 +69,3 @@ burn = do
                                                                 , "--mint-script-file" , monetaryScriptFilePath
                                                                 , "--mint-redeemer-value",  "[]"]
 
-getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
-getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value -- should contains only one native token (filtering ADAs) 
-
-utxoWithContainingOneToken :: UTxO -> Bool
-utxoWithContainingOneToken UTxO {..} 
-    = 1 == (length . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value

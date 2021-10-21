@@ -34,7 +34,6 @@ import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
 import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
 import Tokenomia.Adapter.Cardano.CLI.UTxO
 
-
 load SearchPath ["echo","printf"]
 
 select :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
@@ -97,6 +96,7 @@ list = do
            liftIO $ echo "-----------------------------------"
            mapM_ (\Wallet{..} -> do
             liftIO $ echo ("> " <> name)
+              <> echo ("    Public key : "      <> show publicKeyHash)
               <> echo ("    Payment Address : " <> paymentAddress)
             utxos <- getUTxOs paymentAddress
             case utxos of
