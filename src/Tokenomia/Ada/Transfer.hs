@@ -33,7 +33,7 @@ load SearchPath ["echo", "printf"]
 transfer :: (MonadIO m, MonadReader Environment m)  => m ()
 transfer = do
     liftIO $ echo "Select the sender's wallet" 
-    Wallet.select
+    Wallet.askAmongAllWallets
         >>= \case 
             Nothing -> liftIO $ print "No Wallet Registered !"
             Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do 
@@ -43,17 +43,17 @@ transfer = do
                         Just utxoWithCollateral -> do 
                             receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
                             liftIO $ echo "> Select the utxo containing ADAs for fees (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                            Wallet.selectUTxO senderWallet
+                            Wallet.askUTxO senderWallet
                                 >>= \case 
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                     Just utxoWithFees -> do 
                                         liftIO $ echo "> Select the utxo containing Ada to transfer (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                                        Wallet.selectUTxOFilterBy containingStrictlyADAs senderWallet 
+                                        Wallet.askUTxOFilterBy containingStrictlyADAs senderWallet 
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                                 Just utxoWithAda  -> do
                                                     amount          <- liftIO $ echo "-n" "> Amount of Ada (in lovelaces) : "   >>  read @Integer <$> getLine
-                                                    run_tx paymentSigningKeyPath 
+                                                    submitTx paymentSigningKeyPath 
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithAda
                                                             , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                             , "--tx-out" , receiverAddr <> " " <> show amount <> " lovelace"

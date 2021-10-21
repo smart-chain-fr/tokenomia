@@ -39,7 +39,7 @@ load SearchPath ["echo", "printf"]
 mint :: (MonadIO m, MonadReader Environment m)  => m ()
 mint = do
     liftIO $ echo "Select the minter's wallet" 
-    Wallet.select
+    Wallet.askAmongAllWallets
         >>= \case 
             Nothing -> liftIO $ print "No Wallet Registered !"
             Just wallet@Wallet {paymentAddress = minterAddr,..} -> do 
@@ -48,14 +48,14 @@ mint = do
                         Nothing -> liftIO $ printf "Please create a collateral\n"
                         Just utxoWithCollateral -> do
                             liftIO $ echo "> Select the utxo containing ADAs for fees (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                            Wallet.selectUTxO wallet
+                            Wallet.askUTxO wallet
                                 >>= \case 
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                     Just utxoWithFees -> do
                                         tokenNameToMint  <- liftIO $ echo "-n" "> Token Name : "             >>  L.tokenName . BSU.fromString <$> getLine
                                         amountToMint     <- liftIO $ echo "-n" "> Total Supply to Mint : "   >>  read @Integer <$> getLine
                                         liftIO $ echo "> Select the utxo used for Minting the Token (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                                        selectUTxO wallet
+                                        askUTxO wallet
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "Please, add a tokens to your wallet"
                                                 Just utxoForMinting -> do 
@@ -70,7 +70,7 @@ mint = do
                                                     liftIO $ echo "-------------------------"
 
                                                     monetaryScriptFilePath <- registerMintingScriptFile monetaryPolicy
-                                                    run_tx paymentSigningKeyPath
+                                                    submitTx paymentSigningKeyPath
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForMinting 
                                                             , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                             , "--tx-out" , minterAddr <> " + 1344798 lovelace + " <> show amountToMint <> " " <> show policyhash <> "." <> L.toString tokenNameToMint

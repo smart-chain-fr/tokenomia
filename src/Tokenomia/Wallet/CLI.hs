@@ -7,6 +7,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
+
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
@@ -14,62 +16,88 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Tokenomia.Wallet.CLI
-  ( select
-  , selectUTxO
-  , selectUTxOFilterBy
+  ( askAmongGivenWallets
+  , askAmongAllWallets
+  , askUTxO
+  , askUTxOFilterBy
+  , selectUTxOForFees
   , createAndRegister
   , restore
   , list
   , remove)
   where
 
+import Prelude hiding (filter,head,last)
+import qualified Prelude as P
 import Control.Monad.Reader
 
-import Data.List.NonEmpty hiding (filter)
+import Data.List.NonEmpty
 
 import Shh
-import Tokenomia.Common.Shell.InteractiveMenu (askSelect)
+import Tokenomia.Common.Shell.InteractiveMenu (askMenu)
 
 
 import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
 import Tokenomia.Adapter.Cardano.CLI.UTxO
+import Plutus.V1.Ledger.Value (flattenValue)
+
+
 
 load SearchPath ["echo","printf"]
 
-select :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
-select = do
+
+
+askAmongAllWallets :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
+askAmongAllWallets = do
     CardanoCLI.query_registered_wallets
       >>=  \case
             Nothing -> return Nothing
-            Just a -> Just <$> showMenu a
+            Just a -> Just <$> askMenu a
           . nonEmpty
-  where
-  showMenu :: (MonadIO m) => NonEmpty Wallet -> m Wallet
-  showMenu wallets = liftIO $ askSelect wallets
 
-selectUTxO
+askAmongGivenWallets :: (MonadIO m, MonadReader Environment m) 
+  => NonEmpty Wallet
+  -> m Wallet
+askAmongGivenWallets = askMenu
+
+askUTxO
   ::( MonadIO m
     , MonadReader Environment m)
   =>  Wallet
   ->  m (Maybe UTxO)
-selectUTxO = selectUTxOFilterBy (const True)
+askUTxO = askUTxOFilterBy (const True)
 
-selectUTxOFilterBy
+
+selectUTxOForFees
+  ::( MonadIO m
+    , MonadReader Environment m)
+  => Wallet
+  ->  m (Maybe UTxO)
+selectUTxOForFees Wallet {..} = do
+  adas :: Maybe (NonEmpty UTxO) <- nonEmpty . P.filter containingStrictlyADAs <$> getUTxOs paymentAddress
+  return (last . sortWith (\UTxO {value} ->
+                        maybe
+                          0
+                          (third . head)
+                          (nonEmpty $ flattenValue value))
+           <$> adas)
+  where 
+    third :: (a,b,c) -> c
+    third (_,_,c) = c
+
+askUTxOFilterBy
   ::( MonadIO m
     , MonadReader Environment m)
   => (UTxO -> Bool)
   -> Wallet
   ->  m (Maybe UTxO)
-selectUTxOFilterBy predicate  Wallet {..}  =
-    filter predicate <$> getUTxOs paymentAddress
-      >>=  \case
-            Nothing -> return Nothing
-            Just a -> Just <$> showMenu a
-          . nonEmpty
+askUTxOFilterBy predicate  Wallet {..}  = 
+  (nonEmpty . P.filter predicate  <$> getUTxOs paymentAddress) 
+    >>= \case 
+          Nothing -> return Nothing 
+          Just a -> Just <$> askMenu a
+  
 
-  where
-    showMenu :: (MonadIO m) =>  NonEmpty UTxO -> m UTxO
-    showMenu a =  liftIO $ askSelect a
 
 
 createAndRegister
@@ -109,7 +137,7 @@ remove :: (MonadIO m, MonadReader Environment m) => m ()
 remove = do
   liftIO $ echo "-----------------------------------"
   liftIO $ echo "Select the Wallet to remove :"
-  select
+  askAmongAllWallets
     >>= \case
         Nothing ->
           liftIO $ echo "No Wallet Registered !"
@@ -133,5 +161,5 @@ restore = do
   seedPhrase <- liftIO getSeedPhrase
   CardanoCLI.restore_from_seed_phrase walletName seedPhrase
   liftIO $ echo "-----------------------------------"
-  
+
 

@@ -12,7 +12,7 @@
 
 module Tokenomia.Adapter.Cardano.CLI
     ( -- Write 
-      Internal.run_tx
+      Internal.submitTx
     , Internal.registerMintingScriptFile
     , Internal.registerValidatorScriptFile
     , Internal.registerVestingIndex

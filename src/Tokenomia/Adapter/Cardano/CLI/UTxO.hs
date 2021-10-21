@@ -11,6 +11,7 @@ module Tokenomia.Adapter.Cardano.CLI.UTxO
     , getTokensFrom
     , containingOneToken
     , containingStrictlyADAs
+    , containsCollateral
     ) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
@@ -43,6 +44,10 @@ containingOneToken :: UTxO -> Bool
 containingOneToken UTxO {..}
     = 1 == (length . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value
 
+
+containsCollateral :: UTxO -> Bool
+containsCollateral UTxO {..}
+   = adaValueOf 2.0 == value
 
 containingStrictlyADAs :: UTxO -> Bool
 containingStrictlyADAs UTxO {..} 

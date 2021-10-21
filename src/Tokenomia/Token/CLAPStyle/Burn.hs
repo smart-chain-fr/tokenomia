@@ -35,7 +35,7 @@ load SearchPath ["echo", "printf"]
 burn :: (MonadIO m, MonadReader Environment m)  => m ()
 burn = do
     liftIO $ echo "Select the burner's wallet" 
-    Wallet.select
+    Wallet.askAmongAllWallets
         >>= \case 
             Nothing -> liftIO $ print "No Wallet Registered !"
             Just burnerWallet@Wallet {paymentAddress = burnerAddr,..} -> do 
@@ -44,12 +44,12 @@ burn = do
                         Nothing -> liftIO $ printf "Please create a collateral\n"
                         Just utxoWithCollateral -> do
                             liftIO $ echo "> Select the utxo containing ADAs for fees (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                            Wallet.selectUTxO burnerWallet
+                            Wallet.askUTxO burnerWallet
                                 >>= \case 
                                     Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                     Just utxoWithFees -> do
                                         liftIO $ echo "> Select the utxo containing the token to burn :" 
-                                        Wallet.selectUTxOFilterBy containingOneToken burnerWallet 
+                                        Wallet.askUTxOFilterBy containingOneToken burnerWallet 
                                             >>= \case  
                                                 Nothing -> liftIO $ echo "Tokens not found in your wallet."
                                                 Just utxoWithToken  -> do
@@ -59,7 +59,7 @@ burn = do
                                                         Nothing -> liftIO $ echo "You can only burn token minted via tokenomia (Monetary Policy existing in ~/.tokenomia-cli/transactions/ )"
                                                         Just monetaryScriptFilePath -> do
                                                             amountToBurn  <- liftIO $ echo "-n" "> Amount to burn : "  >>  read @Integer <$> getLine
-                                                            run_tx paymentSigningKeyPath
+                                                            submitTx paymentSigningKeyPath
                                                                 [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken 
                                                                 , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                                 , "--tx-out" , burnerAddr <> " + 1344798 lovelace + " <> show (totalAmount - amountToBurn) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected
