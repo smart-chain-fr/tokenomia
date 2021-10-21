@@ -18,7 +18,7 @@
 -}
 module Tokenomia.Adapter.Cardano.CLI.Internal
     ( -- Write 
-      run_tx
+      submitTx
     , registerMintingScriptFile
     , registerValidatorScriptFile
     , registerVestingIndex
@@ -230,14 +230,14 @@ query_utxo walletAddress = do
 
 -- | Build a Tx , Sign it with the private key path provided and Submit it
 --   Temporary Files are persisted into ~/.cardano-cli/ folder 
-run_tx
+submitTx
     :: ( ExecArg a
        , MonadIO m
        , MonadReader Environment m )
     => FilePath
     -> a
     -> m ()
-run_tx privateKeyPath buildTxBody = do
+submitTx privateKeyPath buildTxBody = do
     magicN <- asks magicNumber
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
     protocolParametersPath <- register_protocol_parameters

@@ -30,7 +30,9 @@ import qualified Tokenomia.Wallet.Collateral as Wallet
 import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
 import qualified Tokenomia.Node.Status as Node
-import Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Control.Monad.Except
+import           Tokenomia.Wallet.Collateral (Error (..)) 
 
 load SearchPath ["echo","cardano-cli","clear"]
 
@@ -57,11 +59,16 @@ selectNetwork = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select a network"
   liftIO $ echo "----------------------"  
-  environment <- liftIO $ askSelect networks >>= \case 
+  environment <- liftIO $ askMenu networks >>= \case 
       SelectTestnet     -> getTestnetEnvironmment 1097911063 
       SelectMainnet     -> getMainnetEnvironmment 764824073
   clear
-  runReaderT recursiveMenu environment 
+  result :: Either Error () <- runExceptT $ runReaderT recursiveMenu environment 
+  case result of 
+          Left e -> liftIO $ echo $ "An unexpected error occured :" <> show e
+          Right _ -> return ()
+
+
 
 networks :: NonEmpty SelectEnvironment
 networks = NonEmpty.fromList [
@@ -79,16 +86,26 @@ instance DisplayMenuItem SelectEnvironment where
     SelectMainnet   -> "Mainnet (magicNumber 764824073)"
 
 
-recursiveMenu :: (MonadIO m,MonadReader Environment m) =>  m()
+recursiveMenu 
+  :: ( MonadIO m
+     , MonadReader Environment m
+     , MonadError Error m) =>  m ()
 recursiveMenu = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select an action"
   liftIO $ echo "----------------------"
-  r <- liftIO $ askSelect actions
+  r <- liftIO $ askMenu actions
   case r of
       WalletList       -> Wallet.list
       WalletCreate        -> Wallet.createAndRegister
-      WalletCollateral -> Wallet.createCollateral
+      WalletCollateral -> Wallet.createCollateral 
+                            `catchError` 
+                              (\case 
+                                NoWalletRegistered ->        liftIO $ echo "Register a Wallet First..."
+                                NoWalletWithoutCollateral -> liftIO $ echo "All Wallets contain collateral..."  
+                                AlreadyACollateral utxo ->   liftIO $ echo $ "Collateral Already Created..." <> show utxo
+                                NoADAInWallet ->             liftIO $ echo "Please, add ADAs to your wallet...")
+
       WalletRestore    -> Wallet.restore
       WalletRemove     -> Wallet.remove
       TokenMint        -> Token.mint

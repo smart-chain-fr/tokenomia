@@ -57,12 +57,12 @@ retrieveFunds = do
                                                          , Tranche {status = s2, value = v2})
                                             , ..} -> do
                         liftIO $ echo "> Select the utxo containing ADAs for collateral  :"
-                        Wallet.selectUTxOFilterBy containingStrictlyADAs wallet
+                        Wallet.askUTxOFilterBy containingStrictlyADAs wallet
                             >>= \case
                                 Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
                                 Just utxoWithCollateral -> do
                                     liftIO $ echo "> Select the utxo containing ADAs for fees  :"
-                                    Wallet.selectUTxOFilterBy containingStrictlyADAs wallet
+                                    Wallet.askUTxOFilterBy containingStrictlyADAs wallet
                                     >>= \case
                                         Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                         Just utxoWithFees -> do
@@ -81,14 +81,14 @@ retrieveFunds = do
                                             case (s1,s2) of
                                                 (Available,Available) -> do
                                                     let tokensThatCanBeVested = v2 + v1
-                                                    run_tx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet)
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
 
                                                 (Available,Locked _) -> do
                                                     let remainingTokensOnScript = v2
                                                         tokensThatCanBeVested = v1
                                                     datumVoidHash <- getDataHash ()
-                                                    run_tx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet)
                                                         (commonParams
                                                         <> [ "--tx-out" , onChain scriptLocation <> "  " <> (T.unpack . toCLI) remainingTokensOnScript
                                                             , "--tx-out-datum-hash"  , datumVoidHash
@@ -97,18 +97,18 @@ retrieveFunds = do
                                                     let remainingTokensOnScript = v1
                                                         tokensThatCanBeVested = v2
                                                     datumVoidHash <- getDataHash ()
-                                                    run_tx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet)
                                                         (commonParams
                                                         <> [ "--tx-out" , onChain scriptLocation <> "  " <> (T.unpack . toCLI) remainingTokensOnScript
                                                             , "--tx-out-datum-hash"  , datumVoidHash
                                                             , "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
                                                 (Retrieved ,Available) -> do
                                                     let tokensThatCanBeVested = v2 
-                                                    run_tx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet)
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
                                                 (Available ,Retrieved) -> do 
                                                     let tokensThatCanBeVested = v1
-                                                    run_tx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet)
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])              
                                                 (Retrieved ,Locked _)  -> liftIO $ echo "No funds to be retrieved"
                                                 (Locked _  ,Retrieved) -> liftIO $ echo "No funds to be retrieved"
@@ -129,7 +129,7 @@ selectWalletWithVestedFunds = do
           . nonEmpty
   where
   showMenu :: (MonadIO m) => NonEmpty WalletWithVestedFunds -> m WalletWithVestedFunds
-  showMenu wallets = liftIO $ askSelect wallets
+  showMenu wallets = liftIO $ askMenu wallets
 
 instance DisplayMenuItem WalletWithVestedFunds where
     displayMenuItem WalletWithVestedFunds{wallet = Wallet{..},..}
@@ -155,7 +155,7 @@ selectVesting a = case nonEmpty a of
 
   where
   showMenu :: (MonadIO m) => NonEmpty VestingInProgress -> m VestingInProgress
-  showMenu wallets = liftIO $ askSelect wallets
+  showMenu wallets = liftIO $ askMenu wallets
 
 instance DisplayMenuItem VestingInProgress where
     displayMenuItem VestingInProgress {tranches = (Tranche {status = s1,value = v1 },Tranche {status = s2,value = v2})}

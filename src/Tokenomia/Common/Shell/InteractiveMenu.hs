@@ -14,14 +14,14 @@
 
 
 module Tokenomia.Common.Shell.InteractiveMenu
-    ( askSelect
+    ( askMenu
     , DisplayMenuItem (..)) where
 
 import Data.List.NonEmpty (NonEmpty, toList, (!!))
 import Prelude hiding ((!!))
 import Text.Read (readEither)
 import Shh
-import Control.Monad.Reader (liftIO)
+import Control.Monad.Reader 
 
 load SearchPath ["echo", "clear", "printf"]
 
@@ -32,25 +32,33 @@ zipIndex i (x: xs) = (i, x) : zipIndex (i + 1) xs
 echoChoices :: DisplayMenuItem a =>  (Int, a) -> Cmd 
 echoChoices (i, x) = echo "    " (show i) "-" (displayMenuItem x) 
 
-askSelectRepeatedly :: DisplayMenuItem a => NonEmpty a -> IO Int
+askSelectRepeatedly 
+    :: ( MonadIO m 
+       , DisplayMenuItem a) 
+    => NonEmpty a 
+    -> m Int
 askSelectRepeatedly choices = do
     let orderedChoices = zipIndex 1 (toList choices)
     mapM_ (liftIO . echoChoices) orderedChoices
     liftIO $ printf "\n> please choose an action (provide the index) : "
-    getLine >>= (
+    liftIO getLine >>= (
         \case
             Left err -> do
-                clear
-                putStrLn  $ show err ++ ": Wrong parse input. Please try again."
+                liftIO clear
+                liftIO $ putStrLn  $ show err ++ ": Wrong parse input. Please try again."
                 askSelectRepeatedly choices
             Right ioIdx -> if ioIdx > length choices || ioIdx <= 0 then do
-                clear
-                putStrLn $ show ioIdx ++ ": Number selected is incorrect"
+                liftIO clear
+                liftIO $ putStrLn $ show ioIdx ++ ": Number selected is incorrect"
                 askSelectRepeatedly choices else return ioIdx) . readEither
 
 
-askSelect :: DisplayMenuItem a => NonEmpty a -> IO a
-askSelect choices = (\idx -> choices !! (idx - 1)) <$> askSelectRepeatedly choices
+askMenu 
+    :: ( MonadIO m 
+       , DisplayMenuItem a) 
+    => NonEmpty a 
+    -> m a
+askMenu choices = (\idx -> choices !! (idx - 1)) <$> askSelectRepeatedly choices
 
 class DisplayMenuItem a where
     displayMenuItem :: a -> String 

@@ -39,27 +39,27 @@ load SearchPath ["echo"]
 vestFunds :: (MonadIO m, MonadReader Environment m)  => m ()
 vestFunds = do
     liftIO $ echo "Select the token's owner wallet"
-    Wallet.select
+    Wallet.askAmongAllWallets
         >>= \case
             Nothing -> liftIO $ print "No Wallet Registered !"
             Just ownerWallet -> do
                 liftIO $ echo "> Select the collateral utxo :"
-                Wallet.selectUTxO ownerWallet
+                Wallet.askUTxO ownerWallet
                     >>= \case
                         Nothing -> liftIO $ echo "Please, add a collateral to your wallet"
                         Just utxoWithCollateral -> do
                             liftIO $ echo "> Select the utxo containing ADAs for fees  :"
-                            Wallet.selectUTxO ownerWallet
+                            Wallet.askUTxO ownerWallet
                             >>= \case
                                 Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
                                 Just utxoWithFees -> do
                                     liftIO $ echo "Select the investor's wallet"
-                                    Wallet.select
+                                    Wallet.askAmongAllWallets
                                         >>= \case
                                             Nothing -> liftIO $ print "No Wallet Registered !"
                                             Just investorWallet@Wallet{} -> do
                                                 liftIO $ echo "> Select the utxo containing the token to vest  :"
-                                                Wallet.selectUTxOFilterBy containingOneToken ownerWallet
+                                                Wallet.askUTxOFilterBy containingOneToken ownerWallet
                                                     >>= \case
                                                             Nothing -> liftIO $ echo "Tokens not found in your wallet."
                                                             Just utxoWithToken  -> do
@@ -95,7 +95,7 @@ vestFunds = do
 
                                                                 liftIO $ echo $ "Script adress will be  :" <> onChain scriptLocation
                                                                 datumVoidHash <- getDataHash ()
-                                                                run_tx (paymentSigningKeyPath ownerWallet)
+                                                                submitTx (paymentSigningKeyPath ownerWallet)
                                                                         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
                                                                         , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
                                                                         , "--tx-out" , onChain scriptLocation <> " " <> (T.unpack . toCLI .vestingTrancheAmount . vestingTranche1) params
