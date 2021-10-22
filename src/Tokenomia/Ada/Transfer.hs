@@ -53,7 +53,7 @@ transfer = do
                                                 Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                                 Just utxoWithAda  -> do
                                                     amount          <- liftIO $ echo "-n" "> Amount of Ada (in lovelaces) : "   >>  read @Integer <$> getLine
-                                                    submitTx paymentSigningKeyPath 
+                                                    submitTx paymentSigningKeyPath utxoWithFees
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithAda
                                                             , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                             , "--tx-out" , receiverAddr <> " " <> show amount <> " lovelace"

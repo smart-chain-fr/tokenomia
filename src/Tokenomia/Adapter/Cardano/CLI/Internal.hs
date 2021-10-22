@@ -52,6 +52,7 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Lazy.UTF8 as BLU 
 
 import           Control.Monad.Reader
+import           Control.Concurrent
 
 import           System.Random
 import           System.Directory
@@ -76,6 +77,8 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Vesting.Contract
 import           Tokenomia.Common.Shell.InteractiveMenu
 import           Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString)
+import qualified Tokenomia.Adapter.Cardano.CLI.UTxO as U
+import           Tokenomia.Adapter.Cardano.CLI.Serialise (toCLI, fromCLI)
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -235,9 +238,10 @@ submitTx
        , MonadIO m
        , MonadReader Environment m )
     => FilePath
+    -> U.UTxO
     -> a
     -> m ()
-submitTx privateKeyPath buildTxBody = do
+submitTx privateKeyPath utxoWithFees buildTxBody = do
     magicN <- asks magicNumber
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
     protocolParametersPath <- register_protocol_parameters
@@ -259,7 +263,9 @@ submitTx privateKeyPath buildTxBody = do
 
     liftIO (echo "Signing Tx")    >> sign_tx   rawHashTx signedHashTx privateKeyPath
     liftIO (echo "Submitting Tx") >> submit_tx signedHashTx
-    liftIO $ echo "Tx sent"
+    liftIO $ echo "Waiting for confirmation..."
+    awaitTxCommitted utxoWithFees 0
+    liftIO $ echo "\nTx committed into ledger"
 
 submit_tx
     :: ( MonadIO m
@@ -271,6 +277,25 @@ submit_tx f = do
     liftIO $ cardano_cli "transaction" "submit"
          "--testnet-magic" magicN
          "--tx-file" f
+
+awaitTxCommitted
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => U.UTxO
+    -> Int
+    -> m ()
+awaitTxCommitted utxoWithFees duration = do
+    magicN <- asks magicNumber
+    fromCLI . TL.toStrict . TLE.decodeUtf8 <$> liftIO (cardano_cli "query" "utxo" 
+                                                            "--tx-in" ((T.unpack . toCLI . U.txOutRef) utxoWithFees) 
+                                                            "--testnet-magic" magicN |> capture)
+        >>= \case
+            []     -> return ()
+            [utxo] -> do
+                liftIO $ threadDelay 1000000
+                liftIO $ echo "-ne" (take duration (repeat '#')) duration "s\r"
+                awaitTxCommitted utxo (duration + 1)
+            _ -> error ("Unexpected value, it is supposed to return [UTxO] or []") 
 
 sign_tx
     :: ( MonadIO m

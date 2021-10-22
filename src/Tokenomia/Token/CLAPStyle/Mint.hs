@@ -70,7 +70,7 @@ mint = do
                                                     liftIO $ echo "-------------------------"
 
                                                     monetaryScriptFilePath <- registerMintingScriptFile monetaryPolicy
-                                                    submitTx paymentSigningKeyPath
+                                                    submitTx paymentSigningKeyPath utxoWithFees
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForMinting 
                                                             , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                             , "--tx-out" , minterAddr <> " + 1344798 lovelace + " <> show amountToMint <> " " <> show policyhash <> "." <> L.toString tokenNameToMint

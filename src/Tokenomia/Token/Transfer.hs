@@ -56,7 +56,7 @@ transfer = do
                                             Just utxoWithToken  -> do
                                                 let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
                                                 amount <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
-                                                submitTx paymentSigningKeyPath 
+                                                submitTx paymentSigningKeyPath utxoWithFees
                                                         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
                                                         , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                         , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
