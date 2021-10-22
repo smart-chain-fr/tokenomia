@@ -81,14 +81,14 @@ retrieveFunds = do
                                             case (s1,s2) of
                                                 (Available,Available) -> do
                                                     let tokensThatCanBeVested = v2 + v1
-                                                    submitTx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
 
                                                 (Available,Locked _) -> do
                                                     let remainingTokensOnScript = v2
                                                         tokensThatCanBeVested = v1
                                                     datumVoidHash <- getDataHash ()
-                                                    submitTx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams
                                                         <> [ "--tx-out" , onChain scriptLocation <> "  " <> (T.unpack . toCLI) remainingTokensOnScript
                                                             , "--tx-out-datum-hash"  , datumVoidHash
@@ -97,18 +97,18 @@ retrieveFunds = do
                                                     let remainingTokensOnScript = v1
                                                         tokensThatCanBeVested = v2
                                                     datumVoidHash <- getDataHash ()
-                                                    submitTx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams
                                                         <> [ "--tx-out" , onChain scriptLocation <> "  " <> (T.unpack . toCLI) remainingTokensOnScript
                                                             , "--tx-out-datum-hash"  , datumVoidHash
                                                             , "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
                                                 (Retrieved ,Available) -> do
                                                     let tokensThatCanBeVested = v2 
-                                                    submitTx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
                                                 (Available ,Retrieved) -> do 
                                                     let tokensThatCanBeVested = v1
-                                                    submitTx (paymentSigningKeyPath wallet)
+                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])              
                                                 (Retrieved ,Locked _)  -> liftIO $ echo "No funds to be retrieved"
                                                 (Locked _  ,Retrieved) -> liftIO $ echo "No funds to be retrieved"

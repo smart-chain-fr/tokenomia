@@ -59,7 +59,7 @@ burn = do
                                                         Nothing -> liftIO $ echo "You can only burn token minted via tokenomia (Monetary Policy existing in ~/.tokenomia-cli/transactions/ )"
                                                         Just monetaryScriptFilePath -> do
                                                             amountToBurn  <- liftIO $ echo "-n" "> Amount to burn : "  >>  read @Integer <$> getLine
-                                                            submitTx paymentSigningKeyPath
+                                                            submitTx paymentSigningKeyPath utxoWithFees
                                                                 [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken 
                                                                 , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                                 , "--tx-out" , burnerAddr <> " + 1344798 lovelace + " <> show (totalAmount - amountToBurn) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected

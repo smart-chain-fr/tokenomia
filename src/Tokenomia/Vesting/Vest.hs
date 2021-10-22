@@ -95,7 +95,7 @@ vestFunds = do
 
                                                                 liftIO $ echo $ "Script adress will be  :" <> onChain scriptLocation
                                                                 datumVoidHash <- getDataHash ()
-                                                                submitTx (paymentSigningKeyPath ownerWallet)
+                                                                submitTx (paymentSigningKeyPath ownerWallet) utxoWithFees
                                                                         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
                                                                         , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
                                                                         , "--tx-out" , onChain scriptLocation <> " " <> (T.unpack . toCLI .vestingTrancheAmount . vestingTranche1) params

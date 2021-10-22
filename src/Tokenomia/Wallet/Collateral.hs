@@ -65,11 +65,11 @@ createCollateral'
        -> m ()
 createCollateral' senderWallet@Wallet {paymentAddress = senderAddr,..} = do
     assertCollateralNotAlreadyCreated senderWallet
-    utxoForFees <- selectUTxOForFees senderWallet >>=  whenNothingThrow NoADAInWallet
-    submitTx paymentSigningKeyPath
-        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForFees
+    utxoWithFees <- selectUTxOForFees senderWallet >>=  whenNothingThrow NoADAInWallet
+    submitTx paymentSigningKeyPath utxoWithFees
+        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
         , "--tx-out" , senderAddr <> " " <>(T.unpack . toCLI) (adaValueOf 2.0)
-        , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoForFees
+        , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithFees
         , "--change-address"  , senderAddr]
 
 
