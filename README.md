@@ -1,96 +1,144 @@
 
 <img src="./tokenomia-logo.png" width="500"  />
 
-Link of the video for the Plutus Pioneer Capstone : https://youtu.be/afWjFIoCgA8
-
 Tokenomia aims to simplify the use of Native Tokens and Smart Contracts above the Cardano Platform for the needs of [Smart Chain](https://smart-chain.fr/en/) Developments.
 
-This Project is still in an early stage and the first goal here is to simplify the production of tokens with some vesting logic (Our fisrt tokenomic over the Cardano Platform). This implies the following capabilities : 
-- Automating the creation of organisational wallets
-- Minting and Burning tokens over a specific monetary Policy
-- Applying Some Custom Vesting Logic   
+## What you can do on (Testnet/Mainnet)
 
-## What you can do with it so far
-
-|Wallet Management 
+|Shelley Wallet Management 
 ---------- | 
 List registered wallets
-Add a wallet
-Remove a wallet 
+Create a wallet
+Remove an existing Wallet
+Restore Wallets from your 24 words seed phrase (e.g from Deadalus Wallet)
+Create a collateral 
 
 |Native Token
 ---------- | 
 Mint and Burn (Fix Total Supply, one-time Minting and open Burning Policy) 
 Transfer tokens
 
-## Roadmap 
-- move on freer-simple (the idea was to get a sense of what is required to implement the functionalities to the detriment of quality as a first step... )
-- use deeper `plutus` and `cardano api` codebase vs `cardano-cli` and `shh` hacks 
-- fee calculation when submitting transactions
-- add the creation of a collateral utxos into a wallet
-- redeeming tokens
-- add Vesting capabilities (only minting token is implemented so far)
-- use `cardano-adresses` to have "real" wallets and being able to restore them in deadalus
-- options for testnet/mainnet 
-- add `waitTxConfirmation` to submitted transactions 
+|ADA
+---------- | 
+Transfer ADA
+
+|Vesting
+---------- | 
+Vest Funds (using the official plutus-use-case vesting validator)
+Retrieve Funds
+
 
 ## Technical Approach 
 
-we are providing `tokenomia-cli` as a first artefact :
-- it pilots `cardano-cli` thanks to the haskell `shh` library. 
-- Generate some "wallets" (so far we are only generating payment adressesses via `cardano-cli` but we'll use `cardano-adresses` evntually)
-- Progressively uses plutus codebase (Minting Policies,TxOutRef,Value...) over `cardano-cli`
+Regarding our personal objectives at Smart Chain,  we are aiming to release services on Cardano Mainnet soon and so we can't wait for the PAB to come...
+From this particular context, we are exactly doing what Nigel Hemsley is describing during the [Mid Month Development Update - October](https://www.youtube.com/watch?v=XzdTyV5Jejc&t=2s&ab_channel=IOHK) which was a part of the Capstone Hackathon Subject for EMEA Europe Region.
 
-For the visual people, here is a simple view of `tokenomia-cli` :
+We are using a mix of different approaches : 
+- The normal way where we directly use cardano-api and cardano-cli
+- The shorter way where we are calling the command shells via haskell code (using shh)
 
-<img src="./schema.png" width="500"  />
+After a few iterations now, we start seeing the patterns we were looking for by bypassing the Contract Monad (Also explained by Nigel Hemsley in the update video) : 
+- Preconditions/Assertions
+- Coin Selection
+- Tx Building
 
+A good simple example could be the creation of collateral for a wallet ([here](https://github.com/smart-chain-fr/tokenomia/blob/main/src/Tokenomia/Wallet/Collateral.hs)) 
 
-`tokenomia-cli` is saving information at `~/.tokenomia-cli/`, here is a simple example of the structure : 
+### Some Challenges we have faced 
+
+- Validator error Opacity :  When you have a validator failing, this is the kind information you will get :  
+```shell 
+Command failed: transaction build  Error: The following scripts have execution failures:
+the script for transaction input 1 (in the order of the TxIds) failed with:
+The Plutus script evaluation failed: An error has occurred:  User error:
+The provided Plutus code called 'error'.
+```
+ 
+**Solution** : Since the validators are deterministics, it's sufficient to retrieve only the information given to the validator into cardano-cli.  
+So, We have traced into cardano-ledger-specs this way to be able to improve the transparency ([here](https://github.com/nhenin/cardano-ledger-specs/commit/2329c83e44f2f83ef29a97466820eb2b4ec58d97)). 
+
+- The Vesting :  without the chain-index, we had to keep locally some information (e.g : the params embedded into the vesting validators)
+
+### Tokenomia "DB"
+
+`tokenomia-cli` is saving information at `~/.tokenomia-cli/` into the following folders 
+- `keys`  
+    - You'll find all the information about the wallets you are using in tokenomia
+    - e.g : `Zeus` and `Athena` are 2 "wallets" used in the Testenet generated into the `testnet/keys` folders.
+- `monetary-policies` : you'll find the monetary policy plutus scripts of the Native Tokens you mint via Tokenomia 
+- `transactions` folder is used for building transactions 
+- `validators` : you'll find the vesting validators and a record of all the vesting you'll have done via Tokenomia (required for retrieving the funds vested)
+- `tmp` : mainnly used for recording datums and redeemers data
+
+here is a simple example of the structure : 
 
 ```shell
-.
-|-- keys
-|   |-- Athena
-|   |   |-- payment-signing.skey
-|   |   |-- payment-verification.vkey
-|   |   |-- payment.addr
-|   |   |-- stake-signing.skey
-|   |   `-- stake-verification.vkey
-|   `-- Zeus
-|       |-- payment-signing.skey
-|       |-- payment-verification.vkey
-|       |-- payment.addr
-|       |-- stake-signing.skey
-|       `-- stake-verification.vkey
-|-- parameters
-|   `-- parameters-testnet.json
-`-- transactions
-    |-- 0e10fd80e44172d0ec31dce1d537fe0c.raw
-    |-- 0e10fd80e44172d0ec31dce1d537fe0c.signed
-    |-- 10cef34466ccbe574e91abdce3b462662d5ca88b3836b286d6eaf577.plutus
-    |-- 43f4b575a39a885c0bbfd2e787d0d4ee343ab9dd410fee970fcd9969.plutus
-    |-- 666abb9219aa12f199b403e263ab8107.raw
-    |-- 666abb9219aa12f199b403e263ab8107.signed
-    |-- 6681340d7ea6804b8fb7fac624a21bfa.raw
-    |-- 6681340d7ea6804b8fb7fac624a21bfa.signed
-    |-- 7ab273056996bcc9479ace89941d02dae115b0d96ee5ce2da34b2774.plutus
-    |-- 94cb16873c5f858a0c3f61b2ffe1b57c5d303a8c8a995f034030c861.plutus
-    |-- a4fe55f29156a7f74812fc5f181bce7986322345da17e5b44ff38652.plutus
-    |-- b5cb3f28d92493a68d904ec8df0927e3.raw
-    |-- cfe139b73748cc0343a6711f517b024a.raw
-    `-- cfe139b73748cc0343a6711f517b024a.signed
-
+-- testnet
+    |-- keys
+    |   |-- Athena
+    |   |   |-- mnemonics.txt
+    |   |   |-- payment-signing.skey
+    |   |   |-- payment-signing.xsk
+    |   |   |-- payment-verification.vkey
+    |   |   |-- payment-verification.xvk
+    |   |   |-- payment.addr
+    |   |   |-- public-key.hash
+    |   |   |-- root.xsk
+    |   |   `-- stake.xvk
+    |   |-- Jupiter
+    |   |   |-- mnemonics.txt
+    |   |   |-- payment-signing.skey
+    |   |   |-- payment-signing.xsk
+    |   |   |-- payment-verification.vkey
+    |   |   |-- payment-verification.xvk
+    |   |   |-- payment.addr
+    |   |   |-- public-key.hash
+    |   |   |-- root.xsk
+    |   |   `-- stake.xvk
+    |   `-- Zeus
+    |       |-- mnemonics.txt
+    |       |-- payment-signing.skey
+    |       |-- payment-signing.xsk
+    |       |-- payment-verification.vkey
+    |       |-- payment-verification.xvk
+    |       |-- payment.addr
+    |       |-- public-key.hash
+    |       |-- root.xsk
+    |       `-- stake.xvk
+    |-- monetary-policies
+    |   `-- d14fee196d96d37f3ea149fac4b3ce326f724b706b70d67b45ef76de.plutus
+    |-- parameters
+    |   `-- parameters-testnet.json
+    |-- tmp
+    |   |-- 1457377353943883957.txt
+    |   |-- 1785756855668231913.txt
+    |   |-- 1968830820112713122.txt
+    |   |-- 2569789401013764603.txt
+    |   |-- 4122642902711131427.txt
+    |   |-- 498428157451304989.txt
+    |   |-- 5017803380174220559.txt
+    |   |-- 5724876749071085794.txt
+    |   |-- 5867046558793242961.txt
+    |   |-- 7047104766165311267.txt
+    |   `-- 7569565383380314696.txt
+    |-- transactions
+    |   |-- 19460e5550bfad26c17a557b32d421ba.raw
+    |   |-- 19460e5550bfad26c17a557b32d421ba.signed
+    |   |-- 19a6ec39ea303e12e1b6e43421ef6a19.raw
+    |   |-- 19a6ec39ea303e12e1b6e43421ef6a19.signed
+    |   |-- 24b74da7af102de6307ddff796498cf1.raw
+    `-- validators
+        |-- 2c47033d5be3d6659c4b419f75098d32919df881d9aa8e9ef721caeb.plutus
+        `-- vesting.index
+-- mainnet ...        
 ```
-- `Zeus` and `Athena` are 2 "wallets" generated into the `/keys` folders.
-- The `transaction` folder is used for building transactions (minting policy scripts,raw and signed transations)
 
 ## Development Tasks (Only tested on Ubuntu)
 
 ### Environment Setup
 
 - The same used in the  [plutus starter project](https://github.com/input-output-hk/plutus-starter).
-- You need to install `cardano-cli` 1.29.0  as well, see [cardano-node project](https://github.com/input-output-hk/cardano-node)  
+- You need to install `cardano-cli` 1.30.1  as well, see [cardano-node project](https://github.com/input-output-hk/cardano-node)  
 
 ### Run tokenomia-cli
 
