@@ -27,12 +27,16 @@ import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
 import           Ledger.Value 
 import           Plutus.V1.Ledger.Ada
 
-import           Tokenomia.Adapter.Cardano.CLI
+
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import qualified Tokenomia.Wallet.CLI as Wallet
 import           Tokenomia.Vesting.Contract
 import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Adapter.Cardano.CLI.Scripts
+import           Tokenomia.Vesting.Repository
 
 load SearchPath ["echo"]
 
@@ -95,7 +99,7 @@ vestFunds = do
 
                                                                 liftIO $ echo $ "Script adress will be  :" <> onChain scriptLocation
                                                                 datumVoidHash <- getDataHash ()
-                                                                submitTx (paymentSigningKeyPath ownerWallet) utxoWithFees
+                                                                submit (paymentSigningKeyPath ownerWallet) utxoWithFees
                                                                         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
                                                                         , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
                                                                         , "--tx-out" , onChain scriptLocation <> " " <> (T.unpack . toCLI .vestingTrancheAmount . vestingTranche1) params
@@ -106,5 +110,5 @@ vestFunds = do
                                                                         , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral
                                                                         , "--change-address"  , paymentAddress ownerWallet
                                                                         ]
-                                                                registerVestingIndex params
+                                                                register params
 

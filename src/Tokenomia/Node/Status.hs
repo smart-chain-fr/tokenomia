@@ -26,7 +26,7 @@ import Shh
 import Ledger hiding (getPOSIXTime)
 
 import Tokenomia.Adapter.Cardano.CLI.Environment 
-import Tokenomia.Adapter.Cardano.CLI 
+import Tokenomia.Adapter.Cardano.CLI.Node 
 
 
 load SearchPath ["echo"]

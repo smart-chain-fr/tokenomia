@@ -12,27 +12,34 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 module Tokenomia.CLI (main) where
 
-import Tokenomia.Common.Shell.InteractiveMenu
 
-import Control.Monad.Reader
+import           Control.Monad.Reader
+import           Control.Monad.Except
+
 
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 
 import Shh
 
-import           Tokenomia.Adapter.Cardano.CLI
+import           Tokenomia.Common.Shell.InteractiveMenu
+
+import           Tokenomia.Adapter.Cardano.CLI.Environment
+
 import qualified Tokenomia.Wallet.CLI as Wallet
+import qualified Tokenomia.Wallet.Collateral as Wallet
+
 import qualified Tokenomia.Token.CLAPStyle.Mint as Token
 import qualified Tokenomia.Token.CLAPStyle.Burn as Token
 import qualified Tokenomia.Token.Transfer as Token
+
 import qualified Tokenomia.Ada.Transfer as Ada
-import qualified Tokenomia.Wallet.Collateral as Wallet
+
 import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
+
 import qualified Tokenomia.Node.Status as Node
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-import           Control.Monad.Except
-import           Tokenomia.Wallet.Collateral (Error (..)) 
+
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
 
 load SearchPath ["echo","cardano-cli","clear"]
 
@@ -63,7 +70,7 @@ selectNetwork = do
       SelectTestnet     -> getTestnetEnvironmment 1097911063 
       SelectMainnet     -> getMainnetEnvironmment 764824073
   clear
-  result :: Either Error () <- runExceptT $ runReaderT recursiveMenu environment 
+  result :: Either BuildingTxError () <- runExceptT $ runReaderT recursiveMenu environment 
   case result of 
           Left e -> liftIO $ echo $ "An unexpected error occured :" <> show e
           Right _ -> return ()
@@ -89,7 +96,7 @@ instance DisplayMenuItem SelectEnvironment where
 recursiveMenu 
   :: ( MonadIO m
      , MonadReader Environment m
-     , MonadError Error m) =>  m ()
+     , MonadError BuildingTxError m) =>  m ()
 recursiveMenu = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select an action"

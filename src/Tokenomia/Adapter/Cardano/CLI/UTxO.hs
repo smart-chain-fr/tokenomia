@@ -1,9 +1,23 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# LANGUAGE RecordWildCards #-}
+
+
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Tokenomia.Adapter.Cardano.CLI.UTxO
     ( UTxO (..)
@@ -27,8 +41,11 @@ import Tokenomia.Adapter.Cardano.CLI.Serialise
 import Tokenomia.Adapter.Cardano.CLI.Value ()
 import Data.Foldable ( Foldable(fold) )
 import Plutus.V1.Ledger.Ada
-
 import Ledger.Value
+
+type Address = String
+
+
 
 getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
 getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value -- should contains only one native token (filtering ADAs) 

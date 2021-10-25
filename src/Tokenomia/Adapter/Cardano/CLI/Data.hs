@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString) where
 
-import Data.Aeson as Json
+import Data.Aeson as Json ( encode )
 
 import Cardano.Api
     ( scriptDataToJson,

@@ -31,14 +31,19 @@ import           PlutusTx.Prelude  (AdditiveSemigroup((+)))
 import           Ledger.Value
 import           Ledger hiding (singleton,Address)
 
-import           Tokenomia.Adapter.Cardano.CLI
+
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import qualified Tokenomia.Wallet.CLI as Wallet
 import           Tokenomia.Vesting.Contract
 import           Tokenomia.Common.Shell.InteractiveMenu
 import           Tokenomia.Adapter.Cardano.CLI.Environment
-
+import           Tokenomia.Adapter.Cardano.CLI.Node
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Adapter.Cardano.CLI.Scripts
+import           Tokenomia.Vesting.Repository
+import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
 load SearchPath ["echo"]
 
@@ -81,14 +86,14 @@ retrieveFunds = do
                                             case (s1,s2) of
                                                 (Available,Available) -> do
                                                     let tokensThatCanBeVested = v2 + v1
-                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
+                                                    submit (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
 
                                                 (Available,Locked _) -> do
                                                     let remainingTokensOnScript = v2
                                                         tokensThatCanBeVested = v1
                                                     datumVoidHash <- getDataHash ()
-                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
+                                                    submit (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams
                                                         <> [ "--tx-out" , onChain scriptLocation <> "  " <> (T.unpack . toCLI) remainingTokensOnScript
                                                             , "--tx-out-datum-hash"  , datumVoidHash
@@ -97,18 +102,18 @@ retrieveFunds = do
                                                     let remainingTokensOnScript = v1
                                                         tokensThatCanBeVested = v2
                                                     datumVoidHash <- getDataHash ()
-                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
+                                                    submit (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams
                                                         <> [ "--tx-out" , onChain scriptLocation <> "  " <> (T.unpack . toCLI) remainingTokensOnScript
                                                             , "--tx-out-datum-hash"  , datumVoidHash
                                                             , "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
                                                 (Retrieved ,Available) -> do
                                                     let tokensThatCanBeVested = v2 
-                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
+                                                    submit (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])
                                                 (Available ,Retrieved) -> do 
                                                     let tokensThatCanBeVested = v1
-                                                    submitTx (paymentSigningKeyPath wallet) utxoWithFees
+                                                    submit (paymentSigningKeyPath wallet) utxoWithFees
                                                         (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])              
                                                 (Retrieved ,Locked _)  -> liftIO $ echo "No funds to be retrieved"
                                                 (Locked _  ,Retrieved) -> liftIO $ echo "No funds to be retrieved"
@@ -212,7 +217,7 @@ availableTokens  = foldMap (\UTxO{value = v} -> v)
 getVestingInProgress :: (MonadIO m, MonadReader Environment m)  => m [VestingInProgress]
 getVestingInProgress  = do
     now <- convertToInternalPosix <$> liftIO POSIX.getPOSIXTime
-    vestingParams <- getVestingIndex
+    vestingParams <- getAll
     catMaybes <$> mapM (convert now) vestingParams
     where
         convert :: (MonadIO m, MonadReader Environment m)  => POSIXTime ->  VestingParams -> m (Maybe VestingInProgress)
@@ -228,7 +233,7 @@ getVestingInProgress  = do
             , vestingOwner = investorId } = do
           let validator = vestingScript vestingParam
           scriptLocation <- getScriptLocation validator
-          getUTxOs (onChain scriptLocation)
+          UTxOs.query (onChain scriptLocation)
             >>= \case
                 [] -> return Nothing
                 vestingUTxOs@[_] -> do

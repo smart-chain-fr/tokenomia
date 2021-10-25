@@ -26,13 +26,16 @@ import           Ledger hiding (mint)
 import qualified Ledger.Value as L
 
 import           Tokenomia.Token.CLAPStyle.MonetaryPolicy
-import           Tokenomia.Adapter.Cardano.CLI
+import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
+
 import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Tokenomia.Wallet.Collateral as Wallet
-
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Adapter.Cardano.CLI.Scripts
 
 load SearchPath ["echo", "printf"]
 
@@ -70,7 +73,7 @@ mint = do
                                                     liftIO $ echo "-------------------------"
 
                                                     monetaryScriptFilePath <- registerMintingScriptFile monetaryPolicy
-                                                    submitTx paymentSigningKeyPath utxoWithFees
+                                                    submit paymentSigningKeyPath utxoWithFees
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForMinting 
                                                             , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                             , "--tx-out" , minterAddr <> " + 1344798 lovelace + " <> show amountToMint <> " " <> show policyhash <> "." <> L.toString tokenNameToMint

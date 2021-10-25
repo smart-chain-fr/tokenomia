@@ -23,12 +23,15 @@ import           Ledger.Value
 
 
 
-import           Tokenomia.Adapter.Cardano.CLI
+import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
+import           Tokenomia.Adapter.Cardano.CLI.Scripts
+
 import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Tokenomia.Wallet.Collateral as Wallet
-
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
 
 load SearchPath ["echo", "printf"]
 
@@ -59,7 +62,7 @@ burn = do
                                                         Nothing -> liftIO $ echo "You can only burn token minted via tokenomia (Monetary Policy existing in ~/.tokenomia-cli/transactions/ )"
                                                         Just monetaryScriptFilePath -> do
                                                             amountToBurn  <- liftIO $ echo "-n" "> Amount to burn : "  >>  read @Integer <$> getLine
-                                                            submitTx paymentSigningKeyPath utxoWithFees
+                                                            submit paymentSigningKeyPath utxoWithFees
                                                                 [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken 
                                                                 , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                                 , "--tx-out" , burnerAddr <> " + 1344798 lovelace + " <> show (totalAmount - amountToBurn) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected

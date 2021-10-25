@@ -13,18 +13,21 @@
 module Tokenomia.Ada.Transfer 
     ( transfer ) where
 
-import Control.Monad.Reader
+import qualified Data.Text as T
+import           Control.Monad.Reader
 
 import Shh
     ( load,
       ExecReference(SearchPath) )
 
-import Tokenomia.Adapter.Cardano.CLI
-import qualified Tokenomia.Wallet.CLI as Wallet
-import qualified Tokenomia.Wallet.Collateral as Wallet
-import qualified Data.Text as T
+import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
+
+import qualified Tokenomia.Wallet.CLI as Wallet
+import qualified Tokenomia.Wallet.Collateral as Wallet
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -53,7 +56,7 @@ transfer = do
                                                 Nothing -> liftIO $ echo "UTxO containing ONLY Ada not found in your wallet."
                                                 Just utxoWithAda  -> do
                                                     amount          <- liftIO $ echo "-n" "> Amount of Ada (in lovelaces) : "   >>  read @Integer <$> getLine
-                                                    submitTx paymentSigningKeyPath utxoWithFees
+                                                    submit paymentSigningKeyPath utxoWithFees
                                                             [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithAda
                                                             , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                             , "--tx-out" , receiverAddr <> " " <> show amount <> " lovelace"

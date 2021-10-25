@@ -13,19 +13,22 @@
 module Tokenomia.Token.Transfer 
     ( transfer) where
 
+import qualified Data.Text as T
+
 import Control.Monad.Reader
 
 import Shh
     ( load,
       ExecReference(SearchPath) )
 
-import Tokenomia.Adapter.Cardano.CLI
+import           Ledger.Value
+import           Tokenomia.Adapter.Cardano.CLI.Environment
 import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Tokenomia.Wallet.Collateral as Wallet
-import qualified Data.Text as T
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import Ledger.Value
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
@@ -56,7 +59,7 @@ transfer = do
                                             Just utxoWithToken  -> do
                                                 let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
                                                 amount <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
-                                                submitTx paymentSigningKeyPath utxoWithFees
+                                                submit paymentSigningKeyPath utxoWithFees
                                                         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
                                                         , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
                                                         , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
