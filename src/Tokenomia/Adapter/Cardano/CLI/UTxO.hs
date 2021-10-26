@@ -26,6 +26,7 @@ module Tokenomia.Adapter.Cardano.CLI.UTxO
     , containingOneToken
     , containingStrictlyADAs
     , containsCollateral
+    , showValue
     ) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
