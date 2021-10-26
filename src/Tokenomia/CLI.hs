@@ -110,8 +110,13 @@ recursiveMenu = do
                               (\case 
                                 NoWalletRegistered ->        liftIO $ echo "Register a Wallet First..."
                                 NoWalletWithoutCollateral -> liftIO $ echo "All Wallets contain collateral..."  
-                                AlreadyACollateral utxo ->   liftIO $ echo $ "Collateral Already Created..." <> show utxo
-                                NoADAInWallet ->             liftIO $ echo "Please, add ADAs to your wallet...")
+                                NoWalletWithCollateral    -> liftIO $ echo "No Wallets with collateral..."
+                                WalletWithoutCollateral   -> liftIO $ echo "Wallets selected without a required collateral..."
+                                AlreadyACollateral utxo   -> liftIO $ echo ("Collateral Already Created..." <> show utxo)
+                                NoADAInWallet ->             liftIO $ echo "Please, add ADAs to your wallet..."
+                                NoUTxOWithOnlyOneToken ->    liftIO $ echo "Please, add tokens to your wallet..."
+                                TryingToBurnTokenWithoutScriptRegistered -> liftIO $ echo "You can't burn tokens without the monetary script registered in Tokenomia")
+
 
       WalletRestore    -> Wallet.restore
       WalletRemove     -> Wallet.remove

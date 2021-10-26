@@ -41,8 +41,8 @@ transfer = do
     Wallet.askAmongAllWallets
         >>= \case
             Nothing -> liftIO $ print "No Wallet Registered !"
-            Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do
-                Wallet.getCollateral senderWallet
+            Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do 
+                Wallet.fetchCollateral senderWallet
                     >>= \case
                         Nothing -> liftIO $ printf "Please create a collateral\n"
                         Just utxoWithCollateral -> do

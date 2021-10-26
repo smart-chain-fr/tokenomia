@@ -47,6 +47,7 @@ library
       Tokenomia.Wallet.CLI
       Tokenomia.Wallet.Collateral
       Tokenomia.Ada.Transfer
+      Tokenomia.Common.Error
       Tokenomia.Token.Transfer
       Tokenomia.Vesting.Contract
       Tokenomia.Vesting.Repository

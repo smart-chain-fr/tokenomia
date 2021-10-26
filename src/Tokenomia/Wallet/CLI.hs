@@ -16,11 +16,11 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Tokenomia.Wallet.CLI
-  ( askAmongGivenWallets
+  ( askToChooseAmongGivenWallets
   , askAmongAllWallets
   , askUTxO
   , askUTxOFilterBy
-  , selectUTxOForFees
+  , selectBiggestStrictlyADAsNotCollateral
   , createAndRegister
   , restore
   , list
@@ -46,6 +46,7 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 
 import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
+
 load SearchPath ["echo","printf"]
 
 
@@ -57,10 +58,10 @@ askAmongAllWallets = do
             Just a -> Just <$> askMenu a
           . nonEmpty
 
-askAmongGivenWallets :: (MonadIO m, MonadReader Environment m) 
+askToChooseAmongGivenWallets :: (MonadIO m, MonadReader Environment m) 
   => NonEmpty Wallet
   -> m Wallet
-askAmongGivenWallets = askMenu
+askToChooseAmongGivenWallets = askMenu
 
 askUTxO
   ::( MonadIO m
@@ -70,13 +71,15 @@ askUTxO
 askUTxO = askUTxOFilterBy (const True)
 
 
-selectUTxOForFees
+
+
+selectBiggestStrictlyADAsNotCollateral
   ::( MonadIO m
     , MonadReader Environment m)
   => Wallet
-  ->  m (Maybe UTxO)
-selectUTxOForFees Wallet {..} = do
-  adas :: Maybe (NonEmpty UTxO) <- nonEmpty . P.filter containingStrictlyADAs <$> UTxOs.query paymentAddress
+  -> m (Maybe UTxO)
+selectBiggestStrictlyADAsNotCollateral Wallet {..} = do
+  adas :: Maybe (NonEmpty UTxO) <- nonEmpty . P.filter ((&&) <$> containingStrictlyADAs <*> not . containsCollateral)  <$> UTxOs.query paymentAddress
   return (last . sortWith (\UTxO {value} ->
                         maybe
                           0
