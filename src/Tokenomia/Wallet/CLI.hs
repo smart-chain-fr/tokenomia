@@ -27,24 +27,26 @@ module Tokenomia.Wallet.CLI
   , remove)
   where
 
-import Prelude hiding (filter,head,last)
+import           Prelude hiding (filter,head,last)
 import qualified Prelude as P
-import Control.Monad.Reader
 
-import Data.List.NonEmpty
+import           Data.List.NonEmpty
 
-import Shh
-import Tokenomia.Common.Shell.InteractiveMenu (askMenu)
+import           Control.Monad.Reader
 
+import           Shh
 
-import Tokenomia.Adapter.Cardano.CLI as CardanoCLI
-import Tokenomia.Adapter.Cardano.CLI.UTxO
-import Plutus.V1.Ledger.Value (flattenValue)
+import           Plutus.V1.Ledger.Value (flattenValue)
 
+import           Tokenomia.Common.Shell.InteractiveMenu (askMenu)
 
+import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Adapter.Cardano.CLI.Wallet as CardanoCLI
+import           Tokenomia.Adapter.Cardano.CLI.UTxO
+
+import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
 load SearchPath ["echo","printf"]
-
 
 
 askAmongAllWallets :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
@@ -74,7 +76,7 @@ selectUTxOForFees
   => Wallet
   ->  m (Maybe UTxO)
 selectUTxOForFees Wallet {..} = do
-  adas :: Maybe (NonEmpty UTxO) <- nonEmpty . P.filter containingStrictlyADAs <$> getUTxOs paymentAddress
+  adas :: Maybe (NonEmpty UTxO) <- nonEmpty . P.filter containingStrictlyADAs <$> UTxOs.query paymentAddress
   return (last . sortWith (\UTxO {value} ->
                         maybe
                           0
@@ -92,7 +94,7 @@ askUTxOFilterBy
   -> Wallet
   ->  m (Maybe UTxO)
 askUTxOFilterBy predicate  Wallet {..}  = 
-  (nonEmpty . P.filter predicate  <$> getUTxOs paymentAddress) 
+  (nonEmpty . P.filter predicate  <$> UTxOs.query paymentAddress) 
     >>= \case 
           Nothing -> return Nothing 
           Just a -> Just <$> askMenu a
@@ -126,7 +128,7 @@ list = do
             liftIO $ echo ("> " <> name)
               <> echo ("    Public key : "      <> show publicKeyHash)
               <> echo ("    Payment Address : " <> paymentAddress)
-            utxos <- getUTxOs paymentAddress
+            utxos <- UTxOs.query paymentAddress
             case utxos of
               [] -> liftIO $ echo "\t(No UTxOs Available)"
               a  -> mapM_ (\utxo -> liftIO $ echo ("\t- " <> show utxo)) a

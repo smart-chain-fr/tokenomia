@@ -13,7 +13,7 @@
 module Tokenomia.Wallet.Collateral
     ( createCollateral
     , getCollateral
-    , Error (..)) where
+    ) where
 
 import Control.Monad.Reader
 
@@ -21,30 +21,33 @@ import Shh
     ( load,
       ExecReference(SearchPath) )
 
-import           Tokenomia.Adapter.Cardano.CLI
-import           Tokenomia.Wallet.CLI as Wallet
+import           Data.List.NonEmpty (nonEmpty)
+import           Data.Maybe
 import qualified Data.Text as T
-import           Tokenomia.Adapter.Cardano.CLI.Serialise
-import           Tokenomia.Adapter.Cardano.CLI.UTxO
-import           Ledger.Ada
+
 import           Control.Monad.Except
 
-import          Data.List.NonEmpty (nonEmpty)
-import          Data.Maybe
+import           Ledger.Ada
+
+import           Tokenomia.Adapter.Cardano.CLI.Serialise
+import           Tokenomia.Adapter.Cardano.CLI.UTxO
+import           Tokenomia.Adapter.Cardano.CLI.Transaction
+import           Tokenomia.Adapter.Cardano.CLI.Environment
+
+import           Tokenomia.Wallet.CLI as Wallet
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 load SearchPath ["echo"]
 
 
-data Error = NoWalletRegistered
-           | NoWalletWithoutCollateral
-           | AlreadyACollateral UTxO
-           | NoADAInWallet deriving Show
+
 
 createCollateral
     :: ( MonadIO m
        , MonadReader Environment m
-       , MonadError Error m)
+       , MonadError BuildingTxError m)
        => m ()
 createCollateral = do
     allWallets <- query_registered_wallets
@@ -60,13 +63,13 @@ createCollateral = do
 createCollateral'
     :: ( MonadIO m
        , MonadReader Environment m
-       , MonadError Error m)
+       , MonadError BuildingTxError m)
        => Wallet 
        -> m ()
 createCollateral' senderWallet@Wallet {paymentAddress = senderAddr,..} = do
     assertCollateralNotAlreadyCreated senderWallet
     utxoWithFees <- selectUTxOForFees senderWallet >>=  whenNothingThrow NoADAInWallet
-    submitTx paymentSigningKeyPath utxoWithFees
+    submit paymentSigningKeyPath utxoWithFees
         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
         , "--tx-out" , senderAddr <> " " <>(T.unpack . toCLI) (adaValueOf 2.0)
         , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithFees
@@ -76,7 +79,7 @@ createCollateral' senderWallet@Wallet {paymentAddress = senderAddr,..} = do
 assertCollateralNotAlreadyCreated
     :: ( MonadIO m
         , MonadReader Environment m
-        , MonadError Error m) => Wallet -> m ()
+        , MonadError BuildingTxError m) => Wallet -> m ()
 assertCollateralNotAlreadyCreated wallet = getCollateral wallet >>=  whenSomethingThrow AlreadyACollateral
 
 whenSomethingThrow :: MonadError e m => (a -> e) -> Maybe a  -> m ()
@@ -91,7 +94,7 @@ getCollateral
      => Wallet
     -> m (Maybe UTxO)
 getCollateral Wallet {..} =
-    filter containsCollateral <$> getUTxOs paymentAddress
+    filter containsCollateral <$> UTxOs.query paymentAddress
         >>= \case
             [] -> return Nothing
             (x:_)  -> (return . Just) x

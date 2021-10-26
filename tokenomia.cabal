@@ -41,7 +41,6 @@ library
     exposed-modules:
       Tokenomia.CLI
       Tokenomia.Node.Status
-      Tokenomia.Adapter.Cardano.CLI
       Tokenomia.Token.CLAPStyle.Mint
       Tokenomia.Token.CLAPStyle.Burn
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
@@ -50,16 +49,22 @@ library
       Tokenomia.Ada.Transfer
       Tokenomia.Token.Transfer
       Tokenomia.Vesting.Contract
+      Tokenomia.Vesting.Repository
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Adapter.Cardano.CLI.UTxO
       Tokenomia.Adapter.Cardano.CLI.Value
       Tokenomia.Adapter.Cardano.CLI.Serialise
-      Tokenomia.Adapter.Cardano.CLI.Internal
+      Tokenomia.Adapter.Cardano.CLI.Node
+      Tokenomia.Adapter.Cardano.CLI.Transaction
+      Tokenomia.Adapter.Cardano.CLI.Folder
+      Tokenomia.Adapter.Cardano.CLI.Scripts
+      Tokenomia.Adapter.Cardano.CLI.Wallet
       Tokenomia.Common.Shell.InteractiveMenu
       Tokenomia.Adapter.Cardano.CLI.Environment
       Tokenomia.Adapter.Cardano.CLI.Data
+      Tokenomia.Adapter.Cardano.CLI.UTxO.Query
     build-depends:
       base >= 4.9 && < 5,
       lens,
