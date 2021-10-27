@@ -37,7 +37,8 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
 import           Tokenomia.Adapter.Cardano.CLI.Serialise (toCLI, fromCLI)
-import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
+import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))Plutus.V1.Ledger.Ada
+import           Plutus.V1.Ledger.Ada (Ada, lovelaceOf)
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -48,6 +49,8 @@ data BuildingTxError = NoWalletRegistered
            | NoWalletWithoutCollateral
            | AlreadyACollateral UTxO
            | NoADAInWallet deriving Show
+
+type Address = String
 
 
 submit
@@ -144,3 +147,16 @@ register_protocol_parameters = do
         "--out-file" filePath
     return filePath
 
+getMinimalAdaRequired :: (MonadIO m, MonadReader Environment m) => Address -> UTxO -> m Ada
+getMinimalAdaRequired addr utxo = do
+    protocolParamsFile <- register_protocol_parameters
+    unparsedLovelaces  <- liftIO (cardano_cli
+                                  "transaction"
+                                  "calculate-min-required-utxo"
+                                  "--alonzo-era"
+                                  "--protocol-params-file" protocolParamsFile
+                                  "--tx-out" addr (show utxo)
+                            |> capture)
+    
+    return $ lovelaceOf (parse unparsedLovelaces)
+    where parse lovelaces = read @Integer (head (words (C.unpack lovelaces)))
