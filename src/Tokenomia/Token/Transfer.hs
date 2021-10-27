@@ -27,7 +27,7 @@ import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Tokenomia.Wallet.Collateral as Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import           Tokenomia.Adapter.Cardano.CLI.Transaction
+import           Tokenomia.Adapter.Cardano.CLI.Transaction (submit, createMetadataFile)
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 
 
@@ -59,13 +59,16 @@ transfer = do
                                             Just utxoWithToken  -> do
                                                 let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
                                                 amount <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
-                                                submit paymentSigningKeyPath utxoWithFees
-                                                        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
-                                                        , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
-                                                        , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                                                        , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                                                        , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
-                                                        , "--change-address"  , senderAddr]
+                                                let args = [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
+                                                            , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
+                                                            , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                                                            , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                                                            , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
+                                                            , "--change-address"  , senderAddr]
 
-
-
+                                                (liftIO $ echo "Add label to your transaction (leave blank if no)" >> getLine)
+                                                    >>= \case
+                                                        [] -> submit paymentSigningKeyPath utxoWithFees args
+                                                        message -> do
+                                                            metadataJsonFilepath <- createMetadataFile message
+                                                            submit paymentSigningKeyPath utxoWithFees (args <> ["--metadata-json-file", metadataJsonFilepath])

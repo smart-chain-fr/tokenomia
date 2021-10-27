@@ -16,6 +16,7 @@ module Tokenomia.Adapter.Cardano.CLI.Transaction
     ( submit
     , awaitTxCommitted
     , BuildingTxError (..)
+    , createMetadataFile
     ) where
 
 
@@ -29,6 +30,8 @@ import qualified Data.ByteString.Lazy.Char8 as C
 
 import           Control.Monad.Reader
 import           Control.Concurrent
+import           System.Random
+import           Data.String (fromString)
 
 import           Shh.Internal
 
@@ -144,3 +147,11 @@ register_protocol_parameters = do
         "--out-file" filePath
     return filePath
 
+createMetadataFile :: (MonadIO m, MonadReader Environment m) => String -> m FilePath
+createMetadataFile message = do
+    tmpFolder <- getFolderPath TMP
+    randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
+    let metadataJsonFilepath = tmpFolder <> "metadata-" <> show randomInt <> ".json"
+    liftIO $ echo "-n" ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
+        &> (Truncate . fromString) metadataJsonFilepath
+    return metadataJsonFilepath
