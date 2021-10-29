@@ -1,19 +1,14 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Tokenomia.Token.CLAPStyle.Mint
     ( mint ) where
-    
-import           Prelude
-import           Shh
+
+import           Prelude hiding (print)
 
 import           Control.Monad.Reader
 
@@ -37,9 +32,8 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Common.Error
+import           Tokenomia.Common.Shell.Console (printLn, printOpt)
 
-
-load SearchPath ["echo"]
 
 
 mint 
@@ -50,10 +44,10 @@ mint
 mint = do
     wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
-            liftIO $ echo "Select the minter wallet : "
+            printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
-    tokenNameToMint  <- liftIO $ echo "-n" "> Token Name : "             >>  L.tokenName . BSU.fromString <$> getLine
-    amountToMint     <- liftIO $ echo "-n" "> Total Supply to Mint : "   >>  read @Integer <$> getLine 
+    tokenNameToMint  <- liftIO (printOpt "> Token Name : " "-n" >>  L.tokenName . BSU.fromString <$> getLine)
+    amountToMint     <- liftIO (printOpt "> Total Supply to Mint : " "-n"   >>  read @Integer <$> getLine)
     mint' wallet tokenNameToMint amountToMint  
 
 mint'
@@ -72,9 +66,9 @@ mint' wallet@Wallet {paymentAddress = minterAddr,..} tokenName amount = do
     let monetaryPolicy = mkMonetaryPolicyScript Params { txOutRefToConsume = txOutRef utxoForMintingAndFees, .. }
         policyhash = scriptCurrencySymbol monetaryPolicy
 
-    liftIO $ echo "-------------------------"
-    liftIO $ echo $ "Policy hash will be : " <> show policyhash
-    liftIO $ echo "-------------------------"
+    printLn "-------------------------"
+    printLn $ "Policy hash will be : " <> show policyhash
+    printLn "-------------------------"
 
     monetaryScriptFilePath <- registerMintingScriptFile monetaryPolicy
     submit paymentSigningKeyPath utxoForMintingAndFees

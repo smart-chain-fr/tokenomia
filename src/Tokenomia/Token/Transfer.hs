@@ -1,14 +1,10 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-
 
 module Tokenomia.Token.Transfer 
     ( transfer) where
@@ -17,10 +13,6 @@ import qualified Data.Text as T
 
 import           Control.Monad.Reader
 import           Control.Monad.Except
-
-import Shh
-    ( load,
-      ExecReference(SearchPath) )
 
 import           Ledger.Value
 import           Tokenomia.Adapter.Cardano.CLI.Environment
@@ -32,8 +24,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
-
-load SearchPath ["echo"]
+import           Tokenomia.Common.Shell.Console (printLn, printOpt)
 
 type Address = String
 
@@ -45,12 +36,12 @@ transfer
 transfer = do
     wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
-            liftIO $ echo "Select the minter wallet : "
+            printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
     utxoWithToken <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken        
-    amount <- liftIO $ echo "-n" "- Amount of Token to transfer : "   >>  read @Integer <$> getLine
-    receiverAddr    <- liftIO $ echo "-n" "- Receiver address : "  >>  getLine
-    labelMaybe <- liftIO $ echo "-n" "- Add label to your transaction (leave blank if no) : " >> getLine
+    amount <- liftIO (printOpt "- Amount of Token to transfer : " "-n" >>  read @Integer <$> getLine)
+    receiverAddr <- liftIO (printOpt "- Receiver address : " "-n" >> getLine)
+    labelMaybe <- liftIO (printLn "- Add label to your transaction (leave blank if no) : " >> getLine)
                     >>= \case
                         [] -> return Nothing
                         label -> (return . Just) label

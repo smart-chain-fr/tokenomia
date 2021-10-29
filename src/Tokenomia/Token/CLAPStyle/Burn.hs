@@ -1,19 +1,11 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Tokenomia.Token.CLAPStyle.Burn (burn) where
 
-import           Prelude
-import           Shh
 
+import           Prelude hiding (print)
 import           Control.Monad.Reader
 import           Control.Monad.Except
 
@@ -34,8 +26,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
-
-load SearchPath ["echo"]
+import           Tokenomia.Common.Shell.Console (printLn, printOpt)
 
 
 burn
@@ -46,11 +37,11 @@ burn
 burn = do 
     wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
-            liftIO $ echo "Select the burner wallet : "
+            printLn "Select the burner wallet : "
             askToChooseAmongGivenWallets wallets 
-    liftIO $ echo "- Select the utxo containing the tokens to burn :" 
+    printLn "- Select the utxo containing the tokens to burn :" 
     utxoWithTokensToBurn <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
-    amountToBurn  <- liftIO $ echo "-n" "- Amount to burn : "  >>  read @Integer <$> getLine       
+    amountToBurn  <- liftIO (printOpt "- Amount to burn : " "-n" >>  read @Integer <$> getLine)    
     burn' wallet utxoWithTokensToBurn amountToBurn
 
 burn' 

@@ -1,18 +1,9 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-type-defaults #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Tokenomia.Wallet.CLI
@@ -36,8 +27,7 @@ import           Data.List.NonEmpty
 
 import           Control.Monad.Reader
 
-import           Shh
-
+import           Tokenomia.Common.Shell.Console (printLn, printOpt)
 import           Plutus.V1.Ledger.Value (flattenValue)
 
 import           Tokenomia.Common.Shell.InteractiveMenu (askMenu)
@@ -47,9 +37,6 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet as CardanoCLI
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
 
 import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
-
-
-load SearchPath ["echo","printf"]
 
 
 askAmongAllWallets :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
@@ -124,11 +111,11 @@ createAndRegister
   ::( MonadIO m, MonadReader Environment m)
   => m ()
 createAndRegister = do
-  liftIO $ echo "-----------------------------------"
-  walletName <- liftIO $ echo "-n" "> Wallet Name : " >>  getLine
+  printLn "-----------------------------------"
+  walletName <- printOpt "> Wallet Name : " "-n" >> liftIO getLine
   CardanoCLI.register_shelley_wallet walletName
-  liftIO $ echo "Wallet Created and Registered!"
-  liftIO $ echo "-----------------------------------"
+  printLn "Wallet Created and Registered!"
+  printLn "-----------------------------------"
 
 
 list
@@ -137,49 +124,49 @@ list
 list =
   CardanoCLI.query_registered_wallets
  >>= \case
-       [] -> liftIO $ echo "No Wallet Registered!"
+       [] -> printLn "No Wallet Registered!"
        wallets -> do
-         liftIO $ echo "-----------------------------------"
-         liftIO $ echo "Wallets Registered"
-         liftIO $ echo "-----------------------------------"
+         printLn "-----------------------------------"
+         printLn "Wallets Registered"
+         printLn "-----------------------------------"
          mapM_ (\Wallet{..} -> do
-          liftIO $ echo ("> " <> name)
-            <> echo ("    Public key : "      <> show publicKeyHash)
-            <> echo ("    Payment Address : " <> paymentAddress)
-          utxos <- UTxOs.query paymentAddress
-          case utxos of
-            [] -> liftIO $ echo "\t(No UTxOs Available)"
-            a  -> mapM_ (\utxo -> liftIO $ echo ("\t- " <> show utxo)) a
+            printLn ("> " <> name)
+            printLn ("    Public key : "      <> show publicKeyHash)
+            printLn ("    Payment Address : " <> paymentAddress)
+            utxos <- UTxOs.query paymentAddress
+            case utxos of
+              [] -> printLn "\t(No UTxOs Available)"
+              a  -> mapM_ (\utxo -> printLn ("\t- " <> show utxo)) a
           ) wallets
-         liftIO $ echo "-----------------------------------"
+         printLn "-----------------------------------"
 
 remove :: (MonadIO m, MonadReader Environment m) => m ()
 remove = do
-  liftIO $ echo "-----------------------------------"
-  liftIO $ echo "Select the Wallet to remove :"
+  printLn "-----------------------------------"
+  printLn "Select the Wallet to remove :"
   askAmongAllWallets
     >>= \case
         Nothing ->
-          liftIO $ echo "No Wallet Registered !"
+          printLn "No Wallet Registered !"
         Just Wallet {..} -> CardanoCLI.remove_shelley_wallet name
 
-  liftIO $ echo "-----------------------------------"
+  printLn "-----------------------------------"
 
 getSeedPhrase :: IO String
 getSeedPhrase = do
-  seedPhrase <- liftIO $ echo "-n" "> please enter your 24 words mnemonics then press enter : " >> getLine
+  seedPhrase <- printOpt "> please enter your 24 words mnemonics then press enter : " "-n" >> getLine
   if Prelude.length (words seedPhrase) /= 24
     then do
-      liftIO $ printf "\n We said 24 words !\n"
+      printLn "\n We said 24 words !\n"
       getSeedPhrase
     else return seedPhrase
 
 restore :: (MonadIO m, MonadReader Environment m) => m ()
 restore = do
-  liftIO $ echo "-----------------------------------"
-  walletName <- liftIO $ echo "-n" "> Wallet Name : " >>  getLine
+  printLn "-----------------------------------"
+  walletName <- printOpt "> Wallet Name : " "-n" >> liftIO  getLine
   seedPhrase <- liftIO getSeedPhrase
   CardanoCLI.restore_from_seed_phrase walletName seedPhrase
-  liftIO $ echo "-----------------------------------"
+  printLn "-----------------------------------"
 
 

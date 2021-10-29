@@ -41,6 +41,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
 import           Tokenomia.Adapter.Cardano.CLI.Serialise (toCLI, fromCLI)
 import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
+import           Tokenomia.Common.Shell.Console (printLn)
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -88,11 +89,11 @@ submit privateKeyPath utxoWithFees buildTxBody = do
                                     . C.unpack . head <$> liftIO (md5sum rawTx |> captureWords )
     liftIO $ mv rawTx rawHashTx
 
-    liftIO (echo "Signing Tx")    >> sign_tx   rawHashTx signedHashTx privateKeyPath
-    liftIO (echo "Submitting Tx") >> submit_tx signedHashTx
-    liftIO $ echo "Waiting for confirmation..."
+    liftIO (printLn "Signing Tx")    >> sign_tx   rawHashTx signedHashTx privateKeyPath
+    liftIO (printLn "Submitting Tx") >> submit_tx signedHashTx
+    printLn "Waiting for confirmation..."
     awaitTxCommitted utxoWithFees 0
-    liftIO $ echo "\nTx committed into ledger"
+    printLn "\nTx committed into ledger"
 
 submit_tx
     :: ( MonadIO m
@@ -159,6 +160,7 @@ createMetadataFile message = do
     tmpFolder <- getFolderPath TMP
     randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
     let metadataJsonFilepath = tmpFolder <> "metadata-" <> show randomInt <> ".json"
-    liftIO $ echo "-n" ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
-        &> (Truncate . fromString) metadataJsonFilepath
+
+    liftIO (printLn ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
+        &> (Truncate . fromString) metadataJsonFilepath)
     return metadataJsonFilepath

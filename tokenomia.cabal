@@ -63,6 +63,7 @@ library
       Tokenomia.Adapter.Cardano.CLI.Scripts
       Tokenomia.Adapter.Cardano.CLI.Wallet
       Tokenomia.Common.Shell.InteractiveMenu
+      Tokenomia.Common.Shell.Console
       Tokenomia.Adapter.Cardano.CLI.Environment
       Tokenomia.Adapter.Cardano.CLI.Data
       Tokenomia.Adapter.Cardano.CLI.UTxO.Query

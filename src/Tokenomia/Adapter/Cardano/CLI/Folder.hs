@@ -44,12 +44,13 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 
 
 import           Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString)
+import           Tokenomia.Common.Shell.Console (printLn)
 
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["echo","mkdir","cardano-cli" ]
+load SearchPath ["mkdir","cardano-cli" ]
 
 
 
@@ -100,5 +101,5 @@ persistDataInTMP a = do
     tmpFolder <- getFolderPath TMP
     randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
     let filePath = tmpFolder <> show randomInt <> ".txt"
-    liftIO $ echo (dataToJSONString a) &> (Truncate . fromString) filePath
+    liftIO $ printLn (dataToJSONString a) &> (Truncate . fromString) filePath
     return filePath

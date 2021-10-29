@@ -18,12 +18,13 @@ module Tokenomia.Common.Shell.InteractiveMenu
     , DisplayMenuItem (..)) where
 
 import Data.List.NonEmpty (NonEmpty, toList, (!!))
-import Prelude hiding ((!!))
+import Prelude hiding ((!!), print)
 import Text.Read (readEither)
 import Shh
-import Control.Monad.Reader 
+import Control.Monad.Reader hiding (ask)
+import Tokenomia.Common.Shell.Console (printLn, clearConsole)
 
-load SearchPath ["echo", "clear", "printf"]
+load SearchPath ["echo"]
 
 zipIndex :: DisplayMenuItem a => Int -> [a] -> [(Int, a)]
 zipIndex _ [] = []
@@ -40,18 +41,17 @@ askSelectRepeatedly
 askSelectRepeatedly choices = do
     let orderedChoices = zipIndex 1 (toList choices)
     mapM_ (liftIO . echoChoices) orderedChoices
-    liftIO $ printf "\n> please choose an action (provide the index) : "
+    printLn "\n> please choose an action (provide the index) : "
     liftIO getLine >>= (
         \case
             Left err -> do
-                liftIO clear
-                liftIO $ putStrLn  $ show err ++ ": Wrong parse input. Please try again."
+                clearConsole
+                printLn $ show err ++ ": Wrong parse input. Please try again."
                 askSelectRepeatedly choices
             Right ioIdx -> if ioIdx > length choices || ioIdx <= 0 then do
-                liftIO clear
-                liftIO $ putStrLn $ show ioIdx ++ ": Number selected is incorrect"
+                clearConsole
+                printLn $ show ioIdx ++ ": Number selected is incorrect"
                 askSelectRepeatedly choices else return ioIdx) . readEither
-
 
 askMenu 
     :: ( MonadIO m 
@@ -59,6 +59,24 @@ askMenu
     => NonEmpty a 
     -> m a
 askMenu choices = (\idx -> choices !! (idx - 1)) <$> askSelectRepeatedly choices
+
+ask' :: (MonadIO m, Read a) => String -> m a
+ask' prompt = do
+    printLn prompt
+    liftIO (readEither <$> getLine) >>=
+        \case 
+            Left err -> do
+                printLn $ show err
+                ask' prompt
+            Right answer -> return answer
+
+ask :: (MonadIO m, Read a) => String -> (a -> Bool) -> m a
+ask prompt f = do
+    answer <- ask' prompt
+    f answer >>=
+        \case
+            True -> return answer
+            False -> ask prompt f
 
 class DisplayMenuItem a where
     displayMenuItem :: a -> String 
