@@ -101,23 +101,33 @@ recursiveMenu = do
   liftIO $ echo "----------------------"
   liftIO $ echo "  Select an action"
   liftIO $ echo "----------------------"
-  r <- liftIO $ askMenu actions
-  case r of
+  action <- askMenu actions 
+  runAction action 
+    `catchError`
+      (\case 
+        NoWalletRegistered ->        liftIO $ echo "Register a Wallet First..."
+        NoWalletWithoutCollateral -> liftIO $ echo "All Wallets contain collateral..."  
+        NoWalletWithCollateral    -> liftIO $ echo "No Wallets with collateral..."
+        WalletWithoutCollateral   -> liftIO $ echo "Wallets selected without a required collateral..."
+        AlreadyACollateral utxo   -> liftIO $ echo ("Collateral Already Created..." <> show utxo)
+        NoADAInWallet ->             liftIO $ echo "Please, add ADAs to your wallet..."
+        NoUTxOWithOnlyOneToken ->    liftIO $ echo "Please, add tokens to your wallet..."
+        TryingToBurnTokenWithoutScriptRegistered -> liftIO $ echo "You can't burn tokens without the monetary script registered in Tokenomia"
+        NoVestingInProgress       -> liftIO $ echo "No vesting in progress")
+            
+  liftIO waitAndClear         
+  recursiveMenu
+
+
+runAction :: ( MonadIO m
+     , MonadReader Environment m
+     , MonadError BuildingTxError m) 
+     => Action 
+     -> m ()
+runAction = \case    
       WalletList       -> Wallet.list
       WalletCreate        -> Wallet.createAndRegister
       WalletCollateral -> Wallet.createCollateral 
-                            `catchError` 
-                              (\case 
-                                NoWalletRegistered ->        liftIO $ echo "Register a Wallet First..."
-                                NoWalletWithoutCollateral -> liftIO $ echo "All Wallets contain collateral..."  
-                                NoWalletWithCollateral    -> liftIO $ echo "No Wallets with collateral..."
-                                WalletWithoutCollateral   -> liftIO $ echo "Wallets selected without a required collateral..."
-                                AlreadyACollateral utxo   -> liftIO $ echo ("Collateral Already Created..." <> show utxo)
-                                NoADAInWallet ->             liftIO $ echo "Please, add ADAs to your wallet..."
-                                NoUTxOWithOnlyOneToken ->    liftIO $ echo "Please, add tokens to your wallet..."
-                                TryingToBurnTokenWithoutScriptRegistered -> liftIO $ echo "You can't burn tokens without the monetary script registered in Tokenomia")
-
-
       WalletRestore    -> Wallet.restore
       WalletRemove     -> Wallet.remove
       TokenMint        -> Token.mint
@@ -127,8 +137,6 @@ recursiveMenu = do
       VestingVestFunds  -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
-  liftIO waitAndClear         
-  recursiveMenu
 
 actions :: NonEmpty Action
 actions = NonEmpty.fromList [

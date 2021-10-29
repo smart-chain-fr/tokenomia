@@ -42,6 +42,7 @@ import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
 import           Tokenomia.Common.Error
 
+
 load SearchPath ["echo"]
 
 
@@ -97,6 +98,7 @@ fetchWalletsWithCollateral
      , MonadReader Environment m )
      => m [Wallet]
 fetchWalletsWithCollateral = query_registered_wallets >>= filterM (fmap isJust . fetchCollateral )  
+
 
 fetchCollateral
   :: ( MonadIO m

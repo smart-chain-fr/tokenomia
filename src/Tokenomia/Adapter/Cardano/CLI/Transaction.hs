@@ -56,6 +56,7 @@ data BuildingTxError
     | NoADAInWallet
     | NoUTxOWithOnlyOneToken 
     | TryingToBurnTokenWithoutScriptRegistered 
+    | NoVestingInProgress
     deriving Show
 
 

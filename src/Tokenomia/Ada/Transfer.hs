@@ -37,7 +37,6 @@ import           Tokenomia.Wallet.CLI
 load SearchPath ["echo"]
 
 
-
 type Address = String
 
 transfer
