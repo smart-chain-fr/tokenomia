@@ -47,10 +47,17 @@ import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..)
 load SearchPath ["echo","cardano-cli","md5sum","mv" ]
 
 
-data BuildingTxError = NoWalletRegistered
-           | NoWalletWithoutCollateral
-           | AlreadyACollateral UTxO
-           | NoADAInWallet deriving Show
+data BuildingTxError 
+    = NoWalletRegistered
+    | NoWalletWithoutCollateral
+    | NoWalletWithCollateral
+    | WalletWithoutCollateral
+    | AlreadyACollateral UTxO
+    | NoADAInWallet
+    | NoUTxOWithOnlyOneToken 
+    | TryingToBurnTokenWithoutScriptRegistered 
+    | NoVestingInProgress
+    deriving Show
 
 
 submit

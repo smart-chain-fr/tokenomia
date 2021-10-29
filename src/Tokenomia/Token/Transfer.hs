@@ -15,7 +15,8 @@ module Tokenomia.Token.Transfer
 
 import qualified Data.Text as T
 
-import Control.Monad.Reader
+import           Control.Monad.Reader
+import           Control.Monad.Except
 
 import Shh
     ( load,
@@ -23,52 +24,72 @@ import Shh
 
 import           Ledger.Value
 import           Tokenomia.Adapter.Cardano.CLI.Environment
-import qualified Tokenomia.Wallet.CLI as Wallet
-import qualified Tokenomia.Wallet.Collateral as Wallet
+
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import           Tokenomia.Adapter.Cardano.CLI.Transaction (submit, createMetadataFile)
+import           Tokenomia.Adapter.Cardano.CLI.Transaction 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Common.Error
+import           Tokenomia.Wallet.Collateral
+import           Tokenomia.Wallet.CLI
 
+load SearchPath ["echo"]
 
-{-# ANN module "HLINT: ignore Use camelCase" #-}
+type Address = String
 
-load SearchPath ["echo","printf"]
-
-transfer :: (MonadIO m, MonadReader Environment m)  => m ()
+transfer 
+    :: (  MonadIO m
+        , MonadReader Environment m
+        , MonadError BuildingTxError m)  
+    => m ()
 transfer = do
-    liftIO $ echo "Select the sender's wallet" 
-    Wallet.askAmongAllWallets
-        >>= \case 
-            Nothing -> liftIO $ print "No Wallet Registered !"
-            Just senderWallet@Wallet {paymentAddress = senderAddr,..} -> do 
-                Wallet.getCollateral senderWallet
+    wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+        >>= \wallets -> do
+            liftIO $ echo "Select the minter wallet : "
+            askToChooseAmongGivenWallets wallets 
+    utxoWithToken <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken        
+    amount <- liftIO $ echo "-n" "- Amount of Token to transfer : "   >>  read @Integer <$> getLine
+    receiverAddr    <- liftIO $ echo "-n" "- Receiver address : "  >>  getLine
+    labelMaybe <- liftIO $ echo "-n" "- Add label to your transaction (leave blank if no) : " >> getLine
                     >>= \case
-                        Nothing -> liftIO $ printf "Please create a collateral\n"
-                        Just utxoWithCollateral -> do
-                            receiverAddr    <- liftIO $ echo "-n" "> Receiver address : "  >>  getLine
-                            liftIO $ echo "> Select the utxo containing ADAs for fees (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                            Wallet.askUTxO senderWallet
-                                >>= \case 
-                                Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
-                                Just utxoWithFees -> do 
-                                    liftIO $ echo "> Select the utxo containing the token to transfer (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                                    Wallet.askUTxOFilterBy containingOneToken senderWallet 
-                                        >>= \case  
-                                            Nothing -> liftIO $ echo "Tokens not found in your wallet."
-                                            Just utxoWithToken  -> do
-                                                let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
-                                                amount <- liftIO $ echo "-n" "> Amount of Token : "   >>  read @Integer <$> getLine
-                                                let args = [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
-                                                            , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
-                                                            , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                                                            , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                                                            , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral 
-                                                            , "--change-address"  , senderAddr]
+                        [] -> return Nothing
+                        label -> (return . Just) label
+    transfer' wallet utxoWithToken receiverAddr amount labelMaybe
 
-                                                (liftIO $ echo "Add label to your transaction (leave blank if no)" >> getLine)
-                                                    >>= \case
-                                                        [] -> submit paymentSigningKeyPath utxoWithFees args
-                                                        message -> do
-                                                            metadataJsonFilepath <- createMetadataFile message
-                                                            submit paymentSigningKeyPath utxoWithFees (args <> ["--metadata-json-file", metadataJsonFilepath])
+
+type MetadataLabel = String
+
+transfer' 
+    :: (  MonadIO m
+        , MonadReader Environment m
+        , MonadError BuildingTxError m)  
+    => Wallet 
+    -> UTxO
+    -> Address 
+    -> Integer
+    -> Maybe MetadataLabel    
+    -> m ()
+transfer' senderWallet@Wallet {paymentAddress = senderAddr,..} utxoWithToken receiverAddr amount labelMaybe = do
+    collateral <- fetchCollateral senderWallet >>= whenNothingThrow WalletWithoutCollateral  
+    utxoForFees <- selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet
+    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
+    case labelMaybe of 
+        Nothing -> 
+            submit paymentSigningKeyPath utxoForFees
+                [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
+                , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForFees 
+                , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) collateral 
+                , "--change-address"  , senderAddr]
+        Just label -> do
+            metadataJsonFilepath <- createMetadataFile label
+            submit paymentSigningKeyPath utxoForFees
+                [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
+                , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForFees 
+                , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
+                , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) collateral 
+                , "--change-address"  , senderAddr
+                , "--metadata-json-file", metadataJsonFilepath]   
+    

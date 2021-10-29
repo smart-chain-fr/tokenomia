@@ -12,7 +12,8 @@
 
 module Tokenomia.Wallet.Collateral
     ( createCollateral
-    , getCollateral
+    , fetchCollateral
+    , fetchWalletsWithCollateral
     ) where
 
 import Control.Monad.Reader
@@ -21,7 +22,8 @@ import Shh
     ( load,
       ExecReference(SearchPath) )
 
-import           Data.List.NonEmpty (nonEmpty)
+import           Data.List.NonEmpty (nonEmpty, NonEmpty, toList)
+
 import           Data.Maybe
 import qualified Data.Text as T
 
@@ -37,11 +39,11 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Wallet.CLI as Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
-{-# ANN module "HLINT: ignore Use camelCase" #-}
+
+import           Tokenomia.Common.Error
+
 
 load SearchPath ["echo"]
-
-
 
 
 createCollateral
@@ -50,14 +52,22 @@ createCollateral
        , MonadError BuildingTxError m)
        => m ()
 createCollateral = do
-    allWallets <- query_registered_wallets
-    walletWithoutCollateral <- nonEmpty <$> filterM (fmap isNothing . getCollateral ) allWallets
-    case walletWithoutCollateral of
-        Nothing  | null allWallets -> throwError NoWalletRegistered
-        Nothing -> throwError NoWalletWithoutCollateral
-        Just wallets -> do
-              liftIO $ echo "Select the sender's wallet"
-              askAmongGivenWallets wallets >>= createCollateral'
+    query_registered_wallets         >>= whenNullThrow    NoWalletRegistered
+    >>= filterWalletsWithCollateral  >>= whenNothingThrow NoWalletWithoutCollateral 
+    >>= \wallets -> do
+            liftIO $ echo "Select the wallet to receive the collateral"
+            askToChooseAmongGivenWallets wallets 
+    >>= createCollateral'
+
+
+filterWalletsWithCollateral 
+  :: ( MonadIO m
+     , MonadReader Environment m )
+     => NonEmpty Wallet
+     -> m (Maybe (NonEmpty Wallet))
+filterWalletsWithCollateral xs = do 
+    wallets <- (filterM (fmap isNothing . fetchCollateral ) . toList) xs
+    (return . nonEmpty) wallets
 
 
 createCollateral'
@@ -68,7 +78,7 @@ createCollateral'
        -> m ()
 createCollateral' senderWallet@Wallet {paymentAddress = senderAddr,..} = do
     assertCollateralNotAlreadyCreated senderWallet
-    utxoWithFees <- selectUTxOForFees senderWallet >>=  whenNothingThrow NoADAInWallet
+    utxoWithFees <- selectBiggestStrictlyADAsNotCollateral senderWallet >>=  whenNothingThrow NoADAInWallet
     submit paymentSigningKeyPath utxoWithFees
         [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
         , "--tx-out" , senderAddr <> " " <>(T.unpack . toCLI) (adaValueOf 2.0)
@@ -80,20 +90,22 @@ assertCollateralNotAlreadyCreated
     :: ( MonadIO m
         , MonadReader Environment m
         , MonadError BuildingTxError m) => Wallet -> m ()
-assertCollateralNotAlreadyCreated wallet = getCollateral wallet >>=  whenSomethingThrow AlreadyACollateral
+assertCollateralNotAlreadyCreated wallet = fetchCollateral wallet >>=  whenSomethingThrow AlreadyACollateral
 
-whenSomethingThrow :: MonadError e m => (a -> e) -> Maybe a  -> m ()
-whenSomethingThrow toErr = maybe (pure ()) (throwError . toErr)
 
-whenNothingThrow :: MonadError e m => e -> Maybe a ->  m a
-whenNothingThrow err = maybe (throwError err) pure
+fetchWalletsWithCollateral 
+  :: ( MonadIO m
+     , MonadReader Environment m )
+     => m [Wallet]
+fetchWalletsWithCollateral = query_registered_wallets >>= filterM (fmap isJust . fetchCollateral )  
 
-getCollateral
+
+fetchCollateral
   :: ( MonadIO m
      , MonadReader Environment m )
      => Wallet
     -> m (Maybe UTxO)
-getCollateral Wallet {..} =
+fetchCollateral Wallet {..} =
     filter containsCollateral <$> UTxOs.query paymentAddress
         >>= \case
             [] -> return Nothing

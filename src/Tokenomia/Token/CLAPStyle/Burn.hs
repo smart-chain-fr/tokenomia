@@ -15,6 +15,7 @@ import           Prelude
 import           Shh
 
 import           Control.Monad.Reader
+import           Control.Monad.Except
 
 
 import qualified Data.Text as T
@@ -29,46 +30,49 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import           Tokenomia.Adapter.Cardano.CLI.Transaction
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
 
-import qualified Tokenomia.Wallet.CLI as Wallet
-import qualified Tokenomia.Wallet.Collateral as Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Wallet.Collateral
+import           Tokenomia.Wallet.CLI
+import           Tokenomia.Common.Error
 
-load SearchPath ["echo", "printf"]
+load SearchPath ["echo"]
 
-burn :: (MonadIO m, MonadReader Environment m)  => m ()
-burn = do
-    liftIO $ echo "Select the burner's wallet" 
-    Wallet.askAmongAllWallets
-        >>= \case 
-            Nothing -> liftIO $ print "No Wallet Registered !"
-            Just burnerWallet@Wallet {paymentAddress = burnerAddr,..} -> do 
-                Wallet.getCollateral burnerWallet
-                    >>= \case
-                        Nothing -> liftIO $ printf "Please create a collateral\n"
-                        Just utxoWithCollateral -> do
-                            liftIO $ echo "> Select the utxo containing ADAs for fees (please don't use the utxo containing 2 ADA as it is used for collateral) :" 
-                            Wallet.askUTxO burnerWallet
-                                >>= \case 
-                                    Nothing -> liftIO $ echo "Please, add a ADA to your wallet"
-                                    Just utxoWithFees -> do
-                                        liftIO $ echo "> Select the utxo containing the token to burn :" 
-                                        Wallet.askUTxOFilterBy containingOneToken burnerWallet 
-                                            >>= \case  
-                                                Nothing -> liftIO $ echo "Tokens not found in your wallet."
-                                                Just utxoWithToken  -> do
-                                                    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
-                                                    getMonetaryPolicyPath tokenPolicyHash
-                                                        >>= \case 
-                                                        Nothing -> liftIO $ echo "You can only burn token minted via tokenomia (Monetary Policy existing in ~/.tokenomia-cli/transactions/ )"
-                                                        Just monetaryScriptFilePath -> do
-                                                            amountToBurn  <- liftIO $ echo "-n" "> Amount to burn : "  >>  read @Integer <$> getLine
-                                                            submit paymentSigningKeyPath utxoWithFees
-                                                                [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken 
-                                                                , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees 
-                                                                , "--tx-out" , burnerAddr <> " + 1344798 lovelace + " <> show (totalAmount - amountToBurn) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected
-                                                                , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithCollateral
-                                                                , "--change-address"  , burnerAddr
-                                                                , "--mint" , "-" <> show amountToBurn <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected
-                                                                , "--mint-script-file" , monetaryScriptFilePath
-                                                                , "--mint-redeemer-value",  "[]"]
+
+burn
+    :: (  MonadIO m
+        , MonadReader Environment m
+        , MonadError BuildingTxError m)  
+    => m ()
+burn = do 
+    wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+        >>= \wallets -> do
+            liftIO $ echo "Select the burner wallet : "
+            askToChooseAmongGivenWallets wallets 
+    liftIO $ echo "- Select the utxo containing the tokens to burn :" 
+    utxoWithTokensToBurn <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
+    amountToBurn  <- liftIO $ echo "-n" "- Amount to burn : "  >>  read @Integer <$> getLine       
+    burn' wallet utxoWithTokensToBurn amountToBurn
+
+burn' 
+    :: (  MonadIO m
+        , MonadReader Environment m
+        , MonadError BuildingTxError m)  
+    => Wallet 
+    -> UTxO
+    -> Integer
+    -> m ()
+burn' wallet@Wallet {paymentAddress = burnerAddr,..} utxoWithTokensToBurn amountToBurn = do 
+    collateral <- fetchCollateral wallet >>= whenNothingThrow WalletWithoutCollateral  
+    utxoForFees <- selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet
+    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithTokensToBurn
+    monetaryScriptFilePath <- getMonetaryPolicyPath tokenPolicyHash >>= whenNothingThrow TryingToBurnTokenWithoutScriptRegistered
+    submit paymentSigningKeyPath utxoForFees
+        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithTokensToBurn 
+        , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForFees 
+        , "--tx-out" , burnerAddr <> " + 1344798 lovelace + " <> show (totalAmount - amountToBurn) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected
+        , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) collateral
+        , "--change-address"  , burnerAddr
+        , "--mint" , "-" <> show amountToBurn <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected
+        , "--mint-script-file" , monetaryScriptFilePath
+        , "--mint-redeemer-value",  "[]"]
 
