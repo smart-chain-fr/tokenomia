@@ -7,14 +7,13 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 module Tokenomia.Token.CLAPStyle.Mint
-    ( mint ) where
+    ( mint
+    , mint' ) where
     
 import           Prelude hiding ((+),print)
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)) )
 
-
 import           Control.Monad.Reader hiding (ask)
-
 
 import           Data.List.NonEmpty
 import qualified Data.ByteString.UTF8 as BSU 
@@ -41,10 +40,11 @@ import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (ask,askString)
 
 
-mint 
-    :: (  MonadIO m
-        , MonadReader Environment m
-        , MonadError BuildingTxError m)  
+
+mint :: 
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m)  
     => m ()
 mint = do
     wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
@@ -53,16 +53,17 @@ mint = do
             askToChooseAmongGivenWallets wallets 
     tokenNameToMint  <- L.tokenName . BSU.fromString <$> askString "> Token Name : "
     amountToMint     <- ask @Integer "> Total Supply to Mint : "
-    mint' wallet tokenNameToMint amountToMint  
+    _ <- mint' wallet tokenNameToMint amountToMint  
+    return ()
 
-mint'
-    :: (  MonadIO m
-        , MonadReader Environment m
-        , MonadError BuildingTxError m)  
+mint' :: 
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m)  
     => Wallet
     -> TokenName
     -> Integer
-    -> m ()
+    -> m CurrencySymbol
 mint' wallet tokenName amount = do
 
     txOutRefToConsume <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
@@ -85,3 +86,4 @@ mint' wallet tokenName amount = do
         , tokenSupplyChangesMaybe = Just $ Mint { amount = valueToMint, script = monetaryScript} :| []
         , metadataMaybe = Nothing 
         , ..}
+    return policyhash

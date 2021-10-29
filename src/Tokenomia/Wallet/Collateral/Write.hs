@@ -5,6 +5,7 @@
 
 module Tokenomia.Wallet.Collateral.Write
     ( createCollateral
+    , createCollateral'
     ) where
 
 import           Control.Monad.Reader
@@ -29,11 +30,11 @@ import           Tokenomia.Common.Shell.Console (printLn)
 import           Prelude hiding (print)
 import           Tokenomia.Wallet.Collateral.Read
 
-createCollateral
-    :: ( MonadIO m
-       , MonadReader Environment m
-       , MonadError BuildingTxError m)
-       => m ()
+createCollateral :: 
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m )
+    => m ()
 createCollateral = do
     query_registered_wallets         >>= whenNullThrow    NoWalletRegistered
     >>= filterWalletsWithCollateral  >>= whenNothingThrow NoWalletWithoutCollateral 
@@ -51,7 +52,7 @@ createCollateral'
 createCollateral' senderWallet = do
     assertCollateralNotAlreadyCreated senderWallet
     ada <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet)
-    submit'
+    submitCollateral
       TxBuild
         { wallet = senderWallet
         , txIns =  FromWallet ada :| []
@@ -60,10 +61,12 @@ createCollateral' senderWallet = do
         , tokenSupplyChangesMaybe = Nothing
         , metadataMaybe = Nothing }
 
-assertCollateralNotAlreadyCreated
-    :: ( MonadIO m
-        , MonadReader Environment m
-        , MonadError BuildingTxError m) => Wallet -> m ()
+assertCollateralNotAlreadyCreated :: 
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m ) 
+    => Wallet 
+    -> m ()
 assertCollateralNotAlreadyCreated wallet = fetchCollateral wallet >>=  whenSomethingThrow AlreadyACollateral
 
 

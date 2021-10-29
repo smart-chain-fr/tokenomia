@@ -17,6 +17,7 @@ module Tokenomia.Adapter.Cardano.CLI.Wallet
     , remove_shelley_wallet
     , restore_from_seed_phrase
     , query_registered_wallets
+    , queryWallet
     , Wallet (..)
     ) where
 
@@ -60,22 +61,34 @@ instance DisplayMenuItem Wallet where
     displayMenuItem Wallet {..} = name
 
 
-query_registered_wallets :: (MonadIO m, MonadReader Environment m) => m [Wallet]
+query_registered_wallets :: 
+    ( MonadIO m
+    , MonadReader Environment m ) 
+    => m [Wallet]
 query_registered_wallets = do
    keyPath <- getFolderPath Keys
    walletNames <- liftIO $ (fmap.fmap) C.unpack (ls keyPath |> captureWords)
-   mapM (\name ->
-        do
-        let paymentAddressPath = keyPath <> name <> "/payment.addr"
-            paymentSigningKeyPath = keyPath <> name <> "/payment-signing.skey"
-            publickeyPath = keyPath <> name <> "/public-key.hash"
-        paymentAddress <- liftIO $ Address . C.unpack  <$> (cat paymentAddressPath |> capture)
-        publicKeyHash <- liftIO $ fromString . BLU.toString <$> (cat publickeyPath |> captureTrim)
-        return $ Wallet {..} ) walletNames
+   mapM queryWallet walletNames
 
 
-generate_seed_phrase
-    :: ( MonadIO m, MonadReader Environment m )
+queryWallet :: 
+    ( MonadIO m
+    , MonadReader Environment m ) 
+    => WalletName 
+    -> m Wallet
+queryWallet name = do
+    keyPath <- getFolderPath Keys
+    let paymentAddressPath = keyPath <> name <> "/payment.addr"
+        paymentSigningKeyPath = keyPath <> name <> "/payment-signing.skey"
+        publickeyPath = keyPath <> name <> "/public-key.hash"
+    paymentAddress <- liftIO $ Address . C.unpack  <$> (cat paymentAddressPath |> capture)
+    publicKeyHash <- liftIO $ fromString . BLU.toString <$> (cat publickeyPath |> captureTrim)
+    
+    return $ Wallet {..}
+
+generate_seed_phrase :: 
+    ( MonadIO m
+    , MonadReader Environment m )
     => WalletName
     -> m ()
 generate_seed_phrase walletName = do
@@ -87,19 +100,21 @@ generate_seed_phrase walletName = do
         &> (Truncate . fromString) mnemonics
 
 
-register_shelley_wallet
-    :: ( MonadIO m
-       , MonadReader Environment m )
+register_shelley_wallet :: 
+    ( MonadIO m
+    , MonadReader Environment m )
     => WalletName
     -> m ()
 register_shelley_wallet walletName = do
     generate_seed_phrase walletName
     generate_keys walletName
 
-restore_from_seed_phrase
-    :: ( MonadIO m
-       , MonadReader Environment m )
-    => WalletName -> String
+
+restore_from_seed_phrase :: 
+    ( MonadIO m
+    , MonadReader Environment m )
+    => WalletName 
+    -> String
     -> m ()
 restore_from_seed_phrase walletName seedPhrase = do
     keyPath <- getFolderPath Keys
@@ -110,9 +125,10 @@ restore_from_seed_phrase walletName seedPhrase = do
         &> (Truncate . fromString) mnemonics)
     generate_keys walletName
 
-generate_keys
-    :: ( MonadIO m
-       , MonadReader Environment m )
+
+generate_keys :: 
+    ( MonadIO m
+    , MonadReader Environment m )
     => WalletName
     -> m ()
 generate_keys walletName = do
@@ -143,8 +159,10 @@ generate_keys walletName = do
         &> (Truncate . fromString) shortPaymentAddress
     convertKeys walletName
 
-convertKeys
-    :: ( MonadIO m, MonadReader Environment m )
+
+convertKeys :: 
+    ( MonadIO m
+    , MonadReader Environment m )
     => WalletName
     -> m ()
 convertKeys walletName = do
@@ -159,7 +177,12 @@ convertKeys walletName = do
     liftIO $ cardano_cli "key" "verification-key" "--signing-key-file" paymentSigningConvertedPath "--verification-key-file" paymentVerificationConvertedPath
     liftIO $ cardano_cli "address" "key-hash" "--payment-verification-key-file" paymentVerificationConvertedPath &> (Truncate . fromString) publickeyPath
 
-remove_shelley_wallet :: ( MonadIO m, MonadReader Environment m) =>WalletName -> m ()
+
+remove_shelley_wallet :: 
+    ( MonadIO m
+    , MonadReader Environment m ) 
+    =>WalletName 
+    -> m ()
 remove_shelley_wallet walletName = do
     keyPath <- getFolderPath Keys
     let walletKeyPath = keyPath <> walletName <> "/"

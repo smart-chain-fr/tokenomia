@@ -18,6 +18,7 @@
 
 module Tokenomia.Adapter.Cardano.CLI.UTxO.Query
     ( query
+    , queryUTxOsFilterBy
     ) where
 
 
@@ -28,6 +29,7 @@ import           Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
 import           Shh.Internal
 
 
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Value ()
@@ -37,9 +39,9 @@ import            Tokenomia.Adapter.Cardano.Types
 
 load SearchPath ["cardano-cli"]
 
-query
-  :: ( MonadIO m
-     , MonadReader Environment m )
+query :: 
+  ( MonadIO m
+  , MonadReader Environment m )
   => Address
   -> m [UTxO]
 query (Address address) = do
@@ -47,3 +49,13 @@ query (Address address) = do
     fromCLI . TL.toStrict . TLE.decodeUtf8 <$> liftIO (cardano_cli "query" "utxo" "--testnet-magic" magicN "--address" address |> capture)
 
 
+queryUTxOsFilterBy ::
+    ( MonadIO m
+    , MonadReader Environment m )
+    => Wallet
+    -> (UTxO -> Bool)
+    -> m [UTxO]
+queryUTxOsFilterBy Wallet {..} f = do
+    utxos <- query paymentAddress
+    let filteredUTxOs = filter f utxos
+    return filteredUTxOs

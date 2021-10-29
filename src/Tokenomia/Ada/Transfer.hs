@@ -4,7 +4,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Tokenomia.Ada.Transfer
-    ( transfer ) where
+    ( transfer
+    , transfer' ) where
 
 import           Data.List.NonEmpty
 import           Control.Monad.Reader hiding (ask)
@@ -24,10 +25,10 @@ import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (askString, ask, askStringLeaveBlankOption)
 
 
-transfer
-    :: (  MonadIO m
-        , MonadReader Environment m
-        , MonadError BuildingTxError m)
+transfer :: 
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m)
     => m ()
 transfer = do
     wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
@@ -45,10 +46,10 @@ transfer = do
 
 type MetadataLabel = String
 
-transfer'
-    :: (  MonadIO m
-        , MonadReader Environment m
-        , MonadError BuildingTxError m)
+transfer' :: 
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m)
     => Wallet
     -> Address
     -> Integer
