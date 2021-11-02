@@ -32,8 +32,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Value ()
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
-
-type Address = String
+import            Tokenomia.Adapter.Cardano.Types
 
 
 load SearchPath ["cardano-cli"]
@@ -43,7 +42,7 @@ query
      , MonadReader Environment m )
   => Address
   -> m [UTxO]
-query address = do
+query (Address address) = do
     magicN <- asks magicNumber
     fromCLI . TL.toStrict . TLE.decodeUtf8 <$> liftIO (cardano_cli "query" "utxo" "--testnet-magic" magicN "--address" address |> capture)
 

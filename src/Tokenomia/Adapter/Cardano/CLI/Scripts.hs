@@ -20,7 +20,7 @@ module Tokenomia.Adapter.Cardano.CLI.Scripts
     , getMonetaryPolicyPath
     , getDataHash
     , persistDataInTMP
-    , Address) where
+    ) where
 
 import           Data.String
 import qualified Data.ByteString.Lazy.Char8 as C
@@ -30,7 +30,6 @@ import qualified Data.ByteString.Lazy as LB
 
 import           Control.Monad.Reader
 
-
 import           System.Random
 import           System.Directory
 
@@ -38,7 +37,7 @@ import           Shh.Internal
 
 import           Codec.Serialise ( serialise )
 
-import           Cardano.Api hiding (Testnet,Mainnet,Address)
+import           Cardano.Api hiding (Testnet,Mainnet,Address,Hash)
 import qualified Cardano.Api.Shelley  as Shelley
 
 
@@ -53,14 +52,12 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString)
 import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
 import           Tokenomia.Common.Shell.Console (printLn)
+import           Tokenomia.Adapter.Cardano.Types
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 load SearchPath ["cat","cardano-cli" ]
-
-type Address = String
-
 
 getMonetaryPolicyPath
     :: ( MonadIO m, MonadReader Environment m )
@@ -98,7 +95,7 @@ getScriptLocation validator = do
                         Testnet {magicNumber} ->  asArg ["--testnet-magic", show magicNumber])
     scFolder <- getFolderPath Validators
     let validatorPath =  scFolder <> show (validatorHash validator) <> ".plutus"
-    scriptAddr <- liftIO $ C.unpack  <$> (cardano_cli "address" "build" "--payment-script-file" validatorPath networkOption |> capture)
+    scriptAddr <- liftIO $ Address . C.unpack  <$> (cardano_cli "address" "build" "--payment-script-file" validatorPath networkOption |> capture)
     return ScriptLocation {onChain = scriptAddr, offChain = validatorPath}
 
 registerValidatorScriptFile
@@ -121,10 +118,10 @@ toPlutusScriptV1
   . LB.toStrict
   . serialise
 
-getDataHash :: (MonadIO m, MonadReader Environment m, ToData a) => a -> m String
+getDataHash :: (MonadIO m, MonadReader Environment m, ToData a) => a -> m Hash
 getDataHash a = do
     filePath <- persistDataInTMP a
-    liftIO $ init . C.unpack  <$>  (cardano_cli "transaction" "hash-script-data" "--script-data-file" filePath |> capture)
+    liftIO $ Hash . init . C.unpack  <$>  (cardano_cli "transaction" "hash-script-data" "--script-data-file" filePath |> capture)
 
 persistDataInTMP :: (MonadIO m, MonadReader Environment m, ToData a) => a -> m FilePath
 persistDataInTMP a = do

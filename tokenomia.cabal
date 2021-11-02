@@ -67,6 +67,7 @@ library
       Tokenomia.Adapter.Cardano.CLI.Environment
       Tokenomia.Adapter.Cardano.CLI.Data
       Tokenomia.Adapter.Cardano.CLI.UTxO.Query
+      Tokenomia.Adapter.Cardano.Types
     build-depends:
       base >= 4.9 && < 5,
       lens,

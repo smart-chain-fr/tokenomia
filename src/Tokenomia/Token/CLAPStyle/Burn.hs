@@ -4,20 +4,18 @@
 
 module Tokenomia.Token.CLAPStyle.Burn (burn) where
 
+import           Prelude hiding ((+),(-),print)
+import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
 
-import           Prelude hiding (print)
 import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
 
-import qualified Data.Text as T
-
+import           Data.List.NonEmpty
 import           Ledger.Value
-
-
+import           Ledger.Ada
 
 import           Tokenomia.Adapter.Cardano.CLI.Environment
-import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
 import           Tokenomia.Adapter.Cardano.CLI.Transaction
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
@@ -53,18 +51,26 @@ burn'
     -> UTxO
     -> Integer
     -> m ()
-burn' wallet@Wallet {paymentAddress = burnerAddr,..} utxoWithTokensToBurn amountToBurn = do 
-    collateral <- fetchCollateral wallet >>= whenNothingThrow WalletWithoutCollateral  
-    utxoForFees <- selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet
-    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithTokensToBurn
-    monetaryScriptFilePath <- getMonetaryPolicyPath tokenPolicyHash >>= whenNothingThrow TryingToBurnTokenWithoutScriptRegistered
-    submit paymentSigningKeyPath utxoForFees
-        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithTokensToBurn 
-        , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForFees 
-        , "--tx-out" , burnerAddr <> " + 1344798 lovelace + " <> show (totalAmount - amountToBurn) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected
-        , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) collateral
-        , "--change-address"  , burnerAddr
-        , "--mint" , "-" <> show amountToBurn <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected
-        , "--mint-script-file" , monetaryScriptFilePath
-        , "--mint-redeemer-value",  "[]"]
+burn' wallet utxoWithTokensToBurn@UTxO {value = totalAmountBurnable} amountToBurn = do 
+    collateral <-  txOutRef <$> (fetchCollateral wallet >>= whenNothingThrow WalletWithoutCollateral) 
+    utxoForFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
+
+    let (tokenPolicyHash,tokenNameSelected,_) = getTokenFrom utxoWithTokensToBurn
+        valueToBurn = singleton tokenPolicyHash tokenNameSelected amountToBurn
+        change = totalAmountBurnable - valueToBurn
+
+    monetaryScript <- getMonetaryPolicyPath tokenPolicyHash >>= whenNothingThrow TryingToBurnTokenWithoutScriptRegistered
+
+    submit'
+      TxBuild
+        { signingKeyPath = paymentSigningKeyPath wallet
+        , txIns =  FromWallet utxoForFees :| [FromWallet (txOutRef  utxoWithTokensToBurn)] 
+        , txOuts = ToWallet (paymentAddress wallet) (change + lovelaceValueOf 1344798):| [] 
+        , changeAdress = paymentAddress wallet
+        , validitySlotRangeMaybe = Nothing
+        , tokenSupplyChangesMaybe = Just $ Burn { amount = valueToBurn, script = monetaryScript} :| []
+        , metadataMaybe = Nothing 
+        , ..}
+
+ 
 

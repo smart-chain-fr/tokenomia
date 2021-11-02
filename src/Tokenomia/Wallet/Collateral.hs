@@ -11,16 +11,13 @@ module Tokenomia.Wallet.Collateral
 
 import           Control.Monad.Reader
 
-import           Data.List.NonEmpty (nonEmpty, NonEmpty, toList)
 
 import           Data.Maybe
-import qualified Data.Text as T
-
+import           Data.List.NonEmpty
 import           Control.Monad.Except
 
 import           Ledger.Ada
 
-import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import           Tokenomia.Adapter.Cardano.CLI.Transaction
 import           Tokenomia.Adapter.Cardano.CLI.Environment
@@ -64,15 +61,19 @@ createCollateral'
        , MonadError BuildingTxError m)
        => Wallet 
        -> m ()
-createCollateral' senderWallet@Wallet {paymentAddress = senderAddr,..} = do
+createCollateral' senderWallet = do
     assertCollateralNotAlreadyCreated senderWallet
-    utxoWithFees <- selectBiggestStrictlyADAsNotCollateral senderWallet >>=  whenNothingThrow NoADAInWallet
-    submit paymentSigningKeyPath utxoWithFees
-        [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithFees
-        , "--tx-out" , senderAddr <> " " <>(T.unpack . toCLI) (adaValueOf 2.0)
-        , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) utxoWithFees
-        , "--change-address"  , senderAddr]
-
+    utxoWithFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>=  whenNothingThrow NoADAInWallet)
+    submit'
+      TxBuild
+        { signingKeyPath = paymentSigningKeyPath senderWallet
+        , txIns =  FromWallet utxoWithFees :| [] 
+        , txOuts = ToWallet (paymentAddress senderWallet) (adaValueOf 2.0) :| [] 
+        , changeAdress = paymentAddress $ senderWallet
+        , validitySlotRangeMaybe = Nothing
+        , tokenSupplyChangesMaybe = Nothing
+        , metadataMaybe = Nothing 
+        , collateral = utxoWithFees}
 
 assertCollateralNotAlreadyCreated
     :: ( MonadIO m
@@ -94,7 +95,7 @@ fetchCollateral
      => Wallet
     -> m (Maybe UTxO)
 fetchCollateral Wallet {..} =
-    filter containsCollateral <$> UTxOs.query paymentAddress
+    Prelude.filter containsCollateral <$> UTxOs.query paymentAddress
         >>= \case
             [] -> return Nothing
             (x:_)  -> (return . Just) x

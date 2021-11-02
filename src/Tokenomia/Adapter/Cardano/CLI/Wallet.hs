@@ -35,26 +35,26 @@ import           Tokenomia.Common.Shell.InteractiveMenu
 import           Tokenomia.Common.Shell.Console (printLn)
 
 import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
-
+import           Tokenomia.Adapter.Cardano.Types
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address" ]
 
 
 type WalletName = String
-type PaymentAddress = String
+
 
 
 data Wallet = Wallet
               { name :: WalletName
-              , paymentAddress :: PaymentAddress
+              , paymentAddress :: Address
               , paymentSigningKeyPath :: FilePath
               , publicKeyHash :: PubKeyHash  }
 
 instance Show Wallet where
     show Wallet {..} = ">> " <> name
         <> " \n public key hash :" <> show publicKeyHash
-        <> " \n payment addr :" <> paymentAddress
+        <> " \n payment addr :" <> show paymentAddress
 
 instance DisplayMenuItem Wallet where
     displayMenuItem Wallet {..} = name
@@ -69,7 +69,7 @@ query_registered_wallets = do
         let paymentAddressPath = keyPath <> name <> "/payment.addr"
             paymentSigningKeyPath = keyPath <> name <> "/payment-signing.skey"
             publickeyPath = keyPath <> name <> "/public-key.hash"
-        paymentAddress <- liftIO $ C.unpack  <$> (cat paymentAddressPath |> capture)
+        paymentAddress <- liftIO $ Address . C.unpack  <$> (cat paymentAddressPath |> capture)
         publicKeyHash <- liftIO $ fromString . BLU.toString <$> (cat publickeyPath |> captureTrim)
         return $ Wallet {..} ) walletNames
 

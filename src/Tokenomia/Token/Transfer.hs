@@ -9,15 +9,17 @@
 module Tokenomia.Token.Transfer 
     ( transfer) where
 
-import qualified Data.Text as T
+import           Prelude hiding ((+),(-))
+import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
 
-import Control.Monad.Reader hiding (ask)
+import           Data.List.NonEmpty
+import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
 import           Ledger.Value
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 
-import           Tokenomia.Adapter.Cardano.CLI.Serialise
+import           Ledger.Ada
 import           Tokenomia.Adapter.Cardano.CLI.UTxO 
 import           Tokenomia.Adapter.Cardano.CLI.Transaction 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
@@ -25,9 +27,9 @@ import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu  (ask, askLeaveBlankOption)
+import           Tokenomia.Common.Shell.InteractiveMenu  (ask,askString, askStringLeaveBlankOption)
 
-type Address = String
+
 
 transfer 
     :: (  MonadIO m
@@ -40,11 +42,11 @@ transfer = do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
     utxoWithToken <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken        
-    amount <- ask @Integer "- Amount of Token to transfer : "
-    receiverAddr <- ask @String "- Receiver address : "
-    labelMaybe <- askLeaveBlankOption @String "- Add label to your transaction (leave blank if no) : " 
-    transfer' wallet utxoWithToken receiverAddr amount labelMaybe
-
+    amount <- ask @Integer                  "- Amount of Token to transfer : "
+    receiverAddr <- Address <$> askString   "- Receiver address : "
+    labelMaybe <- askStringLeaveBlankOption "- Add label to your transaction (leave blank if no) : " 
+    
+    transfer' wallet receiverAddr utxoWithToken  amount labelMaybe
 
 type MetadataLabel = String
 
@@ -53,32 +55,31 @@ transfer'
         , MonadReader Environment m
         , MonadError BuildingTxError m)  
     => Wallet 
-    -> UTxO
     -> Address 
+    -> UTxO
     -> Integer
     -> Maybe MetadataLabel    
     -> m ()
-transfer' senderWallet@Wallet {paymentAddress = senderAddr,..} utxoWithToken receiverAddr amount labelMaybe = do
-    collateral <- fetchCollateral senderWallet >>= whenNothingThrow WalletWithoutCollateral  
-    utxoForFees <- selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet
+transfer' senderWallet receiverAddr utxoWithToken amount labelMaybe = do
+    collateral <- txOutRef <$> (fetchCollateral senderWallet                        >>= whenNothingThrow WalletWithoutCollateral)
+    utxoForFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet)
+    metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
+
     let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
-    case labelMaybe of 
-        Nothing -> 
-            submit paymentSigningKeyPath utxoForFees
-                [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
-                , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForFees 
-                , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) collateral 
-                , "--change-address"  , senderAddr]
-        Just label -> do
-            metadataJsonFilepath <- createMetadataFile label
-            submit paymentSigningKeyPath utxoForFees
-                [ "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoWithToken
-                , "--tx-in"  , (T.unpack . toCLI . txOutRef) utxoForFees 
-                , "--tx-out" , receiverAddr <> " + 1344798 lovelace + " <> show amount <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                , "--tx-out" , senderAddr   <> " + 1344798 lovelace + " <> show (totalAmount - amount) <> " " <> show tokenPolicyHash <> "." <> toString tokenNameSelected 
-                , "--tx-in-collateral", (T.unpack . toCLI . txOutRef) collateral 
-                , "--change-address"  , senderAddr
-                , "--metadata-json-file", metadataJsonFilepath]   
+        tokenId = singleton tokenPolicyHash tokenNameSelected
+        valueToTransfer = tokenId amount + lovelaceValueOf 1344798
+        change = tokenId (totalAmount - amount) + lovelaceValueOf 1344798
+
+    submit'
+      TxBuild
+        { signingKeyPath = paymentSigningKeyPath senderWallet
+        , txIns =  FromWallet utxoForFees 
+                :| [FromWallet (txOutRef utxoWithToken)]
+        , txOuts = ToWallet receiverAddr valueToTransfer 
+                :| [ToWallet (paymentAddress senderWallet) change]
+        , changeAdress = paymentAddress senderWallet
+        , validitySlotRangeMaybe = Nothing
+        , tokenSupplyChangesMaybe = Nothing
+        , ..}
+
     
