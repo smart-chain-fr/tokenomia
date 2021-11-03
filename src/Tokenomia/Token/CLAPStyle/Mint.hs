@@ -32,7 +32,8 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Common.Error
-import           Tokenomia.Common.Shell.Console (printLn, printOpt)
+import           Tokenomia.Common.Shell.Console (printLn)
+import           Tokenomia.Common.Shell.InteractiveMenu (ask')
 
 
 
@@ -46,8 +47,8 @@ mint = do
         >>= \wallets -> do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
-    tokenNameToMint  <- liftIO (printOpt "> Token Name : " "-n" >>  L.tokenName . BSU.fromString <$> getLine)
-    amountToMint     <- liftIO (printOpt "> Total Supply to Mint : " "-n"   >>  read @Integer <$> getLine)
+    tokenNameToMint  <- L.tokenName . BSU.fromString <$> ask' "> Token Name : "
+    amountToMint     <- ask' @Integer "> Total Supply to Mint : "
     mint' wallet tokenNameToMint amountToMint  
 
 mint'

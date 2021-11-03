@@ -26,7 +26,8 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
-import           Tokenomia.Common.Shell.Console (printLn, printOpt)
+import           Tokenomia.Common.Shell.Console (printLn)
+import           Tokenomia.Common.Shell.InteractiveMenu (ask')
 
 
 burn
@@ -41,7 +42,7 @@ burn = do
             askToChooseAmongGivenWallets wallets 
     printLn "- Select the utxo containing the tokens to burn :" 
     utxoWithTokensToBurn <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
-    amountToBurn  <- liftIO (printOpt "- Amount to burn : " "-n" >>  read @Integer <$> getLine)    
+    amountToBurn  <- ask' @Integer "- Amount to burn : "
     burn' wallet utxoWithTokensToBurn amountToBurn
 
 burn' 

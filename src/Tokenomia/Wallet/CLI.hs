@@ -25,12 +25,12 @@ import qualified Prelude as P
 
 import           Data.List.NonEmpty
 
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding (ask)
 
-import           Tokenomia.Common.Shell.Console (printLn, printOpt)
+import           Tokenomia.Common.Shell.Console (printLn)
 import           Plutus.V1.Ledger.Value (flattenValue)
 
-import           Tokenomia.Common.Shell.InteractiveMenu (askMenu)
+import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, ask, ask')
 
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Wallet as CardanoCLI
@@ -38,6 +38,8 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 
 import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
+askWalletName :: (MonadIO m) => m String 
+askWalletName= ask' "Wallet Name : "
 
 askAmongAllWallets :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
 askAmongAllWallets =
@@ -112,7 +114,7 @@ createAndRegister
   => m ()
 createAndRegister = do
   printLn "-----------------------------------"
-  walletName <- printOpt "> Wallet Name : " "-n" >> liftIO getLine
+  walletName <- askWalletName
   CardanoCLI.register_shelley_wallet walletName
   printLn "Wallet Created and Registered!"
   printLn "-----------------------------------"
@@ -152,20 +154,21 @@ remove = do
 
   printLn "-----------------------------------"
 
-getSeedPhrase :: IO String
-getSeedPhrase = do
-  seedPhrase <- printOpt "> please enter your 24 words mnemonics then press enter : " "-n" >> getLine
-  if Prelude.length (words seedPhrase) /= 24
-    then do
-      printLn "\n We said 24 words !\n"
-      getSeedPhrase
-    else return seedPhrase
+getSeedPhrase' :: (MonadIO m) => String -> m Bool
+getSeedPhrase' seedPhrase =  if Prelude.length (words seedPhrase) /= 24 then
+  do
+    printLn "we said 24 words !"
+    return False
+  else return True
+
+getSeedPhrase :: MonadIO m => m String
+getSeedPhrase = ask "> please enter your 24 words mnemonics then press enter : " getSeedPhrase'
 
 restore :: (MonadIO m, MonadReader Environment m) => m ()
 restore = do
   printLn "-----------------------------------"
-  walletName <- printOpt "> Wallet Name : " "-n" >> liftIO  getLine
-  seedPhrase <- liftIO getSeedPhrase
+  walletName <- askWalletName
+  seedPhrase <- getSeedPhrase
   CardanoCLI.restore_from_seed_phrase walletName seedPhrase
   printLn "-----------------------------------"
 

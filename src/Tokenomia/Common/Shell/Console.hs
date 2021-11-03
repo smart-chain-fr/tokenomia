@@ -14,11 +14,13 @@
 
 module Tokenomia.Common.Shell.Console
     ( printLn
+    , print
     , printOpt
     , clearConsole) where
 
 import Shh (load, ExecReference(SearchPath))
 import Control.Monad.Reader (MonadIO, liftIO)
+import Prelude hiding (print)
 
 load SearchPath ["echo", "clear"]
 

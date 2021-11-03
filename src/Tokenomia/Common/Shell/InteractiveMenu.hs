@@ -14,7 +14,10 @@
 
 
 module Tokenomia.Common.Shell.InteractiveMenu
-    ( askMenu
+    ( ask
+    , ask'
+    , askMenu
+    , askMaybe
     , DisplayMenuItem (..)) where
 
 import Data.List.NonEmpty (NonEmpty, toList, (!!))
@@ -22,7 +25,7 @@ import Prelude hiding ((!!), print)
 import Text.Read (readEither)
 import Shh
 import Control.Monad.Reader hiding (ask)
-import Tokenomia.Common.Shell.Console (printLn, clearConsole)
+import Tokenomia.Common.Shell.Console (print, printLn, clearConsole)
 
 load SearchPath ["echo"]
 
@@ -59,18 +62,21 @@ askMenu
     => NonEmpty a 
     -> m a
 askMenu choices = (\idx -> choices !! (idx - 1)) <$> askSelectRepeatedly choices
+class DisplayMenuItem a where
+    displayMenuItem :: a -> String
 
-ask' :: (MonadIO m, Read a) => String -> m a
+    
+ask' :: (Read a, MonadIO m) => String -> m a
 ask' prompt = do
-    printLn prompt
+    print prompt
     liftIO (readEither <$> getLine) >>=
         \case 
             Left err -> do
-                printLn $ show err
+                print $ show err
                 ask' prompt
             Right answer -> return answer
 
-ask :: (MonadIO m, Read a) => String -> (a -> Bool) -> m a
+ask :: (Read a, MonadIO m) => String -> (a -> m Bool) -> m a
 ask prompt f = do
     answer <- ask' prompt
     f answer >>=
@@ -78,6 +84,11 @@ ask prompt f = do
             True -> return answer
             False -> ask prompt f
 
-class DisplayMenuItem a where
-    displayMenuItem :: a -> String 
-
+askMaybe :: (Read a, MonadIO m) => String -> m (Maybe a)
+askMaybe prompt = do
+    print prompt
+    liftIO (readEither <$> getLine) >>=
+        \case 
+            Left _ -> do
+               return Nothing 
+            Right answer -> return (Just answer)

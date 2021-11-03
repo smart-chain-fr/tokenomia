@@ -34,6 +34,7 @@ import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
 import           Tokenomia.Common.Shell.Console
+import           Tokenomia.Common.Shell.InteractiveMenu
 
 
 vestFunds
@@ -50,12 +51,12 @@ vestFunds = do
     printLn "- Select the utxo and associated tokens to vest  :" 
     utxoWithToken <- askToChooseAmongGivenUTxOs utxosWithOneToken
     printLn "- First Tranche : "
-    nbSecondsTranche1  <- liftIO (printOpt "> How many seconds will you vest the tokens ? : " "-n"  >>  read @Integer <$> getLine)
-    nbTokenTranche1  <- liftIO (printOpt "> How many tokens will you vest ? : "  "-n" >>  read @Integer <$> getLine)
+    nbSecondsTranche1  <- ask' @Integer "> How many seconds will you vest the tokens ? : "
+    nbTokenTranche1  <- ask' @Integer  "> How many tokens will you vest ? : "
    
     printLn "- Second Tranche : "
-    nbSecondsTranche2  <- liftIO (printLn "> How many seconds will you vest the tokens ? : "  >>  read @Integer <$> getLine)
-    nbTokenTranche2  <- liftIO (printLn "> How many tokens will you vest ? : "  >>  read @Integer <$> getLine)
+    nbSecondsTranche2  <- ask' @Integer "> How many seconds will you vest the tokens ? : "
+    nbTokenTranche2  <- ask' @Integer "> How many tokens will you vest ? : "
 
     printLn "- Select the investor's wallet"
     investorWallet <- askAmongAllWallets >>= whenNothingThrow NoWalletRegistered
