@@ -10,7 +10,7 @@ module Tokenomia.Token.CLAPStyle.Mint
 
 import           Prelude hiding (print)
 
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding (ask)
 
 import qualified Data.Text as T
 
@@ -33,7 +33,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Scripts
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Common.Error
 import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu (ask')
+import           Tokenomia.Common.Shell.InteractiveMenu (ask)
 
 
 
@@ -47,8 +47,8 @@ mint = do
         >>= \wallets -> do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
-    tokenNameToMint  <- L.tokenName . BSU.fromString <$> ask' "> Token Name : "
-    amountToMint     <- ask' @Integer "> Total Supply to Mint : "
+    tokenNameToMint  <- L.tokenName . BSU.fromString <$> ask @String "> Token Name : "
+    amountToMint     <- ask @Integer "> Total Supply to Mint : "
     mint' wallet tokenNameToMint amountToMint  
 
 mint'

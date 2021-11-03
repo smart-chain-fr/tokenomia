@@ -6,7 +6,7 @@ module Tokenomia.Token.CLAPStyle.Burn (burn) where
 
 
 import           Prelude hiding (print)
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
 
@@ -27,7 +27,7 @@ import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
 import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu (ask')
+import           Tokenomia.Common.Shell.InteractiveMenu (ask)
 
 
 burn
@@ -42,7 +42,7 @@ burn = do
             askToChooseAmongGivenWallets wallets 
     printLn "- Select the utxo containing the tokens to burn :" 
     utxoWithTokensToBurn <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
-    amountToBurn  <- ask' @Integer "- Amount to burn : "
+    amountToBurn  <- ask @Integer "- Amount to burn : "
     burn' wallet utxoWithTokensToBurn amountToBurn
 
 burn' 

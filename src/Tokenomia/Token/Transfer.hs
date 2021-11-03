@@ -25,7 +25,7 @@ import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu  (ask', askMaybe)
+import           Tokenomia.Common.Shell.InteractiveMenu  (ask, askLeaveBlankOption)
 
 type Address = String
 
@@ -40,9 +40,9 @@ transfer = do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
     utxoWithToken <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken        
-    amount <- ask' @Integer "- Amount of Token to transfer : "
-    receiverAddr <- ask' @String "- Receiver address : "
-    labelMaybe <- askMaybe @String "- Add label to your transaction (leave blank if no) : " 
+    amount <- ask @Integer "- Amount of Token to transfer : "
+    receiverAddr <- ask @String "- Receiver address : "
+    labelMaybe <- askLeaveBlankOption @String "- Add label to your transaction (leave blank if no) : " 
     transfer' wallet utxoWithToken receiverAddr amount labelMaybe
 
 

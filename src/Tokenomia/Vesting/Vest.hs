@@ -12,7 +12,7 @@ import           Prelude hiding ((+),(-), print)
 import qualified Prelude as P
 import qualified Data.Text as T
 import qualified Data.Time.Clock.POSIX as POSIX
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
@@ -51,12 +51,12 @@ vestFunds = do
     printLn "- Select the utxo and associated tokens to vest  :" 
     utxoWithToken <- askToChooseAmongGivenUTxOs utxosWithOneToken
     printLn "- First Tranche : "
-    nbSecondsTranche1  <- ask' @Integer "> How many seconds will you vest the tokens ? : "
-    nbTokenTranche1  <- ask' @Integer  "> How many tokens will you vest ? : "
+    nbSecondsTranche1  <- ask @Integer "> How many seconds will you vest the tokens ? : "
+    nbTokenTranche1  <- ask @Integer  "> How many tokens will you vest ? : "
    
     printLn "- Second Tranche : "
-    nbSecondsTranche2  <- ask' @Integer "> How many seconds will you vest the tokens ? : "
-    nbTokenTranche2  <- ask' @Integer "> How many tokens will you vest ? : "
+    nbSecondsTranche2  <- ask @Integer "> How many seconds will you vest the tokens ? : "
+    nbTokenTranche2  <- ask @Integer "> How many tokens will you vest ? : "
 
     printLn "- Select the investor's wallet"
     investorWallet <- askAmongAllWallets >>= whenNothingThrow NoWalletRegistered

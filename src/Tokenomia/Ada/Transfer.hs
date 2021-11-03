@@ -8,7 +8,7 @@ module Tokenomia.Ada.Transfer
     ( transfer ) where
 
 import qualified Data.Text as T
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
@@ -21,7 +21,7 @@ import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu (ask', askMaybe)
+import           Tokenomia.Common.Shell.InteractiveMenu (ask, askLeaveBlankOption)
 
 
 type Address = String
@@ -39,9 +39,9 @@ transfer = do
     utxo <- selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet
     printLn $ "- Amount Available : " <> showValue (value utxo)
 
-    amount <- ask' @Integer "- Amount of Lovelaces to transfer : "
-    receiverAddr <- ask' @String "- Receiver address : "
-    labelMaybe <- askMaybe @String "- Add label to your transaction (leave blank if no) : "
+    amount <- ask @Integer "- Amount of Lovelaces to transfer : "
+    receiverAddr <- ask @String "- Receiver address : "
+    labelMaybe <- askLeaveBlankOption @String "- Add label to your transaction (leave blank if no) : "
     transfer' wallet  receiverAddr amount labelMaybe
 
 

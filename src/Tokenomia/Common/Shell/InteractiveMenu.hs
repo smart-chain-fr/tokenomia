@@ -15,9 +15,9 @@
 
 module Tokenomia.Common.Shell.InteractiveMenu
     ( ask
-    , ask'
+    , askFilterM
     , askMenu
-    , askMaybe
+    , askLeaveBlankOption
     , DisplayMenuItem (..)) where
 
 import Data.List.NonEmpty (NonEmpty, toList, (!!))
@@ -33,13 +33,13 @@ zipIndex :: DisplayMenuItem a => Int -> [a] -> [(Int, a)]
 zipIndex _ [] = []
 zipIndex i (x: xs) = (i, x) : zipIndex (i + 1) xs
 
-echoChoices :: DisplayMenuItem a =>  (Int, a) -> Cmd 
-echoChoices (i, x) = echo "    " (show i) "-" (displayMenuItem x) 
+echoChoices :: (DisplayMenuItem a, MonadIO m) =>  (Int, a) -> m ()
+echoChoices (i, x) = printLn $ "\t" <> show i <> "-" <> displayMenuItem x
 
-askSelectRepeatedly 
-    :: ( MonadIO m 
-       , DisplayMenuItem a) 
-    => NonEmpty a 
+askSelectRepeatedly
+    :: ( MonadIO m
+       , DisplayMenuItem a)
+    => NonEmpty a
     -> m Int
 askSelectRepeatedly choices = do
     let orderedChoices = zipIndex 1 (toList choices)
@@ -56,39 +56,39 @@ askSelectRepeatedly choices = do
                 printLn $ show ioIdx ++ ": Number selected is incorrect"
                 askSelectRepeatedly choices else return ioIdx) . readEither
 
-askMenu 
-    :: ( MonadIO m 
-       , DisplayMenuItem a) 
-    => NonEmpty a 
+askMenu
+    :: ( MonadIO m
+       , DisplayMenuItem a)
+    => NonEmpty a
     -> m a
 askMenu choices = (\idx -> choices !! (idx - 1)) <$> askSelectRepeatedly choices
 class DisplayMenuItem a where
     displayMenuItem :: a -> String
 
-    
-ask' :: (Read a, MonadIO m) => String -> m a
-ask' prompt = do
+
+ask :: (Read a, MonadIO m) => String -> m a
+ask prompt = do
     print prompt
     liftIO (readEither <$> getLine) >>=
-        \case 
+        \case
             Left err -> do
                 print $ show err
-                ask' prompt
+                ask prompt
             Right answer -> return answer
 
-ask :: (Read a, MonadIO m) => String -> (a -> m Bool) -> m a
-ask prompt f = do
-    answer <- ask' prompt
+askFilterM :: (Read a, MonadIO m) => String -> (a -> m Bool) -> m a
+askFilterM prompt f = do
+    answer <- ask prompt
     f answer >>=
         \case
             True -> return answer
-            False -> ask prompt f
+            False -> askFilterM prompt f
 
-askMaybe :: (Read a, MonadIO m) => String -> m (Maybe a)
-askMaybe prompt = do
+askLeaveBlankOption :: (Read a, MonadIO m) => String -> m (Maybe a)
+askLeaveBlankOption prompt = do
     print prompt
     liftIO (readEither <$> getLine) >>=
-        \case 
+        \case
             Left _ -> do
-               return Nothing 
+               return Nothing
             Right answer -> return (Just answer)

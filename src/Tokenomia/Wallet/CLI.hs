@@ -30,7 +30,7 @@ import           Control.Monad.Reader hiding (ask)
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Plutus.V1.Ledger.Value (flattenValue)
 
-import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, ask, ask')
+import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, askFilterM, ask)
 
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Wallet as CardanoCLI
@@ -39,7 +39,7 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
 askWalletName :: (MonadIO m) => m String 
-askWalletName= ask' "Wallet Name : "
+askWalletName= ask "Wallet Name : "
 
 askAmongAllWallets :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
 askAmongAllWallets =
@@ -162,7 +162,7 @@ getSeedPhrase' seedPhrase =  if Prelude.length (words seedPhrase) /= 24 then
   else return True
 
 getSeedPhrase :: MonadIO m => m String
-getSeedPhrase = ask "> please enter your 24 words mnemonics then press enter : " getSeedPhrase'
+getSeedPhrase = askFilterM "> please enter your 24 words mnemonics then press enter : " getSeedPhrase'
 
 restore :: (MonadIO m, MonadReader Environment m) => m ()
 restore = do
