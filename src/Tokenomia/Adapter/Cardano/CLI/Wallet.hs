@@ -32,12 +32,13 @@ import           Ledger.Crypto
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 
 import           Tokenomia.Common.Shell.InteractiveMenu
+import           Tokenomia.Common.Shell.Console (printLn)
 
 import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["cat","echo","mkdir","cardano-cli","awk","ls", "rm", "cardano-address" ]
+load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address" ]
 
 
 type WalletName = String
@@ -105,8 +106,8 @@ restore_from_seed_phrase walletName seedPhrase = do
     let walletKeyPath = keyPath <> walletName <> "/"
         mnemonics = walletKeyPath <> "mnemonics.txt"
     liftIO $ mkdir "-p" walletKeyPath
-    liftIO $ echo seedPhrase
-        &> (Truncate . fromString) mnemonics
+    liftIO (printLn seedPhrase
+        &> (Truncate . fromString) mnemonics)
     generate_keys walletName
 
 generate_keys

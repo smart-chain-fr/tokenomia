@@ -1,16 +1,9 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Tokenomia.Vesting.Retrieve
     ( retrieveFunds) where
@@ -21,14 +14,13 @@ import qualified Data.Text as T
 import           Control.Monad.Reader
 import           Control.Monad.Except
 
-import           Shh
-
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)))
 import           Ledger hiding (singleton,Address)
 
 
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
+import           Tokenomia.Common.Shell.Console
 
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Node
@@ -40,7 +32,7 @@ import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 
-load SearchPath ["echo"]
+
 
 retrieveFunds
     :: (  MonadIO m
@@ -109,8 +101,8 @@ retrieveFundsC wallet (Vesting
             let tokensThatCanBeVested = v1
             submit (paymentSigningKeyPath wallet) utxoForFees
                 (commonParams <> [ "--tx-out" , paymentAddress wallet <> "  " <> (T.unpack . toCLI) tokensThatCanBeVested])              
-        (Retrieved ,Locked )  -> liftIO $ echo "No funds to be retrieved"
-        (Locked  ,Retrieved) -> liftIO $ echo "No funds to be retrieved"
-        (Retrieved ,Retrieved) -> liftIO $ echo "All the funds retrieved"       
-        (Locked   ,Locked )  -> liftIO $ echo "All the funds are locked and can't be retrieve so far.."
+        (Retrieved ,Locked )  -> printLn "No funds to be retrieved"
+        (Locked  ,Retrieved) -> printLn "No funds to be retrieved"
+        (Retrieved ,Retrieved) -> printLn "All the funds retrieved"       
+        (Locked   ,Locked )  -> printLn "All the funds are locked and can't be retrieve so far.."
 

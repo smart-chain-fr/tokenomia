@@ -1,27 +1,15 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 
 module Tokenomia.Ada.Transfer
     ( transfer ) where
 
 import qualified Data.Text as T
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
-
-import Shh
-    ( load
-      , ExecReference(SearchPath)
-    )
-
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
@@ -32,9 +20,8 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
-
-
-load SearchPath ["echo"]
+import           Tokenomia.Common.Shell.Console (printLn)
+import           Tokenomia.Common.Shell.InteractiveMenu (ask, askLeaveBlankOption)
 
 
 type Address = String
@@ -47,17 +34,14 @@ transfer
 transfer = do
     wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
-            liftIO $ echo "Select the minter wallet : "
+            printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets
     utxo <- selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet
-    liftIO $ echo $ "- Amount Available : " <> showValue (value utxo)
+    printLn $ "- Amount Available : " <> showValue (value utxo)
 
-    amount <- liftIO $ echo "-n" "- Amount of Lovelaces to transfer : "   >>  read @Integer <$> getLine
-    receiverAddr    <- liftIO $ echo "-n" "- Receiver address : "  >>  getLine
-    labelMaybe <- liftIO $ echo "-n" "- Add label to your transaction (leave blank if no) : " >> getLine
-                    >>= \case
-                        [] -> return Nothing
-                        label -> (return . Just) label
+    amount <- ask @Integer "- Amount of Lovelaces to transfer : "
+    receiverAddr <- ask @String "- Receiver address : "
+    labelMaybe <- askLeaveBlankOption @String "- Add label to your transaction (leave blank if no) : "
     transfer' wallet  receiverAddr amount labelMaybe
 
 

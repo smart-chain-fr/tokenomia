@@ -1,6 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleInstances #-}

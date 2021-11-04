@@ -1,17 +1,13 @@
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-{-# LANGUAGE EmptyCase #-}
+
 module Tokenomia.Tokenomic.CLAP.Simulation  where
 
 import Control.Monad (void)                   

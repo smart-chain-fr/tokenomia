@@ -1,13 +1,6 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 
 module Tokenomia.Wallet.Collateral
@@ -16,11 +9,7 @@ module Tokenomia.Wallet.Collateral
     , fetchWalletsWithCollateral
     ) where
 
-import Control.Monad.Reader
-
-import Shh
-    ( load,
-      ExecReference(SearchPath) )
+import           Control.Monad.Reader
 
 import           Data.List.NonEmpty (nonEmpty, NonEmpty, toList)
 
@@ -41,9 +30,8 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
 import           Tokenomia.Common.Error
-
-
-load SearchPath ["echo"]
+import           Tokenomia.Common.Shell.Console (printLn)
+import           Prelude hiding (print)
 
 
 createCollateral
@@ -55,7 +43,7 @@ createCollateral = do
     query_registered_wallets         >>= whenNullThrow    NoWalletRegistered
     >>= filterWalletsWithCollateral  >>= whenNothingThrow NoWalletWithoutCollateral 
     >>= \wallets -> do
-            liftIO $ echo "Select the wallet to receive the collateral"
+            printLn "Select the wallet to receive the collateral"
             askToChooseAmongGivenWallets wallets 
     >>= createCollateral'
 

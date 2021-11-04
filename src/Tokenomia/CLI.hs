@@ -10,6 +10,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+
 module Tokenomia.CLI (main) where
 
 
@@ -22,7 +23,7 @@ import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 import Shh
 
 import           Tokenomia.Common.Shell.InteractiveMenu
-
+import           Tokenomia.Common.Shell.Console (printLn, clearConsole, printOpt)
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 
 import qualified Tokenomia.Wallet.CLI as Wallet
@@ -41,38 +42,39 @@ import qualified Tokenomia.Node.Status as Node
 
 import           Tokenomia.Adapter.Cardano.CLI.Transaction
 
-load SearchPath ["echo","cardano-cli","clear"]
+
+load SearchPath ["cardano-cli"]
 
 main ::  IO ()
 main = do 
-    clear
-    echo "#############################"
-    echo "#   Welcome to Tokenomia    #"
-    echo "#############################"
-    echo ""
+    clearConsole
+    printLn "#############################"
+    printLn "#   Welcome to Tokenomia    #"
+    printLn "#############################"
+    printLn ""
     selectNetwork
 
-    echo "#############################"
-    echo "#   End of Tokenomia        #"
-    echo "#############################"
+    printLn "#############################"
+    printLn "#   End of Tokenomia        #"
+    printLn "#############################"
 
 waitAndClear :: IO()
 waitAndClear = do 
-   _ <- echo "-n" "> press enter to continue..." >>  getLine
-   clear
+   _ <- printOpt "> press enter to continue..." "-n" >>  getLine
+   clearConsole
 
 selectNetwork :: IO()
 selectNetwork = do
-  liftIO $ echo "----------------------"
-  liftIO $ echo "  Select a network"
-  liftIO $ echo "----------------------"  
+  printLn "----------------------"
+  printLn "  Select a network"
+  printLn "----------------------"  
   environment <- liftIO $ askMenu networks >>= \case 
       SelectTestnet     -> getTestnetEnvironmment 1097911063 
       SelectMainnet     -> getMainnetEnvironmment 764824073
-  clear
+  clearConsole
   result :: Either BuildingTxError () <- runExceptT $ runReaderT recursiveMenu environment 
   case result of 
-          Left e -> liftIO $ echo $ "An unexpected error occured :" <> show e
+          Left e -> printLn $ "An unexpected error occured :" <> show e
           Right _ -> return ()
 
 
@@ -98,22 +100,22 @@ recursiveMenu
      , MonadReader Environment m
      , MonadError BuildingTxError m) =>  m ()
 recursiveMenu = do
-  liftIO $ echo "----------------------"
-  liftIO $ echo "  Select an action"
-  liftIO $ echo "----------------------"
+  printLn "----------------------"
+  printLn "  Select an action"
+  printLn "----------------------"
   action <- askMenu actions 
   runAction action 
     `catchError`
       (\case 
-        NoWalletRegistered ->        liftIO $ echo "Register a Wallet First..."
-        NoWalletWithoutCollateral -> liftIO $ echo "All Wallets contain collateral..."  
-        NoWalletWithCollateral    -> liftIO $ echo "No Wallets with collateral..."
-        WalletWithoutCollateral   -> liftIO $ echo "Wallets selected without a required collateral..."
-        AlreadyACollateral utxo   -> liftIO $ echo ("Collateral Already Created..." <> show utxo)
-        NoADAInWallet ->             liftIO $ echo "Please, add ADAs to your wallet..."
-        NoUTxOWithOnlyOneToken ->    liftIO $ echo "Please, add tokens to your wallet..."
-        TryingToBurnTokenWithoutScriptRegistered -> liftIO $ echo "You can't burn tokens without the monetary script registered in Tokenomia"
-        NoVestingInProgress       -> liftIO $ echo "No vesting in progress")
+        NoWalletRegistered ->        printLn "Register a Wallet First..."
+        NoWalletWithoutCollateral -> printLn "All Wallets contain collateral..."  
+        NoWalletWithCollateral    -> printLn "No Wallets with collateral..."
+        WalletWithoutCollateral   -> printLn "Wallets selected without a required collateral..."
+        AlreadyACollateral utxo   -> printLn ("Collateral Already Created..." <> show utxo)
+        NoADAInWallet ->             printLn "Please, add ADAs to your wallet..."
+        NoUTxOWithOnlyOneToken ->    printLn "Please, add tokens to your wallet..."
+        TryingToBurnTokenWithoutScriptRegistered -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
+        NoVestingInProgress       -> printLn "No vesting in progress")
             
   liftIO waitAndClear         
   recursiveMenu
@@ -126,7 +128,7 @@ runAction :: ( MonadIO m
      -> m ()
 runAction = \case    
       WalletList       -> Wallet.list
-      WalletCreate        -> Wallet.createAndRegister
+      WalletCreate     -> Wallet.createAndRegister
       WalletCollateral -> Wallet.createCollateral 
       WalletRestore    -> Wallet.restore
       WalletRemove     -> Wallet.remove
@@ -134,7 +136,7 @@ runAction = \case
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
       AdaTransfer      -> Ada.transfer
-      VestingVestFunds  -> Vesting.vestFunds
+      VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
 

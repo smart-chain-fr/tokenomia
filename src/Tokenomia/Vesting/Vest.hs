@@ -1,27 +1,19 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-type-defaults #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Tokenomia.Vesting.Vest
     ( vestFunds) where
 
-import           Prelude hiding ((+),(-))
+import           Prelude hiding ((+),(-), print)
 import qualified Prelude as P
 import qualified Data.Text as T
 import qualified Data.Time.Clock.POSIX as POSIX
-import           Control.Monad.Reader
+import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
-import           Shh
 
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
 import           Ledger.Value 
@@ -41,8 +33,9 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Wallet.Collateral
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
+import           Tokenomia.Common.Shell.Console
+import           Tokenomia.Common.Shell.InteractiveMenu
 
-load SearchPath ["echo"]
 
 vestFunds
     :: (  MonadIO m
@@ -52,20 +45,20 @@ vestFunds
 vestFunds = do
     ownerWallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
-            liftIO $ echo "Select the token owner wallet : "
+            printLn "Select the token owner wallet : "
             askToChooseAmongGivenWallets wallets 
     utxosWithOneToken <- fetchUTxOFilterBy containingOneToken ownerWallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
-    liftIO $ echo "- Select the utxo and associated tokens to vest  :" 
+    printLn "- Select the utxo and associated tokens to vest  :" 
     utxoWithToken <- askToChooseAmongGivenUTxOs utxosWithOneToken
-    liftIO $ echo "- First Tranche : "
-    nbSecondsTranche1  <- liftIO $ echo "-n" "> How many seconds will you vest the tokens ? : "  >>  read @Integer <$> getLine
-    nbTokenTranche1  <- liftIO $ echo "-n" "> How many tokens will you vest ? : "  >>  read @Integer <$> getLine
+    printLn "- First Tranche : "
+    nbSecondsTranche1  <- ask @Integer "> How many seconds will you vest the tokens ? : "
+    nbTokenTranche1  <- ask @Integer  "> How many tokens will you vest ? : "
    
-    liftIO $ echo "- Second Tranche : "
-    nbSecondsTranche2  <- liftIO $ echo "-n" "> How many seconds will you vest the tokens ? : "  >>  read @Integer <$> getLine
-    nbTokenTranche2  <- liftIO $ echo "-n" "> How many tokens will you vest ? : "  >>  read @Integer <$> getLine
+    printLn "- Second Tranche : "
+    nbSecondsTranche2  <- ask @Integer "> How many seconds will you vest the tokens ? : "
+    nbTokenTranche2  <- ask @Integer "> How many tokens will you vest ? : "
 
-    liftIO $ echo "- Select the investor's wallet"
+    printLn "- Select the investor's wallet"
     investorWallet <- askAmongAllWallets >>= whenNothingThrow NoWalletRegistered
     vestFunds' 
         ownerWallet
@@ -123,11 +116,11 @@ vestFunds'
             , "--change-address"  , paymentAddress ownerWallet
             ]
 
-    liftIO $ echo   "-----------------------------------------"
-    liftIO $ echo   "- Investor can retrieve the funds from :"
-    liftIO $ echo $ "\t - Tranche 1 after " <> (formatISO8601 . convertToExternalPosix . vestingTrancheDate . vestingTranche1) params
-    liftIO $ echo $ "\t - Tranche 2 after " <> (formatISO8601 . convertToExternalPosix . vestingTrancheDate . vestingTranche2) params
-    liftIO $ echo $ "- Funds location (script address) : " <> onChain scriptLocation
-    liftIO $ echo   "-----------------------------------------"
+    printLn   "-----------------------------------------"
+    printLn   "- Investor can retrieve the funds from :"
+    printLn $ "\t - Tranche 1 after " <> (formatISO8601 . convertToExternalPosix . vestingTrancheDate . vestingTranche1) params
+    printLn $ "\t - Tranche 2 after " <> (formatISO8601 . convertToExternalPosix . vestingTrancheDate . vestingTranche2) params
+    printLn $ "- Funds location (script address) : " <> onChain scriptLocation
+    printLn   "-----------------------------------------"
     
     register params

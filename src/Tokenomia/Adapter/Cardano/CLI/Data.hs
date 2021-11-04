@@ -1,6 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString) where
 

@@ -1,7 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
--- {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
