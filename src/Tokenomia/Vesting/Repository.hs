@@ -54,7 +54,7 @@ import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
 
 data WalletWithVestedFunds = WalletWithVestedFunds {wallet :: Wallet, vestedFunds :: NonEmpty Vesting}
-data Vesting = Vesting VestingContext VestingState deriving (Eq,Show) 
+data Vesting = Vesting VestingContext VestingState deriving (Eq,Show)
 
 data VestingContext
     = VestingContext
@@ -65,22 +65,22 @@ data VestingContext
     , tranches :: (TrancheContext,TrancheContext)
     } deriving (Eq,Show)
 
-data TrancheContext = TrancheContext {deadline :: POSIXTime, valueVested :: Value} deriving (Eq,Show) 
+data TrancheContext = TrancheContext {deadline :: POSIXTime, valueVested :: Value} deriving (Eq,Show)
 
-data VestingState 
-    = VestingState 
+data VestingState
+    = VestingState
     { utxosOnScript :: [UTxO]
     , tranches :: (TrancheState,TrancheState)
-    } deriving (Eq,Show) 
+    } deriving (Eq,Show)
 
 data TrancheState
-    = Locked 
-    | Available 
+    = Locked
+    | Available
     | Retrieved deriving (Eq,Show)
 
 
 selectWalletWithVestedFunds :: (MonadIO m , MonadReader Environment m)=> m (Maybe WalletWithVestedFunds)
-selectWalletWithVestedFunds = 
+selectWalletWithVestedFunds =
     getWalletWithVestedFunds
       >>=  \case
             Nothing -> return Nothing
@@ -95,24 +95,24 @@ instance DisplayMenuItem WalletWithVestedFunds where
 
 
 getWalletWithVestedFunds :: (MonadIO m , MonadReader Environment m) => m (Maybe (NonEmpty WalletWithVestedFunds))
-getWalletWithVestedFunds = 
+getWalletWithVestedFunds =
     getVestingInProgress
      >>= \case
-            Nothing -> return Nothing 
-            Just allVestingInProgress -> do 
+            Nothing -> return Nothing
+            Just allVestingInProgress -> do
                 query_registered_wallets
-                 >>= return 
-                     . nonEmpty 
-                     . catMaybes 
-                     . map (\wallet@Wallet {publicKeyHash} -> 
+                 >>= return
+                     . nonEmpty
+                     . catMaybes
+                     . map (\wallet@Wallet {publicKeyHash} ->
                             let vestingForWallet = filter (\(Vesting VestingContext{investorId} _) -> investorId == publicKeyHash ) . toList $ allVestingInProgress
-                            in case nonEmpty vestingForWallet of 
-                                    Nothing -> Nothing 
+                            in case nonEmpty vestingForWallet of
+                                    Nothing -> Nothing
                                     Just vestedFunds -> Just WalletWithVestedFunds {..})
 
 
 selectVesting :: (MonadIO m) => NonEmpty Vesting -> m Vesting
-selectVesting  =  askMenu 
+selectVesting  =  askMenu
 
 
 getVestingInProgress :: (MonadIO m, MonadReader Environment m)  => m (Maybe (NonEmpty Vesting))
@@ -139,40 +139,40 @@ getVestingInProgress  = do
                                                     [] -> return ([],AllTranchesRetrieved)
                                                     utxosOnScript@[_] -> return (utxosOnScript,AllTranchesRetrieved)
                                                     utxosOnScript@[_,_] -> return (utxosOnScript,ZeroTrancheRetrieved)
-                                                    _ ->  error $ "retrieved an unexpected number of UTXos at " <> onChain scriptLocation
+                                                    _ ->  error $ "retrieved an unexpected number of UTXos at " <> show (onChain scriptLocation)
           let (s1,s2) = getTrancheStates now deadline1 deadline2 retrieveState
           return
-            (Vesting 
-                VestingContext {tranches = 
+            (Vesting
+                VestingContext {tranches =
                                 (TrancheContext deadline1 token1
                                 ,TrancheContext deadline2 token2)
                                 , ..}
                 VestingState {tranches = (s1,s2), ..})
 
-isInProgress :: Vesting -> Bool 
-isInProgress (Vesting _ VestingState {..}) 
-    = case tranches of 
-        (Retrieved,Retrieved) -> False 
-        _ -> True 
+isInProgress :: Vesting -> Bool
+isInProgress (Vesting _ VestingState {..})
+    = case tranches of
+        (Retrieved,Retrieved) -> False
+        _ -> True
 
 
-getTrancheStates :: POSIXTime -> POSIXTime -> POSIXTime -> RetrieveState -> (TrancheState,TrancheState) 
-getTrancheStates now d1 d2 state = 
-    case (reached d1, reached d2, state) of 
+getTrancheStates :: POSIXTime -> POSIXTime -> POSIXTime -> RetrieveState -> (TrancheState,TrancheState)
+getTrancheStates now d1 d2 state =
+    case (reached d1, reached d2, state) of
         (False ,False,ZeroTrancheRetrieved) -> (Locked   , Locked)
-        (False ,False,OneTrancheRetrieved) -> error "unexpected State : 2 Tranches Locked and One Tranche Retrieved " 
+        (False ,False,OneTrancheRetrieved) -> error "unexpected State : 2 Tranches Locked and One Tranche Retrieved "
         (True,False,ZeroTrancheRetrieved)  -> (Available , Locked )
         (True,False,OneTrancheRetrieved)   -> (Retrieved , Locked )
         (False,True,ZeroTrancheRetrieved)  -> (Locked    , Available )
         (False,True,OneTrancheRetrieved)   -> (Locked    , Retrieved )
         (True,True,ZeroTrancheRetrieved)   -> (Available , Available)
         (True,True,OneTrancheRetrieved)    -> (Retrieved , Available) -- by convention we retrieve tranche 1 firstly
-        (_,_,AllTranchesRetrieved)         -> (Retrieved , Retrieved)      
-  where 
+        (_,_,AllTranchesRetrieved)         -> (Retrieved , Retrieved)
+  where
     reached = (< now)
 
 data RetrieveState = OneTrancheRetrieved | ZeroTrancheRetrieved | AllTranchesRetrieved
-       
+
 
 
 register :: ( MonadIO m , MonadReader Environment m) => VestingParams -> m ()
@@ -202,7 +202,7 @@ getAll = do
 
 
 instance DisplayMenuItem Vesting where
-    displayMenuItem (Vesting 
+    displayMenuItem (Vesting
                         VestingContext { tranches = ( TrancheContext {deadline = d1, valueVested = v1}
                                                     , TrancheContext {deadline = d2, valueVested = v2})}
                         VestingState { tranches = (s1,s2)})
@@ -211,7 +211,7 @@ instance DisplayMenuItem Vesting where
             (Retrieved,Retrieved)    -> "Funds totally retrieved"
             (Locked,Available)       -> "Funds Partially Unlocked :"
                                             <> "\n\t   * " <> (T.unpack . toCLI) v1  <> "(locked till " <> (formatISO8601 . convertToExternalPosix) d1 <> ")"
-                                            <> "\n\t   * " <> (T.unpack . toCLI) v2  <> "(available)"         
+                                            <> "\n\t   * " <> (T.unpack . toCLI) v2  <> "(available)"
             (Available,Locked)   -> "Funds Partially Unlocked :"
                                     <> "\n\t   * " <> (T.unpack . toCLI) v1  <> "(available)"
                                     <> "\n\t   * " <> (T.unpack . toCLI) v2  <> "(locked till " <> (formatISO8601 . convertToExternalPosix) d2 <> ")"
@@ -228,6 +228,6 @@ instance DisplayMenuItem Vesting where
                                     <> "\n\t   * " <> (T.unpack . toCLI) v1  <> "(locked till " <> (formatISO8601 . convertToExternalPosix) d1 <> ")"
                                     <> "\n\t   * " <> (T.unpack . toCLI) v2  <> "(retrieved)"
             (Available,Retrieved) -> "Funds Partially Locked :"
-                                    <> "\n\t   * " <> (T.unpack . toCLI) v1  <> "(available)"                           
+                                    <> "\n\t   * " <> (T.unpack . toCLI) v1  <> "(available)"
                                     <> "\n\t   * " <> (T.unpack . toCLI) v2  <> "(retrieved)"
 

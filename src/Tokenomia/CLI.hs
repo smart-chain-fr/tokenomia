@@ -60,7 +60,7 @@ main = do
 
 waitAndClear :: IO()
 waitAndClear = do 
-   _ <- printOpt "> press enter to continue..." "-n" >>  getLine
+   _ <- printOpt "-n" "> press enter to continue..."  >>  getLine
    clearConsole
 
 selectNetwork :: IO()
@@ -113,9 +113,13 @@ recursiveMenu = do
         WalletWithoutCollateral   -> printLn "Wallets selected without a required collateral..."
         AlreadyACollateral utxo   -> printLn ("Collateral Already Created..." <> show utxo)
         NoADAInWallet ->             printLn "Please, add ADAs to your wallet..."
-        NoUTxOWithOnlyOneToken ->    printLn "Please, add tokens to your wallet..."
-        TryingToBurnTokenWithoutScriptRegistered -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
-        NoVestingInProgress       -> printLn "No vesting in progress")
+        NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
+        TryingToBurnTokenWithoutScriptRegistered 
+                                  -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
+        NoVestingInProgress       -> printLn "No vesting in progress"
+        NoFundsToBeRetrieved      -> printLn "No funds to be retrieved"
+        AllFundsLocked            -> printLn "All the funds alerady retrieved" 
+        FundAlreadyRetrieved      -> printLn "All the funds are locked and can't be retrieve so far..")
             
   liftIO waitAndClear         
   recursiveMenu

@@ -134,12 +134,12 @@ list =
          mapM_ (\Wallet{..} -> do
             printLn ("> " <> name)
             printLn ("    Public key : "      <> show publicKeyHash)
-            printLn ("    Payment Address : " <> paymentAddress)
+            printLn ("    Payment Address : " <> show paymentAddress)
             utxos <- UTxOs.query paymentAddress
             case utxos of
               [] -> printLn "\t(No UTxOs Available)"
               a  -> mapM_ (\utxo -> printLn ("\t- " <> show utxo)) a
-          ) wallets
+            ) wallets
          printLn "-----------------------------------"
 
 remove :: (MonadIO m, MonadReader Environment m) => m ()

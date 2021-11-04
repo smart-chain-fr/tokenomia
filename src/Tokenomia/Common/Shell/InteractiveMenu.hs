@@ -14,10 +14,12 @@
 
 
 module Tokenomia.Common.Shell.InteractiveMenu
-    ( ask
+    ( askString
+    , ask
     , askFilterM
     , askMenu
     , askLeaveBlankOption
+    , askStringLeaveBlankOption
     , DisplayMenuItem (..)) where
 
 import Data.List.NonEmpty (NonEmpty, toList, (!!))
@@ -36,6 +38,8 @@ zipIndex i (x: xs) = (i, x) : zipIndex (i + 1) xs
 echoChoices :: (DisplayMenuItem a, MonadIO m) =>  (Int, a) -> m ()
 echoChoices (i, x) = printLn $ "\t" <> show i <> "-" <> displayMenuItem x
 
+
+
 askSelectRepeatedly
     :: ( MonadIO m
        , DisplayMenuItem a)
@@ -44,7 +48,7 @@ askSelectRepeatedly
 askSelectRepeatedly choices = do
     let orderedChoices = zipIndex 1 (toList choices)
     mapM_ (liftIO . echoChoices) orderedChoices
-    printLn "\n> please choose an action (provide the index) : "
+    print "\n> please choose an action (provide the index) : "
     liftIO getLine >>= (
         \case
             Left err -> do
@@ -65,6 +69,10 @@ askMenu choices = (\idx -> choices !! (idx - 1)) <$> askSelectRepeatedly choices
 class DisplayMenuItem a where
     displayMenuItem :: a -> String
 
+askString :: (MonadIO m) => String -> m String
+askString prompt = do
+    print prompt
+    liftIO getLine
 
 ask :: (Read a, MonadIO m) => String -> m a
 ask prompt = do
@@ -83,6 +91,15 @@ askFilterM prompt f = do
         \case
             True -> return answer
             False -> askFilterM prompt f
+
+askStringLeaveBlankOption :: (MonadIO m) => String -> m (Maybe String)
+askStringLeaveBlankOption prompt = do
+    print prompt
+    liftIO getLine >>=
+        \case
+            [] -> return Nothing
+            answer -> return (Just answer)
+
 
 askLeaveBlankOption :: (Read a, MonadIO m) => String -> m (Maybe a)
 askLeaveBlankOption prompt = do

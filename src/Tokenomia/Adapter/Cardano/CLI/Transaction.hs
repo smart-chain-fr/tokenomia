@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -16,32 +17,45 @@ module Tokenomia.Adapter.Cardano.CLI.Transaction
     ( submit
     , awaitTxCommitted
     , BuildingTxError (..)
+    , TxBuild (..)
+    , TxIn (..)
+    , TxOut (..)
+    , Metadata (..)
+    , ValiditySlotRange (..)
+    , Address (..)
+    , Hash (..)
+    , MonetaryAction (..)
+    , submit'
     , createMetadataFile
     ) where
 
 
+import           Data.Coerce
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 import qualified Data.ByteString.Lazy.Char8 as C
+import qualified Data.List.NonEmpty as NE
+import           Data.List.NonEmpty (NonEmpty)
+import           Data.String (fromString)
 
-
- 
 
 import           Control.Monad.Reader
 import           Control.Concurrent
 import           System.Random
-import           Data.String (fromString)
 
 import           Shh.Internal
 
+import           Ledger ( TxOutRef (..),Value,Slot (..) ) 
 
+import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 
-import           Tokenomia.Adapter.Cardano.CLI.UTxO 
+import           Tokenomia.Adapter.Cardano.CLI.UTxO as UTxO
 import           Tokenomia.Adapter.Cardano.CLI.Serialise (toCLI, fromCLI)
 import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Shell.Console (printLn)
+
+import           Tokenomia.Adapter.Cardano.Types
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -58,18 +72,110 @@ data BuildingTxError
     | NoUTxOWithOnlyOneToken 
     | TryingToBurnTokenWithoutScriptRegistered 
     | NoVestingInProgress
+    | NoFundsToBeRetrieved
+    | AllFundsLocked
+    | FundAlreadyRetrieved
     deriving Show
 
+newtype Metadata = Metadata FilePath
+
+data ValiditySlotRange = ValiditySlotRange Slot Slot
+
+data TxBuild 
+        = TxBuild 
+            { signingKeyPath :: FilePath
+            , txIns :: NonEmpty TxIn
+            , txOuts :: NonEmpty TxOut
+            , collateral :: TxOutRef
+            , changeAdress :: Address
+            , validitySlotRangeMaybe :: Maybe ValiditySlotRange
+            , metadataMaybe :: Maybe Metadata
+            , tokenSupplyChangesMaybe :: Maybe (NonEmpty MonetaryAction)}
+        
+
+data  MonetaryAction 
+        = Mint {script :: FilePath , amount :: Value}
+        | Burn {script :: FilePath , amount :: Value}
+
+data TxIn = FromScript { utxoRef :: TxOutRef, script :: FilePath ,datum :: FilePath,redeemer :: FilePath }
+          | FromWallet { utxoRef :: TxOutRef}
+
+data TxOut = ToScript  { address :: Address , value :: Value, datumHash :: Hash}
+           | ToWallet  { address :: Address , value :: Value} 
+
+
+class ToCardanoCLIOptions a where 
+   toCardanoCLIOptions :: a -> [String]
+
+instance ToCardanoCLIOptions TxIn  where 
+    toCardanoCLIOptions FromScript {..}  = 
+        [ "--tx-in"  , (T.unpack . toCLI) utxoRef
+        , "--tx-in-script-file" , script
+        , "--tx-in-datum-file" , datum
+        , "--tx-in-redeemer-file" , redeemer]
+    toCardanoCLIOptions FromWallet {..}  = 
+        ["--tx-in"  , (T.unpack . toCLI) utxoRef]
+
+instance ToCardanoCLIOptions TxOut  where 
+    toCardanoCLIOptions ToScript {..}  = 
+        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value
+        , "--tx-out-datum-hash"  , coerce datumHash]
+    toCardanoCLIOptions ToWallet {..}  = 
+        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value]
+
+instance ToCardanoCLIOptions ValiditySlotRange  where 
+    toCardanoCLIOptions (ValiditySlotRange (Slot x) (Slot y))  = 
+        [ "--invalid-before" , show x
+        , "--invalid-hereafter" , show y]
+
+instance ToCardanoCLIOptions MonetaryAction where 
+    toCardanoCLIOptions Mint {..}  = 
+        [ "--mint" , (T.unpack . toCLI) amount
+        , "--mint-script-file" , script
+        , "--mint-redeemer-value",  "[]" ]
+    toCardanoCLIOptions Burn {..} = 
+        [ "--mint" , "-" <> (T.unpack . toCLI) amount
+        , "--mint-script-file" , script
+        , "--mint-redeemer-value",  "[]"]   
+
+instance ToCardanoCLIOptions Metadata  where 
+    toCardanoCLIOptions (Metadata filepath)  = 
+        [ "--metadata-json-file", filepath]
+
+
+instance (Foldable m, ToCardanoCLIOptions a) =>  ToCardanoCLIOptions (m a) where 
+    toCardanoCLIOptions  = foldMap toCardanoCLIOptions
+
+instance ToCardanoCLIOptions TxBuild where 
+    toCardanoCLIOptions TxBuild {..} 
+     =  toCardanoCLIOptions txIns 
+     <> [ "--tx-in-collateral" , (T.unpack . toCLI) collateral] 
+     <> toCardanoCLIOptions txOuts
+     <> ["--change-address"  , coerce changeAdress]
+     <> toCardanoCLIOptions tokenSupplyChangesMaybe
+     <> toCardanoCLIOptions validitySlotRangeMaybe
+     <> toCardanoCLIOptions metadataMaybe 
+
+submit' 
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => TxBuild
+    -> m ()
+submit' txBuild@TxBuild {..} = 
+    submit 
+      signingKeyPath 
+       ((utxoRef . NE.head) txIns) 
+       (toCardanoCLIOptions txBuild)
 
 submit
     :: ( ExecArg a
        , MonadIO m
        , MonadReader Environment m )
     => FilePath
-    -> UTxO
+    -> TxOutRef
     -> a
     -> m ()
-submit privateKeyPath utxoWithFees buildTxBody = do
+submit privateKeyPath aGivenTxOutRef buildTxBody = do
     magicN <- asks magicNumber
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
     protocolParametersPath <- register_protocol_parameters
@@ -89,10 +195,10 @@ submit privateKeyPath utxoWithFees buildTxBody = do
                                     . C.unpack . head <$> liftIO (md5sum rawTx |> captureWords )
     liftIO $ mv rawTx rawHashTx
 
-    liftIO (printLn "Signing Tx")    >> sign_tx   rawHashTx signedHashTx privateKeyPath
-    liftIO (printLn "Submitting Tx") >> submit_tx signedHashTx
+    printLn "Signing Tx"    >> sign_tx   rawHashTx signedHashTx privateKeyPath
+    printLn "Submitting Tx" >> submit_tx signedHashTx
     printLn "Waiting for confirmation..."
-    awaitTxCommitted utxoWithFees 0
+    awaitTxCommitted aGivenTxOutRef 0
     printLn "\nTx committed into ledger"
 
 submit_tx
@@ -109,20 +215,20 @@ submit_tx f = do
 awaitTxCommitted
     :: ( MonadIO m
        , MonadReader Environment m )
-    => UTxO
+    => TxOutRef
     -> Int
     -> m ()
-awaitTxCommitted utxoWithFees duration = do
+awaitTxCommitted aGivenTxOutRef duration = do
     magicN <- asks magicNumber
     fromCLI . TL.toStrict . TLE.decodeUtf8 <$> liftIO (cardano_cli "query" "utxo" 
-                                                            "--tx-in" ((T.unpack . toCLI . txOutRef) utxoWithFees) 
+                                                            "--tx-in" ((T.unpack . toCLI ) aGivenTxOutRef) 
                                                             "--testnet-magic" magicN |> capture)
         >>= \case
             []     -> return ()
             [utxo] -> do
                 liftIO $ threadDelay 1000000 -- 1s
                 liftIO $ echo "-ne" (take duration (repeat '#')) duration "s\r"
-                awaitTxCommitted utxo (duration + 1)
+                awaitTxCommitted (txOutRef utxo) (duration + 1)
             _ -> error ("Unexpected value, it is supposed to return [UTxO] or []") 
 
 sign_tx
