@@ -24,7 +24,7 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import           Tokenomia.Adapter.Cardano.CLI.Transaction 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Common.Error
-import           Tokenomia.Wallet.Collateral
+import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu  (ask,askString, askStringLeaveBlankOption)
@@ -61,8 +61,7 @@ transfer'
     -> Maybe MetadataLabel    
     -> m ()
 transfer' senderWallet receiverAddr utxoWithToken amount labelMaybe = do
-    collateral <- txOutRef <$> (fetchCollateral senderWallet                        >>= whenNothingThrow WalletWithoutCollateral)
-    utxoForFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet)
+    
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
 
     let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
@@ -72,12 +71,10 @@ transfer' senderWallet receiverAddr utxoWithToken amount labelMaybe = do
 
     submit'
       TxBuild
-        { signingKeyPath = paymentSigningKeyPath senderWallet
-        , txIns =  FromWallet utxoForFees 
-                :| [FromWallet (txOutRef utxoWithToken)]
+        { wallet = senderWallet
+        , txIns =  [FromWallet (txOutRef utxoWithToken)]
         , txOuts = ToWallet receiverAddr valueToTransfer 
                 :| [ToWallet (paymentAddress senderWallet) change]
-        , changeAdress = paymentAddress senderWallet
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}

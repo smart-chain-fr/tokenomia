@@ -21,7 +21,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Transaction
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
-import           Tokenomia.Wallet.Collateral
+import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
 import           Tokenomia.Common.Shell.Console (printLn)
@@ -52,8 +52,6 @@ burn'
     -> Integer
     -> m ()
 burn' wallet utxoWithTokensToBurn@UTxO {value = totalAmountBurnable} amountToBurn = do 
-    collateral <-  txOutRef <$> (fetchCollateral wallet >>= whenNothingThrow WalletWithoutCollateral) 
-    utxoForFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
 
     let (tokenPolicyHash,tokenNameSelected,_) = getTokenFrom utxoWithTokensToBurn
         valueToBurn = singleton tokenPolicyHash tokenNameSelected amountToBurn
@@ -63,10 +61,8 @@ burn' wallet utxoWithTokensToBurn@UTxO {value = totalAmountBurnable} amountToBur
 
     submit'
       TxBuild
-        { signingKeyPath = paymentSigningKeyPath wallet
-        , txIns =  FromWallet utxoForFees :| [FromWallet (txOutRef  utxoWithTokensToBurn)] 
+        { txIns =  [FromWallet (txOutRef  utxoWithTokensToBurn)]
         , txOuts = ToWallet (paymentAddress wallet) (change + lovelaceValueOf 1344798):| [] 
-        , changeAdress = paymentAddress wallet
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Burn { amount = valueToBurn, script = monetaryScript} :| []
         , metadataMaybe = Nothing 

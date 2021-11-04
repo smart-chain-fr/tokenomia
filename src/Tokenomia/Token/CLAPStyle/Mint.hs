@@ -34,12 +34,11 @@ import           Tokenomia.Adapter.Cardano.CLI.Transaction
 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
-import           Tokenomia.Wallet.Collateral
+import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Common.Error
 
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (ask,askString)
-
 
 
 mint 
@@ -66,7 +65,6 @@ mint'
     -> m ()
 mint' wallet tokenName amount = do
 
-    collateral <-  txOutRef <$> (fetchCollateral wallet >>= whenNothingThrow WalletWithoutCollateral) 
     txOutRefToConsume <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
 
     let monetaryPolicy = mkMonetaryPolicyScript Params { .. }
@@ -81,10 +79,8 @@ mint' wallet tokenName amount = do
 
     submit'
       TxBuild
-        { signingKeyPath = paymentSigningKeyPath wallet
-        , txIns =  FromWallet txOutRefToConsume :| [] 
+        { txIns =  [FromWallet txOutRefToConsume] 
         , txOuts = ToWallet (paymentAddress wallet) (valueToMint + lovelaceValueOf 1344798 ):| [] 
-        , changeAdress = paymentAddress wallet
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Mint { amount = valueToMint, script = monetaryScript} :| []
         , metadataMaybe = Nothing 

@@ -27,9 +27,6 @@ import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
 import           Tokenomia.Vesting.Repository
 import           Tokenomia.Common.Error
-import           Tokenomia.Wallet.Collateral
-import           Tokenomia.Wallet.CLI
-
 
 
 retrieveFunds
@@ -53,22 +50,19 @@ retrieveFundsC wallet (Vesting
                             VestingContext { tranches = ( TrancheContext {valueVested = v1}
                                                         , TrancheContext {valueVested = v2}) , ..}
                             VestingState { tranches = (s1,s2), ..}) = do
-    collateral  <- txOutRef <$> (fetchCollateral wallet >>= whenNothingThrow WalletWithoutCollateral)  
-    utxoForFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
+    
     currentSlot <- getCurrentSlotSynced
     voidDataFilePath <- persistDataInTMP ()
     datumVoidHash <- getDataHash ()
 
-    let txIns = FromWallet utxoForFees :| 
-                 fmap (\UTxO {..} -> 
-                            FromScript 
-                                { script = offChain scriptLocation 
-                                , datum = voidDataFilePath
-                                , redeemer = voidDataFilePath
-                                , utxoRef = txOutRef}) utxosOnScript
-        signingKeyPath = paymentSigningKeyPath wallet                            
+    let txIns = fmap (\UTxO {..} -> 
+                        FromScript 
+                            { script = offChain scriptLocation 
+                            , datum = voidDataFilePath
+                            , redeemer = voidDataFilePath
+                            , utxoRef = txOutRef}) utxosOnScript 
+                                
         validitySlotRangeMaybe = Just (ValiditySlotRange currentSlot (currentSlot + 100) )
-        changeAdress = paymentAddress wallet    
         tokenSupplyChangesMaybe = Nothing
         metadataMaybe = Nothing 
 

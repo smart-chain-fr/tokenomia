@@ -18,7 +18,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Transaction hiding (value)
 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Common.Error
-import           Tokenomia.Wallet.Collateral
+import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (askString, ask, askStringLeaveBlankOption)
@@ -55,16 +55,15 @@ transfer'
     -> Maybe MetadataLabel
     -> m ()
 transfer' senderWallet receiverAddr amount labelMaybe = do
-    collateral <- txOutRef <$> (fetchCollateral senderWallet                        >>= whenNothingThrow WalletWithoutCollateral)
-    adaAndFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet)
+    
+    ada <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet)
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
 
     submit'
       TxBuild
-        { signingKeyPath = paymentSigningKeyPath senderWallet
-        , txIns = FromWallet adaAndFees :| []
+        { wallet = senderWallet
+        , txIns = [FromWallet ada]
         , txOuts = ToWallet receiverAddr (lovelaceValueOf amount) :| []
-        , changeAdress = paymentAddress senderWallet
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}
