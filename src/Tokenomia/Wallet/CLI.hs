@@ -30,7 +30,7 @@ import           Control.Monad.Reader hiding (ask)
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Plutus.V1.Ledger.Value (flattenValue)
 
-import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, askFilterM, ask)
+import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, askFilterM, askString)
 
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Wallet as CardanoCLI
@@ -38,8 +38,8 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 
 import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
 
-askWalletName :: (MonadIO m) => m String 
-askWalletName= ask "Wallet Name : "
+askWalletName :: (MonadIO m) => m String
+askWalletName = askString "Wallet Name : "
 
 askAmongAllWallets :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
 askAmongAllWallets =
