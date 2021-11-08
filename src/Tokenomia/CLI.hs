@@ -27,7 +27,7 @@ import           Tokenomia.Common.Shell.Console (printLn, clearConsole, printOpt
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 
 import qualified Tokenomia.Wallet.CLI as Wallet
-import qualified Tokenomia.Wallet.Collateral as Wallet
+import qualified Tokenomia.Wallet.Collateral.Write as Wallet
 
 import qualified Tokenomia.Token.CLAPStyle.Mint as Token
 import qualified Tokenomia.Token.CLAPStyle.Burn as Token

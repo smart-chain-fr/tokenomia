@@ -45,7 +45,8 @@ library
       Tokenomia.Token.CLAPStyle.Burn
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
       Tokenomia.Wallet.CLI
-      Tokenomia.Wallet.Collateral
+      Tokenomia.Wallet.Collateral.Write
+      Tokenomia.Wallet.Collateral.Read
       Tokenomia.Ada.Transfer
       Tokenomia.Common.Error
       Tokenomia.Token.Transfer

@@ -35,12 +35,12 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 import qualified Data.ByteString.Lazy.Char8 as C
-import qualified Data.List.NonEmpty as NE
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.String (fromString)
 
 
 import           Control.Monad.Reader
+import           Control.Monad.Except
 import           Control.Concurrent
 import           System.Random
 
@@ -56,6 +56,10 @@ import           Tokenomia.Adapter.Cardano.CLI.Serialise (toCLI, fromCLI)
 import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
 
 import           Tokenomia.Adapter.Cardano.Types
+import           Tokenomia.Wallet.Collateral.Read
+import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Common.Error
+import           Tokenomia.Wallet.CLI
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -83,11 +87,9 @@ data ValiditySlotRange = ValiditySlotRange Slot Slot
 
 data TxBuild 
         = TxBuild 
-            { signingKeyPath :: FilePath
-            , txIns :: NonEmpty TxIn
+            { wallet :: Wallet
+            , txIns  :: NonEmpty TxIn
             , txOuts :: NonEmpty TxOut
-            , collateral :: TxOutRef
-            , changeAdress :: Address
             , validitySlotRangeMaybe :: Maybe ValiditySlotRange
             , metadataMaybe :: Maybe Metadata
             , tokenSupplyChangesMaybe :: Maybe (NonEmpty MonetaryAction)}
@@ -149,23 +151,28 @@ instance (Foldable m, ToCardanoCLIOptions a) =>  ToCardanoCLIOptions (m a) where
 instance ToCardanoCLIOptions TxBuild where 
     toCardanoCLIOptions TxBuild {..} 
      =  toCardanoCLIOptions txIns 
-     <> [ "--tx-in-collateral" , (T.unpack . toCLI) collateral] 
      <> toCardanoCLIOptions txOuts
-     <> ["--change-address"  , coerce changeAdress]
      <> toCardanoCLIOptions tokenSupplyChangesMaybe
      <> toCardanoCLIOptions validitySlotRangeMaybe
      <> toCardanoCLIOptions metadataMaybe 
 
 submit' 
     :: ( MonadIO m
-       , MonadReader Environment m )
+       , MonadReader Environment m 
+       , MonadError BuildingTxError m)
+
     => TxBuild
     -> m ()
-submit' txBuild@TxBuild {..} = 
+submit' txBuild@TxBuild {wallet = wallet@Wallet {..}} = do
+    collateral  <- txOutRef <$> (fetchCollateral wallet >>= whenNothingThrow WalletWithoutCollateral) 
+    utxoForFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
     submit 
-      signingKeyPath 
-       ((utxoRef . NE.head) txIns) 
-       (toCardanoCLIOptions txBuild)
+      paymentSigningKeyPath 
+       utxoForFees 
+       (toCardanoCLIOptions txBuild
+        <> [ "--tx-in"  , (T.unpack . toCLI) utxoForFees]
+        <> [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]
+        <> [ "--change-address"   , coerce paymentAddress])
 
 submit
     :: ( ExecArg a
@@ -267,6 +274,6 @@ createMetadataFile message = do
     randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
     let metadataJsonFilepath = tmpFolder <> "metadata-" <> show randomInt <> ".json"
 
-    liftIO (printLn ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
+    liftIO (echo ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
         &> (Truncate . fromString) metadataJsonFilepath)
     return metadataJsonFilepath

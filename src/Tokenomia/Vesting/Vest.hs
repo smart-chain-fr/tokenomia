@@ -31,7 +31,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Transaction
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
 import           Tokenomia.Vesting.Repository
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
-import           Tokenomia.Wallet.Collateral
+import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
 import           Tokenomia.Common.Shell.Console
@@ -46,21 +46,21 @@ vestFunds
 vestFunds = do
     ownerWallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
-            printLn "Select the token owner wallet : "
+            printLn "Select the token owner wallet :"
             askToChooseAmongGivenWallets wallets 
     utxosWithOneToken <- fetchUTxOFilterBy containingOneToken ownerWallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
     printLn "- Select the utxo and associated tokens to vest  :" 
     utxoWithToken <- askToChooseAmongGivenUTxOs utxosWithOneToken
 
-    printLn "- First Tranche : "
+    printLn "- First Tranche :"
     nbSecondsTranche1  <- ask @Integer "> How many seconds will you vest the tokens ? : "
     nbTokenTranche1    <- ask @Integer "> How many tokens will you vest ? : "
    
-    printLn "- Second Tranche : "
+    printLn "- Second Tranche :"
     nbSecondsTranche2  <- ask @Integer "> How many seconds will you vest the tokens ? : "
     nbTokenTranche2    <- ask @Integer "> How many tokens will you vest ? : "
 
-    printLn "- Select the investor's wallet"
+    printLn "- Select the investor's wallet :"
 
     investorWallet <- askAmongAllWallets >>= whenNothingThrow NoWalletRegistered
     vestFunds' 
@@ -87,9 +87,6 @@ vestFunds'
     (nbSecondsTranche1,nbTokenTranche1)
     (nbSecondsTranche2,nbTokenTranche2) = do
 
-    collateral <- txOutRef <$> (fetchCollateral ownerWallet >>= whenNothingThrow WalletWithoutCollateral ) 
-    utxoForFees <- selectBiggestStrictlyADAsNotCollateral ownerWallet >>= whenNothingThrow NoADAInWallet
-
     let (cu,tn,totalAmountToken) = getTokenFrom utxoWithTokens
         valueTotalToken = singleton cu tn totalAmountToken
         valueTokenTranche1 =  singleton cu tn nbTokenTranche1
@@ -114,9 +111,8 @@ vestFunds'
 
     submit'
       TxBuild
-        { signingKeyPath = paymentSigningKeyPath ownerWallet
-        , txIns =  FromWallet (txOutRef  utxoForFees) :| 
-                [  FromWallet (txOutRef  utxoWithTokens)] 
+        { wallet = ownerWallet
+        , txIns =  FromWallet (txOutRef  utxoWithTokens) :| []
         , txOuts = ToWallet (paymentAddress ownerWallet) (changeBackToOwner + lovelaceValueOf 1344798) 
                 :| [ ToScript 
                      { address = onChain scriptLocation
@@ -126,7 +122,6 @@ vestFunds'
                      { address = onChain scriptLocation
                      , value =  (vestingTrancheAmount . vestingTranche2) params
                      , datumHash = datumVoidHash}] 
-        , changeAdress = paymentAddress ownerWallet
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , metadataMaybe = Nothing 

@@ -51,13 +51,13 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 
 import           Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString)
 import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Shell.Console (printLn)
+
 import           Tokenomia.Adapter.Cardano.Types
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-load SearchPath ["cat","cardano-cli" ]
+load SearchPath ["cat","cardano-cli", "echo" ]
 
 getMonetaryPolicyPath
     :: ( MonadIO m, MonadReader Environment m )
@@ -128,5 +128,5 @@ persistDataInTMP a = do
     tmpFolder <- getFolderPath TMP
     randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
     let filePath = tmpFolder <> show randomInt <> ".txt"
-    liftIO $ printLn  (dataToJSONString a) &> (Truncate . fromString) filePath
+    liftIO $ echo  (dataToJSONString a) &> (Truncate . fromString) filePath
     return filePath
