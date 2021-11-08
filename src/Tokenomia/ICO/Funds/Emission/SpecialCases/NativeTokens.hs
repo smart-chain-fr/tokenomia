@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Tokenomia.ICO.SpecialCases.NativeTokens ( sendTokensAndADAs ) where
+module Tokenomia.ICO.Funds.Emission.SpecialCases.NativeTokens ( sendTokensAndADAs ) where
 import           Prelude hiding ((+),(-))
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
 import           Data.List.NonEmpty ( NonEmpty((:|)) )

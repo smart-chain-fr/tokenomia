@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
-module Tokenomia.ICO.SpecialCases.MultiUTxOs
+module Tokenomia.ICO.Funds.Emission.SpecialCases.MultiUTxOs
     ( multiUTxOsSameAddress )
     where
 import Data.List.NonEmpty ( NonEmpty((:|)) )
