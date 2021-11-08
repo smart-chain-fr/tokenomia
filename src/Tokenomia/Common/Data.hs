@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString) where
+module Tokenomia.Common.Data (dataToJSONString) where
 
 import Data.Aeson as Json ( encode )
 

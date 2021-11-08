@@ -12,7 +12,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 
-module Tokenomia.Adapter.Cardano.CLI.Scripts
+module Tokenomia.Script.LocalRepository
     ( registerMintingScriptFile
     , registerValidatorScriptFile
     , getScriptLocation
@@ -46,14 +46,14 @@ import           Ledger hiding (Address)
 import qualified Plutus.V1.Ledger.Scripts as Script
 import           PlutusTx.IsData.Class ( ToData )
 
-import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Common.Environment
 
 
-import           Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString)
-import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
+import           Tokenomia.Common.Data (dataToJSONString)
+import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 
-import           Tokenomia.Adapter.Cardano.Types
-
+import           Tokenomia.Common.Address
+import           Tokenomia.Common.Hash
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 

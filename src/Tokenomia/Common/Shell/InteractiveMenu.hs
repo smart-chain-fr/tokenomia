@@ -17,6 +17,7 @@ module Tokenomia.Common.Shell.InteractiveMenu
     ( askString
     , ask
     , askFilterM
+    , askStringFilterM
     , askMenu
     , askLeaveBlankOption
     , askStringLeaveBlankOption
@@ -83,6 +84,14 @@ ask prompt = do
                 print $ show err
                 ask prompt
             Right answer -> return answer
+
+askStringFilterM :: (MonadIO m) => String -> (String -> m Bool) -> m String
+askStringFilterM prompt f = do
+    answer <- askString prompt
+    f answer >>=
+        \case
+            True -> return answer
+            False -> askStringFilterM prompt f
 
 askFilterM :: (Read a, MonadIO m) => String -> (a -> m Bool) -> m a
 askFilterM prompt f = do

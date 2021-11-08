@@ -12,8 +12,8 @@ import Control.Monad.Reader
 import Ledger hiding (getPOSIXTime)
 import Prelude hiding (print)
 
-import Tokenomia.Adapter.Cardano.CLI.Environment 
-import Tokenomia.Adapter.Cardano.CLI.Node 
+import Tokenomia.Common.Environment 
+import Tokenomia.Common.Node 
 import Tokenomia.Common.Shell.Console (printLn)
 
 displayStatus

@@ -1,4 +1,4 @@
-module Tokenomia.Adapter.Cardano.CLI.Serialise 
+module Tokenomia.Common.Serialise 
    ( FromCLI (..)
    , ToCLI (..)) where
 

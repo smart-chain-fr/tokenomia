@@ -40,20 +40,24 @@ library
     import: lang
     exposed-modules:
       Tokenomia.CLI
-      Tokenomia.ICO.AddressesGeneration
-      Tokenomia.ICO.Funds.Simulation
-      Tokenomia.ICO.HappyPath
-      Tokenomia.ICO.SpecialCases
-      Tokenomia.ICO.SpecialCases.Multisig
-      Tokenomia.ICO.SpecialCases.MultiUTxOs
-      Tokenomia.ICO.SpecialCases.NativeTokens
       Tokenomia.Node.Status
       Tokenomia.Token.CLAPStyle.Mint
       Tokenomia.Token.CLAPStyle.Burn
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
+      Tokenomia.Script.LocalRepository
+      Tokenomia.Script.ChainIndex
+      Tokenomia.Script.UTxO
+      Tokenomia.Wallet.Type
+      Tokenomia.Common.TxOutRef
       Tokenomia.Wallet.CLI
+      Tokenomia.Wallet.LocalRepository
+      Tokenomia.Wallet.LocalRepository.Folder
+      Tokenomia.Wallet.ChildAddress.ChainIndex
+      Tokenomia.Wallet.UTxO
       Tokenomia.Wallet.Collateral.Write
       Tokenomia.Wallet.Collateral.Read
+      Tokenomia.Wallet.ChildAddress.ChildAddressRef
+      Tokenomia.Wallet.ChildAddress.LocalRepository
       Tokenomia.Ada.Transfer
       Tokenomia.Common.Error
       Tokenomia.Token.Transfer
@@ -62,20 +66,24 @@ library
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
       Tokenomia.Tokenomic.CLAP.Simulation
-      Tokenomia.Adapter.Cardano.CLI.UTxO
-      Tokenomia.Adapter.Cardano.CLI.Value
-      Tokenomia.Adapter.Cardano.CLI.Serialise
-      Tokenomia.Adapter.Cardano.CLI.Node
-      Tokenomia.Adapter.Cardano.CLI.Transaction
-      Tokenomia.Adapter.Cardano.CLI.Folder
-      Tokenomia.Adapter.Cardano.CLI.Scripts
-      Tokenomia.Adapter.Cardano.CLI.Wallet
+      Tokenomia.Common.Value
+      Tokenomia.Common.Serialise
+      Tokenomia.Common.Node
+      Tokenomia.Common.Transacting
+      Tokenomia.Common.Folder
       Tokenomia.Common.Shell.InteractiveMenu
       Tokenomia.Common.Shell.Console
-      Tokenomia.Adapter.Cardano.CLI.Environment
-      Tokenomia.Adapter.Cardano.CLI.Data
-      Tokenomia.Adapter.Cardano.CLI.UTxO.Query
-      Tokenomia.Adapter.Cardano.Types
+      Tokenomia.Common.Environment
+      Tokenomia.Common.Data
+      Tokenomia.Common.Address
+      Tokenomia.Common.Hash
+      Tokenomia.ICO.Funds.Reception.Command
+      Tokenomia.ICO.Funds.Reception.Plan
+      Tokenomia.ICO.Funds.Reception.Transact
+      Tokenomia.ICO.Funds.Reception.DryRun
+      Tokenomia.ICO.Funds.Reception.ChildAddress.State
+      Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+      Tokenomia.ICO.RoundSettings
     build-depends:
       base >= 4.9 && < 5,
       lens,
@@ -107,7 +115,17 @@ library
       plutus-contract,
       plutus-tx-plugin,
       plutus-tx,
-      plutus-ledger
+      plutus-ledger,
+      pretty-simple,
+      blockfrost-client,
+      blockfrost-api,
+      blockfrost-client-core,
+      blockfrost-pretty,
+      prettyprinter,
+      safe-money,
+      ordered-containers,
+      nonempty-containers,
+      streamly
     hs-source-dirs: src 
 
 test-suite tokenomia-tests
@@ -118,8 +136,8 @@ test-suite tokenomia-tests
   other-modules:
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
-    Spec.Tokenomia.Adapter.Cardano.CLI.UTxO
-    Spec.Tokenomia.Adapter.Cardano.CLI.Value
+    Spec.Tokenomia.Common.UTxO
+    Spec.Tokenomia.Common.Value
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,

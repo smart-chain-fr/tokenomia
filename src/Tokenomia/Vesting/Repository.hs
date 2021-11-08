@@ -24,7 +24,7 @@ import           Data.Aeson hiding (Value)
 
 import           System.Directory
 
-import           Tokenomia.Adapter.Cardano.CLI.Folder (getFolderPath,Folder (..))
+import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 import           Prelude hiding ((+),(-))
 import           Data.Maybe
 import qualified Data.Text as T
@@ -39,26 +39,26 @@ import           Ledger.Value
 import           Ledger hiding (singleton,Address)
 
 
-import           Tokenomia.Adapter.Cardano.CLI.Serialise
-import           Tokenomia.Adapter.Cardano.CLI.UTxO
+import           Tokenomia.Common.Serialise
+import qualified Tokenomia.Script.UTxO as Script
+import qualified Tokenomia.Script.ChainIndex as Script
+import qualified Tokenomia.Script.LocalRepository as Script
+
+import qualified Tokenomia.Wallet.LocalRepository as Wallet
+import           Tokenomia.Wallet.Type
 
 import           Tokenomia.Vesting.Contract
 import           Tokenomia.Common.Shell.InteractiveMenu
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-
-
-import           Tokenomia.Adapter.Cardano.CLI.Wallet
-import           Tokenomia.Adapter.Cardano.CLI.Scripts
-
-import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
-
+import           Tokenomia.Common.Environment
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.ChildAddress.LocalRepository
 
 data WalletWithVestedFunds = WalletWithVestedFunds {wallet :: Wallet, vestedFunds :: NonEmpty Vesting}
 data Vesting = Vesting VestingContext VestingState deriving (Eq,Show)
 
 data VestingContext
     = VestingContext
-    { scriptLocation :: ScriptLocation
+    { scriptLocation :: Script.ScriptLocation
     , validator :: Validator
     , vestingParam :: VestingParams
     , investorId :: PubKeyHash
@@ -69,7 +69,7 @@ data TrancheContext = TrancheContext {deadline :: POSIXTime, valueVested :: Valu
 
 data VestingState
     = VestingState
-    { utxosOnScript :: [UTxO]
+    { scriptUTxOs :: [Script.ScriptUTxO]
     , tranches :: (TrancheState,TrancheState)
     } deriving (Eq,Show)
 
@@ -100,15 +100,14 @@ getWalletWithVestedFunds =
      >>= \case
             Nothing -> return Nothing
             Just allVestingInProgress -> do
-                query_registered_wallets
-                 >>= return
-                     . nonEmpty
-                     . catMaybes
-                     . map (\wallet@Wallet {publicKeyHash} ->
+                wallets <- Wallet.fetchAll
+                x <-  mapM (\wallet@Wallet{name} -> do
+                            ChildAddress {..} <- fetchById $ ChildAddressRef name 0
                             let vestingForWallet = filter (\(Vesting VestingContext{investorId} _) -> investorId == publicKeyHash ) . toList $ allVestingInProgress
-                            in case nonEmpty vestingForWallet of
-                                    Nothing -> Nothing
-                                    Just vestedFunds -> Just WalletWithVestedFunds {..})
+                            return $ case nonEmpty vestingForWallet  of
+                                    Nothing ->  Nothing
+                                    Just vestedFunds -> Just WalletWithVestedFunds {..}) wallets 
+                return . nonEmpty . catMaybes $ x
 
 
 selectVesting :: (MonadIO m) => NonEmpty Vesting -> m Vesting
@@ -133,13 +132,13 @@ getVestingInProgress  = do
                     , vestingTrancheAmount = token2}
             , vestingOwner = investorId } = do
           let validator = vestingScript vestingParam
-          scriptLocation <- getScriptLocation validator
-          (utxosOnScript,retrieveState) <- UTxOs.query (onChain scriptLocation)
+          scriptLocation <- Script.getScriptLocation validator
+          (scriptUTxOs,retrieveState) <- Script.queryUTxO (Script.onChain scriptLocation)
                                                 >>= \case
                                                     [] -> return ([],AllTranchesRetrieved)
-                                                    utxosOnScript@[_] -> return (utxosOnScript,AllTranchesRetrieved)
-                                                    utxosOnScript@[_,_] -> return (utxosOnScript,ZeroTrancheRetrieved)
-                                                    _ ->  error $ "retrieved an unexpected number of UTXos at " <> show (onChain scriptLocation)
+                                                    scriptUTxOs@[_] -> return (scriptUTxOs,AllTranchesRetrieved)
+                                                    scriptUTxOs@[_,_] -> return (scriptUTxOs,ZeroTrancheRetrieved)
+                                                    _ ->  error $ "retrieved an unexpected number of UTXos at " <> show (Script.onChain scriptLocation)
           let (s1,s2) = getTrancheStates now deadline1 deadline2 retrieveState
           return
             (Vesting

@@ -12,7 +12,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 
-module Tokenomia.Adapter.Cardano.CLI.Folder
+module Tokenomia.Common.Folder
     ( getFolderPath
     , getRootCLIFolder
     , Folder (..)
@@ -41,10 +41,10 @@ import qualified Cardano.Api.Shelley  as Shelley
 import qualified Plutus.V1.Ledger.Scripts as Script
 import           PlutusTx.IsData.Class ( ToData )
 
-import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Common.Environment
 
 
-import           Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString)
+import           Tokenomia.Common.Data (dataToJSONString)
 import           Tokenomia.Common.Shell.Console (printLn)
 
 
@@ -56,14 +56,14 @@ load SearchPath ["mkdir","cardano-cli" ]
 
 
 
-data Folder = Transactions | Keys | Parameters | MonetaryPolicies | Validators | TMP
+data Folder = Transactions | Wallets | Parameters | MonetaryPolicies | Validators | TMP
 
 getFolderPath :: (MonadIO m, MonadReader Environment m) => Folder -> m FilePath
 getFolderPath folder
     =  getFolderPath'
             $ case folder of
                 Transactions -> "transactions"
-                Keys ->  "keys"
+                Wallets ->  "wallets"
                 Parameters -> "parameters"
                 MonetaryPolicies -> "monetary-policies"
                 Validators -> "validators"

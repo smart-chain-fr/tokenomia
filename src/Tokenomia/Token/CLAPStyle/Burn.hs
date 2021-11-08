@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Tokenomia.Token.CLAPStyle.Burn (burn) where
 
@@ -15,54 +16,60 @@ import           Data.List.NonEmpty
 import           Ledger.Value
 import           Ledger.Ada
 
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import           Tokenomia.Adapter.Cardano.CLI.Transaction
-import           Tokenomia.Adapter.Cardano.CLI.Scripts
+import           Tokenomia.Common.Environment
+import           Tokenomia.Wallet.UTxO as UTxO
+import           Tokenomia.Common.Transacting
+import           Tokenomia.Script.LocalRepository
 
-import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
 import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (ask)
-
+import           Tokenomia.Common.Value
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.Type
+import           Tokenomia.Wallet.ChildAddress.LocalRepository
 
 burn
     :: (  MonadIO m
         , MonadReader Environment m
-        , MonadError BuildingTxError m)  
+        , MonadError TokenomiaError m)  
     => m ()
 burn = do 
-    wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+    Wallet{name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
             printLn "Select the burner wallet : "
             askToChooseAmongGivenWallets wallets 
     printLn "- Select the utxo containing the tokens to burn :" 
-    utxoWithTokensToBurn <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
+    utxoWithTokensToBurn <- askUTxOFilterBy (containingOneToken . UTxO.value . utxo ) (ChildAddressRef name 0) >>= whenNothingThrow NoUTxOWithOnlyOneToken
     amountToBurn  <- ask @Integer "- Amount to burn : "
-    burn' wallet utxoWithTokensToBurn amountToBurn
+    burn' name utxoWithTokensToBurn amountToBurn
 
 burn' 
     :: (  MonadIO m
         , MonadReader Environment m
-        , MonadError BuildingTxError m)  
-    => Wallet 
-    -> UTxO
+        , MonadError TokenomiaError m)  
+    => WalletName 
+    -> WalletUTxO
     -> Integer
     -> m ()
-burn' wallet utxoWithTokensToBurn@UTxO {value = totalAmountBurnable} amountToBurn = do 
+burn' walletName walletUTxO@WalletUTxO {utxo = UTxO {value = totalAmountBurnable}} amountToBurn = do 
 
-    let (tokenPolicyHash,tokenNameSelected,_) = getTokenFrom utxoWithTokensToBurn
+    let (tokenPolicyHash,tokenNameSelected,_) = getTokenFrom totalAmountBurnable
         valueToBurn = singleton tokenPolicyHash tokenNameSelected amountToBurn
         change = totalAmountBurnable - valueToBurn
+        firstChildAddress = ChildAddressRef walletName 0
+
 
     monetaryScript <- getMonetaryPolicyPath tokenPolicyHash >>= whenNothingThrow TryingToBurnTokenWithoutScriptRegistered
-
-    submit'
+    ChildAddress {address} <- fetchById firstChildAddress
+    submit
       TxBuild
-        { txIns =  FromWallet (txOutRef  utxoWithTokensToBurn) :| []
-        , txOuts = ToWallet (paymentAddress wallet) (change + lovelaceValueOf 1344798):| [] 
+        { inputsFromWallet =  FromWallet walletUTxO :| []
+        , inputsFromScript =  Nothing
+        , outputs = ToWallet address (change + lovelaceValueOf 1379280):| [] 
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Burn { amount = valueToBurn, script = monetaryScript} :| []
         , metadataMaybe = Nothing 
