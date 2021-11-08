@@ -72,7 +72,7 @@ transfer' senderWallet receiverAddr utxoWithToken amount labelMaybe = do
     submit'
       TxBuild
         { wallet = senderWallet
-        , txIns =  [FromWallet (txOutRef utxoWithToken)]
+        , txIns =  FromWallet (txOutRef utxoWithToken) :| []
         , txOuts = ToWallet receiverAddr valueToTransfer 
                 :| [ToWallet (paymentAddress senderWallet) change]
         , validitySlotRangeMaybe = Nothing

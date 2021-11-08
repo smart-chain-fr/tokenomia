@@ -46,21 +46,21 @@ vestFunds
 vestFunds = do
     ownerWallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
-            printLn "Select the token owner wallet : "
+            printLn "Select the token owner wallet :"
             askToChooseAmongGivenWallets wallets 
     utxosWithOneToken <- fetchUTxOFilterBy containingOneToken ownerWallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
     printLn "- Select the utxo and associated tokens to vest  :" 
     utxoWithToken <- askToChooseAmongGivenUTxOs utxosWithOneToken
 
-    printLn "- First Tranche : "
+    printLn "- First Tranche :"
     nbSecondsTranche1  <- ask @Integer "> How many seconds will you vest the tokens ? : "
     nbTokenTranche1    <- ask @Integer "> How many tokens will you vest ? : "
    
-    printLn "- Second Tranche : "
+    printLn "- Second Tranche :"
     nbSecondsTranche2  <- ask @Integer "> How many seconds will you vest the tokens ? : "
     nbTokenTranche2    <- ask @Integer "> How many tokens will you vest ? : "
 
-    printLn "- Select the investor's wallet"
+    printLn "- Select the investor's wallet :"
 
     investorWallet <- askAmongAllWallets >>= whenNothingThrow NoWalletRegistered
     vestFunds' 
@@ -112,7 +112,7 @@ vestFunds'
     submit'
       TxBuild
         { wallet = ownerWallet
-        , txIns =  [FromWallet (txOutRef  utxoWithTokens)]
+        , txIns =  FromWallet (txOutRef  utxoWithTokens) :| []
         , txOuts = ToWallet (paymentAddress ownerWallet) (changeBackToOwner + lovelaceValueOf 1344798) 
                 :| [ ToScript 
                      { address = onChain scriptLocation

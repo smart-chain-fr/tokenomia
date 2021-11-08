@@ -61,7 +61,7 @@ burn' wallet utxoWithTokensToBurn@UTxO {value = totalAmountBurnable} amountToBur
 
     submit'
       TxBuild
-        { txIns =  [FromWallet (txOutRef  utxoWithTokensToBurn)]
+        { txIns =  FromWallet (txOutRef  utxoWithTokensToBurn) :| []
         , txOuts = ToWallet (paymentAddress wallet) (change + lovelaceValueOf 1344798):| [] 
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Burn { amount = valueToBurn, script = monetaryScript} :| []

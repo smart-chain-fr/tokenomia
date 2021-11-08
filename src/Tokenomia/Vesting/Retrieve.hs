@@ -25,6 +25,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Node
 import           Tokenomia.Adapter.Cardano.CLI.Transaction
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Scripts
+import           Tokenomia.Wallet.CLI
 import           Tokenomia.Vesting.Repository
 import           Tokenomia.Common.Error
 
@@ -36,26 +37,27 @@ retrieveFunds
     => m ()
 retrieveFunds = do
     WalletWithVestedFunds{..} <- selectWalletWithVestedFunds >>= whenNothingThrow NoVestingInProgress
-    selectVesting vestedFunds >>= retrieveFundsC wallet
+    selectVesting vestedFunds >>= retrieveFunds' wallet
      
 
-retrieveFundsC
+retrieveFunds'
     :: (  MonadIO m
         , MonadReader Environment m
         , MonadError BuildingTxError m)
     => Wallet
     -> Vesting
     -> m ()
-retrieveFundsC wallet (Vesting 
+retrieveFunds' wallet (Vesting 
                             VestingContext { tranches = ( TrancheContext {valueVested = v1}
                                                         , TrancheContext {valueVested = v2}) , ..}
                             VestingState { tranches = (s1,s2), ..}) = do
     
+    adas <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
     currentSlot <- getCurrentSlotSynced
     voidDataFilePath <- persistDataInTMP ()
     datumVoidHash <- getDataHash ()
 
-    let txIns = fmap (\UTxO {..} -> 
+    let txIns = FromWallet adas :| fmap (\UTxO {..} -> 
                         FromScript 
                             { script = offChain scriptLocation 
                             , datum = voidDataFilePath

@@ -62,7 +62,7 @@ transfer' senderWallet receiverAddr amount labelMaybe = do
     submit'
       TxBuild
         { wallet = senderWallet
-        , txIns = [FromWallet ada]
+        , txIns = FromWallet ada :| []
         , txOuts = ToWallet receiverAddr (lovelaceValueOf amount) :| []
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing

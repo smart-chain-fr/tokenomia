@@ -88,7 +88,7 @@ data ValiditySlotRange = ValiditySlotRange Slot Slot
 data TxBuild 
         = TxBuild 
             { wallet :: Wallet
-            , txIns :: [TxIn]
+            , txIns  :: NonEmpty TxIn
             , txOuts :: NonEmpty TxOut
             , validitySlotRangeMaybe :: Maybe ValiditySlotRange
             , metadataMaybe :: Maybe Metadata

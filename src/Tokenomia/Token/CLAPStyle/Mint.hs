@@ -79,7 +79,7 @@ mint' wallet tokenName amount = do
 
     submit'
       TxBuild
-        { txIns =  [FromWallet txOutRefToConsume] 
+        { txIns =  FromWallet txOutRefToConsume :| []
         , txOuts = ToWallet (paymentAddress wallet) (valueToMint + lovelaceValueOf 1344798 ):| [] 
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Mint { amount = valueToMint, script = monetaryScript} :| []

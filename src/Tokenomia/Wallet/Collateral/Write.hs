@@ -21,6 +21,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment
 
 import           Tokenomia.Wallet.CLI as Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Adapter.Cardano.CLI.UTxO
 
 
 import           Tokenomia.Common.Error
@@ -49,10 +50,11 @@ createCollateral'
        -> m ()
 createCollateral' senderWallet = do
     assertCollateralNotAlreadyCreated senderWallet
+    ada <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet)
     submit'
       TxBuild
         { wallet = senderWallet
-        , txIns =  []
+        , txIns =  FromWallet ada :| []
         , txOuts = ToWallet (paymentAddress senderWallet) (adaValueOf 2.0) :| [] 
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
