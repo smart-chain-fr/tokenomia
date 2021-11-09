@@ -14,6 +14,7 @@
 
 module Tokenomia.Adapter.Cardano.CLI.Folder
     ( getFolderPath
+    , getRootCLIFolder
     , Folder (..)
     ) where
 
