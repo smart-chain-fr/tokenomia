@@ -34,6 +34,7 @@ import qualified Tokenomia.Token.CLAPStyle.Burn as Token
 import qualified Tokenomia.Token.Transfer as Token
 
 import qualified Tokenomia.Ada.Transfer as Ada
+import qualified Tokenomia.Ada.Consolidate as Ada
 
 import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
@@ -141,6 +142,7 @@ runAction = \case
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
       AdaTransfer      -> Ada.transfer
+      AdaConsolidate   -> Ada.consolidate
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
@@ -156,6 +158,7 @@ actions = NonEmpty.fromList [
     TokenBurn,
     TokenTransfer,
     AdaTransfer,
+    AdaConsolidate,
     VestingVestFunds,
     VestingRetrieveFunds,
     NodeStatus,
@@ -172,6 +175,7 @@ data Action
   | TokenBurn
   | TokenTransfer
   | AdaTransfer
+  | AdaConsolidate
   | VestingVestFunds
   | VestingRetrieveFunds
   | NodeStatus 
@@ -188,6 +192,7 @@ instance DisplayMenuItem Action where
     TokenBurn             -> " [Token]   - Burn Tokens with CLAP type policy"
     TokenTransfer         -> " [Token]   - Transfer Tokens"
     AdaTransfer           -> " [Ada]     - Transfer ADAs"
+    AdaConsolidate        -> " [Ada]     - Consolidate ADAs"
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     NodeStatus            ->  "[Node]    - Status"

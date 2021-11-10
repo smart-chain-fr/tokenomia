@@ -55,6 +55,7 @@ library
       Tokenomia.Wallet.Collateral.Write
       Tokenomia.Wallet.Collateral.Read
       Tokenomia.Ada.Transfer
+      Tokenomia.Ada.Consolidate
       Tokenomia.Common.Error
       Tokenomia.Token.Transfer
       Tokenomia.Vesting.Contract

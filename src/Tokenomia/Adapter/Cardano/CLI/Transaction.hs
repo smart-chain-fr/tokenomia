@@ -28,11 +28,13 @@ module Tokenomia.Adapter.Cardano.CLI.Transaction
     , submit'
     , createMetadataFile
     , register_protocol_parameters
+
     , submit_tx
     , submitCollateral
     , sign_tx
     , doubleSign_tx
     , toCardanoCLIOptions
+    , computeFees
     ) where
 
 
@@ -50,7 +52,15 @@ import           Control.Monad.Except
 import           Control.Concurrent
 import           System.Random
 
-import           Shh.Internal
+import Shh.Internal
+    ( (&>),
+      capture,
+      load,
+      (|>),
+      ExecArg(asArg),
+      ExecReference(SearchPath),
+      Stream(Truncate),
+      captureWords )
 
 import           Ledger ( TxOutRef (..),Value,Slot (..) ) 
 
@@ -66,6 +76,7 @@ import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.CLI
+import           Plutus.V1.Ledger.Ada (lovelaceValueOf)
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -129,7 +140,7 @@ instance ToCardanoCLIOptions TxOut  where
         [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value
         , "--tx-out-datum-hash"  , coerce datumHash]
     toCardanoCLIOptions ToWallet {..}  = 
-        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value]
+        [ "--tx-out" , coerce address <> "+" <> (T.unpack . toCLI) value]
 
 instance ToCardanoCLIOptions ValiditySlotRange  where 
     toCardanoCLIOptions (ValiditySlotRange (Slot x) (Slot y))  = 
@@ -161,7 +172,7 @@ instance ToCardanoCLIOptions TxBuild where
      <> toCardanoCLIOptions tokenSupplyChangesMaybe
      <> toCardanoCLIOptions validitySlotRangeMaybe
      <> toCardanoCLIOptions metadataMaybe 
-
+     
 submit' 
     :: ( MonadIO m
        , MonadReader Environment m 
@@ -318,3 +329,21 @@ createMetadataFile message = do
     liftIO (echo ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
         &> (Truncate . fromString) metadataJsonFilepath)
     return metadataJsonFilepath
+
+computeFees :: (MonadIO m, MonadReader Environment  m) => Int -> Int -> m Integer
+computeFees nbTxIn nbTxOut = do
+    protocolParametersPath <- register_protocol_parameters
+    magicN <- asks magicNumber
+    (_, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
+    unparsedLovelaces <- liftIO (cardano_cli
+        "transaction"
+        "calculate-min-fee"
+        "--tx-body-file" rawTx
+        "--tx-in-count" (show nbTxIn)
+        "--tx-out-count" (show $ nbTxOut)
+        "--witness-count" "1"
+        "--byron-witness-count" "0"
+        "--testnet-magic" magicN
+        "--protocol-params-file" protocolParametersPath |> capture)
+    return $ parse unparsedLovelaces
+    where parse lovelaces = read @Integer (head (words (C.unpack  lovelaces)))

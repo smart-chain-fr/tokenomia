@@ -18,7 +18,11 @@
 
 module Tokenomia.Adapter.Cardano.CLI.UTxO.Query
     ( query
+<<<<<<< HEAD
     , queryUTxOsFilterBy
+=======
+    , queryUTxOsContainingStrictlyADAs
+>>>>>>> 12f4d10 ([ada] consolidation done)
     ) where
 
 
@@ -27,7 +31,6 @@ import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 
 import           Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
 import           Shh.Internal
-
 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
