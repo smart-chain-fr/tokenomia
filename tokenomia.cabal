@@ -58,6 +58,7 @@ library
       Tokenomia.Ada.Consolidate
       Tokenomia.Common.Error
       Tokenomia.Token.Transfer
+      Tokenomia.Token.Consolidate
       Tokenomia.Vesting.Contract
       Tokenomia.Vesting.Repository
       Tokenomia.Vesting.Vest
@@ -71,6 +72,7 @@ library
       Tokenomia.Adapter.Cardano.CLI.Folder
       Tokenomia.Adapter.Cardano.CLI.Scripts
       Tokenomia.Adapter.Cardano.CLI.Wallet
+      Tokenomia.Adapter.Data.List
       Tokenomia.Common.Shell.InteractiveMenu
       Tokenomia.Common.Shell.Console
       Tokenomia.Adapter.Cardano.CLI.Environment

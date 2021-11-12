@@ -29,7 +29,7 @@ import Shh.Internal
       captureWords )
 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
-import           Tokenomia.Adapter.Cardano.CLI.UTxO.Query (queryUTxOsContainingStrictlyADAs)
+import           Tokenomia.Adapter.Cardano.CLI.UTxO.Query (queryUTxOsFilterBy)
 import           Tokenomia.Adapter.Cardano.CLI.Folder ( Folder(Transactions), getFolderPath )
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral.Read
@@ -64,7 +64,7 @@ consolidate'
     => Wallet
     -> m ()
 consolidate' wallet@Wallet {..} = do
-    ada <-  queryUTxOsContainingStrictlyADAs wallet --TODO check if ada is NonEmpty before call fromList
+    ada <-  queryUTxOsFilterBy wallet containingStrictlyADAs
     let amount = fold (value <$> ada)
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
     aGivenTxOutRef <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)

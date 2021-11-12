@@ -32,6 +32,7 @@ import qualified Tokenomia.Wallet.Collateral.Write as Wallet
 import qualified Tokenomia.Token.CLAPStyle.Mint as Token
 import qualified Tokenomia.Token.CLAPStyle.Burn as Token
 import qualified Tokenomia.Token.Transfer as Token
+import qualified Tokenomia.Token.Consolidate as Token
 
 import qualified Tokenomia.Ada.Transfer as Ada
 import qualified Tokenomia.Ada.Consolidate as Ada
@@ -115,6 +116,7 @@ recursiveMenu = do
         AlreadyACollateral utxo   -> printLn ("Collateral Already Created..." <> show utxo)
         NoADAInWallet ->             printLn "Please, add ADAs to your wallet..."
         NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
+        NoUTxOWithSuchCurrency c  -> printLn ("No UTxO found with " <> show c <> " currency.")
         TryingToBurnTokenWithoutScriptRegistered 
                                   -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
         NoVestingInProgress       -> printLn "No vesting in progress"
@@ -141,6 +143,7 @@ runAction = \case
       TokenMint        -> Token.mint
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
+      TokenConsolidate -> Token.consolidate
       AdaTransfer      -> Ada.transfer
       AdaConsolidate   -> Ada.consolidate
       VestingVestFunds -> Vesting.vestFunds
@@ -157,6 +160,7 @@ actions = NonEmpty.fromList [
     TokenMint,
     TokenBurn,
     TokenTransfer,
+    TokenConsolidate,
     AdaTransfer,
     AdaConsolidate,
     VestingVestFunds,
@@ -174,6 +178,7 @@ data Action
   | TokenMint
   | TokenBurn
   | TokenTransfer
+  | TokenConsolidate
   | AdaTransfer
   | AdaConsolidate
   | VestingVestFunds
@@ -191,6 +196,7 @@ instance DisplayMenuItem Action where
     TokenMint             -> " [Token]   - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy)"
     TokenBurn             -> " [Token]   - Burn Tokens with CLAP type policy"
     TokenTransfer         -> " [Token]   - Transfer Tokens"
+    TokenConsolidate       -> "[Token]   - Consolidate Tokens"
     AdaTransfer           -> " [Ada]     - Transfer ADAs"
     AdaConsolidate        -> " [Ada]     - Consolidate ADAs"
     VestingVestFunds      ->  "[Vesting] - Vest Funds"

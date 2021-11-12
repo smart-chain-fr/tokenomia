@@ -62,7 +62,7 @@ import Shh.Internal
       Stream(Truncate),
       captureWords )
 
-import           Ledger ( TxOutRef (..),Value,Slot (..) ) 
+import           Ledger ( TxOutRef (..),Value,Slot (..), CurrencySymbol ) 
 
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Adapter.Cardano.CLI.Environment
@@ -76,7 +76,6 @@ import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.CLI
-import           Plutus.V1.Ledger.Ada (lovelaceValueOf)
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -91,6 +90,7 @@ data BuildingTxError
     | AlreadyACollateral UTxO
     | NoADAInWallet
     | NoUTxOWithOnlyOneToken 
+    | NoUTxOWithSuchCurrency CurrencySymbol
     | TryingToBurnTokenWithoutScriptRegistered 
     | NoVestingInProgress
     | NoFundsToBeRetrieved
