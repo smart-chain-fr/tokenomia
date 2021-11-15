@@ -12,6 +12,7 @@ module Tokenomia.Adapter.Cardano.CLI.UTxO
     , getTokenFrom
     , getTokensFrom
     , containingOneToken
+    , containingGivenNativeToken
     , containingStrictlyADAs
     , containsCollateral
     , showValue
@@ -47,6 +48,9 @@ containingOneToken :: UTxO -> Bool
 containingOneToken UTxO {..}
     = 1 == (length . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value
 
+containingGivenNativeToken :: CurrencySymbol -> UTxO -> Bool
+containingGivenNativeToken policyhash UTxO {..}
+    = 1 == (length . filter (\(c,_,_) -> c == policyhash ) .flattenValue) value
 
 containsCollateral :: UTxO -> Bool
 containsCollateral UTxO {..}
@@ -54,7 +58,7 @@ containsCollateral UTxO {..}
 
 containingStrictlyADAs :: UTxO -> Bool
 containingStrictlyADAs UTxO {..} 
-    = 1 == (length . filter (\(c,_,_) -> c == adaSymbol ) .flattenValue) value
+    = symbols value == [adaSymbol] 
 
 data UTxO = UTxO
               { txOutRef :: TxOutRef

@@ -27,6 +27,12 @@ module Tokenomia.Adapter.Cardano.CLI.Transaction
     , MonetaryAction (..)
     , submit'
     , createMetadataFile
+    , register_protocol_parameters
+    , submit_tx
+    , submitCollateral
+    , sign_tx
+    , doubleSign_tx
+    , toCardanoCLIOptions
     ) where
 
 
@@ -174,6 +180,22 @@ submit' txBuild@TxBuild {wallet = wallet@Wallet {..}} = do
         <> [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]
         <> [ "--change-address"   , coerce paymentAddress])
 
+submitCollateral 
+    :: ( MonadIO m
+       , MonadReader Environment m 
+       , MonadError BuildingTxError m)
+
+    => TxBuild
+    -> m ()
+submitCollateral txBuild@TxBuild {wallet = wallet@Wallet {..}} = do
+    utxoForFees <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
+    submit 
+      paymentSigningKeyPath 
+       utxoForFees 
+       (toCardanoCLIOptions txBuild
+        <> [ "--tx-in"  , (T.unpack . toCLI) utxoForFees]
+        <> [ "--change-address"   , coerce paymentAddress])
+
 submit
     :: ( ExecArg a
        , MonadIO m
@@ -182,9 +204,10 @@ submit
     -> TxOutRef
     -> a
     -> m ()
-submit privateKeyPath aGivenTxOutRef buildTxBody = do
+submit privateKeyPath aGivenTxOutRef@TxOutRef{..} buildTxBody = do
     magicN <- asks magicNumber
-    (txFolder, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
+    randomInt <- liftIO ( abs <$> randomIO :: IO Int )
+    (txFolder, rawTx ) <- (\a-> (a,a <> "tx_" <> show txOutRefId <> "_ " <> show randomInt <> ".raw")) <$> getFolderPath Transactions
     protocolParametersPath <- register_protocol_parameters
     liftIO $ cardano_cli
         "transaction"
@@ -252,6 +275,24 @@ sign_tx body_file outFile signing_key_file = do
         "--signing-key-file" signing_key_file
         "--testnet-magic" magicN
         "--out-file" outFile
+
+doubleSign_tx
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => FilePath
+    -> FilePath
+    -> FilePath
+    -> FilePath
+    -> m ()
+doubleSign_tx body_file outFile signing_key_file1 signing_key_file2 = do
+    magicN <- asks magicNumber
+    liftIO $ cardano_cli "transaction" "sign"
+        "--tx-body-file" body_file
+        "--signing-key-file" signing_key_file1
+        "--signing-key-file" signing_key_file2
+        "--testnet-magic" magicN
+        "--out-file" outFile
+
 
 register_protocol_parameters
     :: ( MonadIO m

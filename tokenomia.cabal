@@ -41,6 +41,12 @@ library
     exposed-modules:
       Tokenomia.CLI
       Tokenomia.ICO.AddressesGeneration
+      Tokenomia.ICO.Funds.Simulation
+      Tokenomia.ICO.HappyPath
+      Tokenomia.ICO.SpecialCases
+      Tokenomia.ICO.SpecialCases.Multisig
+      Tokenomia.ICO.SpecialCases.MultiUTxOs
+      Tokenomia.ICO.SpecialCases.NativeTokens
       Tokenomia.Node.Status
       Tokenomia.Token.CLAPStyle.Mint
       Tokenomia.Token.CLAPStyle.Burn
@@ -82,6 +88,7 @@ library
       directory,
       random,
       exceptions,
+      lifted-base,
       utf8-string,
       freer-simple,
       data-default,
@@ -142,9 +149,21 @@ executable tokenomia-cli
     base >= 4.9 && < 5,
     tokenomia
 
+
 executable addresses-generator 
   import: lang
   main-is: AddressesGenerator.hs
+  hs-source-dirs: app
+  ghc-options:
+    -threaded
+  build-depends:
+    base >= 4.9 && < 5,
+    tokenomia
+
+
+executable ico-simulator 
+  import: lang
+  main-is: ICOSimulation.hs
   hs-source-dirs: app
   ghc-options:
     -threaded

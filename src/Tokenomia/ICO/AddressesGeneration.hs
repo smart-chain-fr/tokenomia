@@ -4,8 +4,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
-module Tokenomia.ICO.AddressesGeneration (generator) where
-import           Data.String
+module Tokenomia.ICO.AddressesGeneration 
+                    ( generator
+                    , generateAddress
+                    ) where
+import           Data.String ( IsString(fromString) )
 import qualified Data.ByteString.Lazy.Char8 as C
 import           Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 import           Control.Monad.Reader ( MonadIO(..), ReaderT(runReaderT), MonadReader, asks )
@@ -88,8 +91,8 @@ generateAddress (walletName, index) = do
     liftIO $ (cat paymentVerification |> cardano_address "address" "payment" "--network-tag" netWorkTag |> cardano_address "address" "delegation" s)
         &> (Truncate . fromString) paymentAddress
 
-    let paymentSigningConvertedPath = walletKeyPath <> "payment-signing-cardano-cli-format.skey"
-        paymentVerificationConvertedPath = walletKeyPath <> "payment-verification-cardano-cli-format.vkey"
+    let paymentSigningConvertedPath = addressFolder <> "/payment-signing-cardano-cli-format.skey"
+        paymentVerificationConvertedPath = addressFolder <> "/payment-verification-cardano-cli-format.vkey"
 
     liftIO $ cardano_cli "key" "convert-cardano-address-key" "--shelley-payment-key" "--signing-key-file" paymentSigning "--out-file" paymentSigningConvertedPath
     liftIO $ cardano_cli "key" "verification-key" "--signing-key-file" paymentSigningConvertedPath "--verification-key-file" paymentVerificationConvertedPath

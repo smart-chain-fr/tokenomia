@@ -7,7 +7,9 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Tokenomia.Token.Transfer 
-    ( transfer) where
+    ( transfer
+    , transfer'
+    ) where
 
 import           Prelude hiding ((+),(-))
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
@@ -31,10 +33,10 @@ import           Tokenomia.Common.Shell.InteractiveMenu  (ask,askString, askStri
 
 
 
-transfer 
-    :: (  MonadIO m
-        , MonadReader Environment m
-        , MonadError BuildingTxError m)  
+transfer :: 
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m )  
     => m ()
 transfer = do
     wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
@@ -50,10 +52,10 @@ transfer = do
 
 type MetadataLabel = String
 
-transfer' 
-    :: (  MonadIO m
-        , MonadReader Environment m
-        , MonadError BuildingTxError m)  
+transfer' :: 
+    (  MonadIO m
+    , MonadReader Environment m
+    , MonadError BuildingTxError m )  
     => Wallet 
     -> Address 
     -> UTxO
