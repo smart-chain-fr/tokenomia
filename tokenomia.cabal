@@ -41,7 +41,7 @@ library
     exposed-modules:
       Tokenomia.CLI
       Tokenomia.ICO.AddressesGeneration
-      Tokenomia.ICO.Simulation
+      Tokenomia.ICO.Funds.Simulation
       Tokenomia.ICO.HappyPath
       Tokenomia.ICO.SpecialCases
       Tokenomia.ICO.SpecialCases.Multisig

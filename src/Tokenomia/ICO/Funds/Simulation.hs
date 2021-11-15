@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
-module Tokenomia.ICO.Simulation ( simulation ) where
+module Tokenomia.ICO.Funds.Simulation ( simulation ) where
 import           Control.Monad.Reader
 import           Control.Monad.Except
 import           Data.Coerce ( coerce )

@@ -58,7 +58,7 @@ containsCollateral UTxO {..}
 
 containingStrictlyADAs :: UTxO -> Bool
 containingStrictlyADAs UTxO {..} 
-    = 1 == (length .flattenValue) value
+    = symbols value == [adaSymbol] 
 
 data UTxO = UTxO
               { txOutRef :: TxOutRef

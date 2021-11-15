@@ -55,7 +55,4 @@ queryUTxOsFilterBy ::
     => Wallet
     -> (UTxO -> Bool)
     -> m [UTxO]
-queryUTxOsFilterBy Wallet {..} f = do
-    utxos <- query paymentAddress
-    let filteredUTxOs = filter f utxos
-    return filteredUTxOs
+queryUTxOsFilterBy Wallet {..} f = filter f <$> query paymentAddress
