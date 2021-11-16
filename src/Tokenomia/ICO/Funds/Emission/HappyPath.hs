@@ -4,7 +4,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-module Tokenomia.ICO.HappyPath ( happyPath ) where
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+module Tokenomia.ICO.Funds.Emission.HappyPath ( happyPath ) where
 import           System.Random
 import           Control.Concurrent.Lifted
 import           Control.Monad.Reader 

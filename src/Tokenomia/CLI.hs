@@ -39,7 +39,7 @@ import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
 
 import qualified Tokenomia.Node.Status as Node
-
+import qualified Tokenomia.ICO.Funds.Reception.Simulation as ICO
 import           Tokenomia.Adapter.Cardano.CLI.Transaction
 
 
@@ -136,6 +136,7 @@ runAction = \case
       WalletCollateral -> Wallet.createCollateral 
       WalletRestore    -> Wallet.restore
       WalletRemove     -> Wallet.remove
+      ICOReceptionPlanList  -> ICO.simulatePlan
       TokenMint        -> Token.mint
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
@@ -157,7 +158,8 @@ actions = NonEmpty.fromList [
     AdaTransfer,
     VestingVestFunds,
     VestingRetrieveFunds,
-    NodeStatus
+    NodeStatus,
+    ICOReceptionPlanList
     ]
 
 data Action
@@ -173,6 +175,7 @@ data Action
   | VestingVestFunds
   | VestingRetrieveFunds
   | NodeStatus 
+  | ICOReceptionPlanList
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
@@ -188,5 +191,6 @@ instance DisplayMenuItem Action where
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     NodeStatus            ->  "[Node]    - Status"
+    ICOReceptionPlanList  ->  "[ICO]     - List Reception Funds Plans from a Stake Address"
 
 
