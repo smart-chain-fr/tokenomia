@@ -116,7 +116,6 @@ recursiveMenu = do
         AlreadyACollateral utxo   -> printLn ("Collateral Already Created..." <> show utxo)
         NoADAInWallet ->             printLn "Please, add ADAs to your wallet..."
         NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
-        NoUTxOWithSuchCurrency c  -> printLn ("No UTxO found with " <> show c <> " currency.")
         TryingToBurnTokenWithoutScriptRegistered 
                                   -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
         NoVestingInProgress       -> printLn "No vesting in progress"

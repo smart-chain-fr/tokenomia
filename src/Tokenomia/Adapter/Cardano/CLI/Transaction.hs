@@ -28,13 +28,13 @@ module Tokenomia.Adapter.Cardano.CLI.Transaction
     , submit'
     , createMetadataFile
     , register_protocol_parameters
-
     , submit_tx
     , submitCollateral
     , sign_tx
     , doubleSign_tx
     , toCardanoCLIOptions
     , computeFees
+    , buildRaw
     ) where
 
 
@@ -62,7 +62,7 @@ import Shh.Internal
       Stream(Truncate),
       captureWords )
 
-import           Ledger ( TxOutRef (..),Value,Slot (..), CurrencySymbol ) 
+import           Ledger ( TxOutRef (..),Value,Slot (..) ) 
 
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Adapter.Cardano.CLI.Environment
@@ -90,7 +90,6 @@ data BuildingTxError
     | AlreadyACollateral UTxO
     | NoADAInWallet
     | NoUTxOWithOnlyOneToken 
-    | NoUTxOWithSuchCurrency CurrencySymbol
     | TryingToBurnTokenWithoutScriptRegistered 
     | NoVestingInProgress
     | NoFundsToBeRetrieved
@@ -347,3 +346,18 @@ computeFees nbTxIn nbTxOut = do
         "--protocol-params-file" protocolParametersPath |> capture)
     return $ parse unparsedLovelaces
     where parse lovelaces = read @Integer (head (words (C.unpack  lovelaces)))
+
+buildRaw
+    :: ( ExecArg a, MonadIO m, MonadReader Environment m)
+    => String
+    -> a
+    -> m ()
+buildRaw fee buildTxBody = do
+    (_, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
+
+    liftIO $ cardano_cli
+        "transaction"
+        "build-raw"
+        (asArg buildTxBody)
+        "--fee" fee
+        "--out-file" rawTx

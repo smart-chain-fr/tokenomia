@@ -5,8 +5,8 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Tokenomia.Token.Consolidate where
-
+module Tokenomia.Token.Consolidate
+    ( consolidate ) where
 
 import           Data.List.NonEmpty
 import qualified Data.ByteString.Lazy.Char8 as C
@@ -15,6 +15,7 @@ import           Control.Monad.Except
 import           Ledger.Ada ( lovelaceValueOf )
 import           Data.Foldable
 import           Ledger (Slot(Slot))
+import           Ledger.Value
 
 import           Tokenomia.Adapter.Cardano.CLI.Node
 
@@ -24,12 +25,11 @@ import           Tokenomia.Adapter.Cardano.CLI.Transaction hiding (value)
 import Shh.Internal
     ( load,
       (|>),
-      ExecArg(asArg),
       ExecReference(SearchPath),
       captureWords )
 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
-import           Tokenomia.Adapter.Cardano.CLI.UTxO.Query (askSelectUTxOByType)
+import           Tokenomia.Adapter.Cardano.CLI.UTxO.Query (askSelectUTxOByType, retrieveTotalAmountFromAsset)
 import           Tokenomia.Adapter.Cardano.CLI.Folder ( Folder(Transactions), getFolderPath )
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral.Read
@@ -49,7 +49,7 @@ consolidate
         , MonadError BuildingTxError m)
     => m ()
 consolidate = do
-    wallet@Wallet{..} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
+    wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets
@@ -61,10 +61,10 @@ consolidate'
         , MonadReader Environment m
         , MonadError BuildingTxError m)
     => Wallet
-    -> [UTxO]
+    -> NonEmpty AssetClass
     -> m ()
 consolidate' wallet@Wallet {..} utxos = do
-    let amount = fold (value <$> utxos)
+    let amount = retrieveTotalAmountFromAsset (Data.List.NonEmpty.head . utxos) wallet
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
     aGivenTxOutRef <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
 
@@ -98,25 +98,3 @@ consolidate' wallet@Wallet {..} utxos = do
     printLn "Waiting for confirmation..."
     awaitTxCommitted aGivenTxOutRef 0
     printLn "\nTx committed into ledger"
-
-
-buildRaw
-    :: ( ExecArg a, MonadIO m, MonadReader Environment m)
-    => String
-    -> a
-    -> m ()
-buildRaw fee buildTxBody = do
-    (_, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
-
-    liftIO $ cardano_cli
-        "transaction"
-        "build-raw"
-        (asArg buildTxBody)
-        "--fee" fee
-        "--out-file" rawTx
-    liftIO $ echo "transaction"
-        "build-raw"
-        (asArg buildTxBody)
-        "--fee" fee
-        "--out-file" rawTx
-        

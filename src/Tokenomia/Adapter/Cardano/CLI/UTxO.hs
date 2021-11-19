@@ -40,7 +40,6 @@ getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenVa
 getTokensFrom :: Value -> Value
 getTokensFrom = mkValue . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
 
-
 mkValue :: [(CurrencySymbol, TokenName, Integer)] -> Value
 mkValue = foldMap (\(a,b,c) -> singleton a b c)
 

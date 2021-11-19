@@ -5,7 +5,8 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Tokenomia.Ada.Consolidate where
+module Tokenomia.Ada.Consolidate
+    ( consolidate ) where
 
 
 import           Data.List.NonEmpty
@@ -24,7 +25,6 @@ import           Tokenomia.Adapter.Cardano.CLI.Transaction hiding (value)
 import Shh.Internal
     ( load,
       (|>),
-      ExecArg(asArg),
       ExecReference(SearchPath),
       captureWords )
 
@@ -64,24 +64,24 @@ consolidate'
     => Wallet
     -> m ()
 consolidate' wallet@Wallet {..} = do
-    ada <-  queryUTxOsFilterBy wallet containingStrictlyADAs
-    let amount = fold (value <$> ada)
+    adas <-  queryUTxOsFilterBy wallet containingStrictlyADAs
+    let amount = fold (value <$> adas )
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
     aGivenTxOutRef <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
 
     buildRaw "0" (toCardanoCLIOptions TxBuild
         { wallet = wallet
-        , txIns = fromList (fmap (FromWallet . txOutRef) ada)
+        , txIns = fromList (fmap (FromWallet . txOutRef) adas )
         , txOuts = ToWallet paymentAddress (lovelaceValueOf 1) :| []
         , metadataMaybe = Nothing
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..})
-    fees <- computeFees (Prelude.length ada) 1
+    fees <- computeFees (Prelude.length adas ) 1
     Slot synSlotAsInt <- getCurrentSlotSynced
     buildRaw (show fees) (toCardanoCLIOptions TxBuild
         { wallet = wallet
-        , txIns = fromList (fmap (FromWallet . txOutRef) ada)
+        , txIns = fromList (fmap (FromWallet . txOutRef) adas )
         , txOuts = ToWallet paymentAddress (amount PlutusTx.Prelude.- lovelaceValueOf fees) :| []
         , metadataMaybe = Nothing
         , validitySlotRangeMaybe = Nothing
@@ -99,25 +99,3 @@ consolidate' wallet@Wallet {..} = do
     printLn "Waiting for confirmation..."
     awaitTxCommitted aGivenTxOutRef 0
     printLn "\nTx committed into ledger"
-
-
-buildRaw
-    :: ( ExecArg a, MonadIO m, MonadReader Environment m)
-    => String
-    -> a
-    -> m ()
-buildRaw fee buildTxBody = do
-    (_, rawTx ) <- (\a-> (a,a <> "tx.raw")) <$> getFolderPath Transactions
-
-    liftIO $ cardano_cli
-        "transaction"
-        "build-raw"
-        (asArg buildTxBody)
-        "--fee" fee
-        "--out-file" rawTx
-    liftIO $ echo "transaction"
-        "build-raw"
-        (asArg buildTxBody)
-        "--fee" fee
-        "--out-file" rawTx
-        

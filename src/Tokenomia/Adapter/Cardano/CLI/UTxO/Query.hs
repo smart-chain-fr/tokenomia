@@ -19,14 +19,14 @@
 module Tokenomia.Adapter.Cardano.CLI.UTxO.Query
     ( query
     , queryUTxOsFilterBy
-    , getCurrency
     , askSelectUTxOByType
+    , retrieveTotalAmountFromAsset
     ) where
 
 
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
-
+import           Data.List.NonEmpty
 
 import           Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
 import           Shh.Internal
@@ -34,14 +34,12 @@ import           Ledger.Value
 
 import           Tokenomia.Adapter.Cardano.CLI.Wallet
 import           Tokenomia.Adapter.Cardano.CLI.Serialise
-import           Tokenomia.Adapter.Data.List (short, rmdups)
+import           Tokenomia.Adapter.Data.List (removeDuplicates)
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 import           Tokenomia.Adapter.Cardano.CLI.Value ()
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import           Tokenomia.Adapter.Cardano.Types
-import           Data.List.NonEmpty (fromList)
 import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, DisplayMenuItem, displayMenuItem)
-
 
 load SearchPath ["cardano-cli"]
 
@@ -61,30 +59,47 @@ queryUTxOsFilterBy ::
     => Wallet
     -> (UTxO -> Bool)
     -> m [UTxO]
-queryUTxOsFilterBy Wallet{..} f = filter f <$> query paymentAddress
+queryUTxOsFilterBy Wallet{..} f = Prelude.filter f <$> query paymentAddress
 
-getCurrency :: UTxO -> (CurrencySymbol, TokenName)
-getCurrency utxo = (currency, _tokenName)
-    where (currency, _tokenName, _) = getTokenFrom utxo
+getAssetClassList :: [UTxO] -> [AssetClass]
+getAssetClassList [] = []
+getAssetClassList (UTxO{..} : xs) =
+    Prelude.map (\(c, t, _) -> assetClass c t) (flattenValue value) ++ getAssetClassList xs
 
-queryTokensList :: (MonadIO m, MonadReader Environment m) => Wallet -> m [(CurrencySymbol, TokenName)]
-queryTokensList wallet = do
+queryAssetClassList :: (MonadIO m, MonadReader Environment m) => Wallet -> m [AssetClass]
+queryAssetClassList wallet = do
     utxos <- queryUTxOsFilterBy wallet (not . containingStrictlyADAs)
     if null utxos then return [] else do
-        let currencyList = map getCurrency utxos
-        return $ rmdups currencyList
+        let currencyList = getAssetClassList utxos -- TODO change this
+        return $ removeDuplicates currencyList
 
-askSelectUTxOByType :: (MonadIO m, MonadReader Environment m) => Wallet -> m (Maybe [UTxO])
+queryAssetClassFilterBy ::
+    ( MonadIO m
+    , MonadReader Environment m )
+    => Wallet
+    -> (AssetClass -> Bool)
+    -> m [AssetClass]
+queryAssetClassFilterBy wallet f = do
+    assetClasses <- queryAssetClassList wallet
+    return $ Prelude.filter f assetClasses
+
+askSelectUTxOByType :: (MonadIO m, MonadReader Environment m) => Wallet -> m (Maybe (NonEmpty AssetClass))
 askSelectUTxOByType wallet = do
-    tokensList <- queryTokensList wallet
+    tokensList <- queryAssetClassList wallet
     case tokensList of
         [] -> return Nothing
         tokenList -> do
-            (currency, _) <- askMenu $ fromList tokenList --displayMenuItem
-            queryUTxOsFilterBy wallet (containingGivenNativeToken currency) >>=
-                \case
-                    [] -> return Nothing 
-                    utxos -> return $ Just utxos
+            _assetClass <- askMenu $ fromList tokenList
+            utxos <- queryAssetClassFilterBy wallet (== _assetClass)
+            if null utxos then return Nothing else return (Just $ fromList utxos)
 
-instance DisplayMenuItem (CurrencySymbol, TokenName) where
-    displayMenuItem (currency, _tokenName) = toString _tokenName <> " - " <> short (show currency)
+instance DisplayMenuItem AssetClass where
+    displayMenuItem _assetClass = show _tokenName <> " - " <> show _currencySymbol --TODO : showHashView for currencySymbol
+        where (_currencySymbol, _tokenName) = unAssetClass _assetClass
+
+
+retrieveTotalAmountFromAsset :: AssetClass -> Wallet -> Integer 
+retrieveTotalAmountFromAsset asset Wallet{..} = do
+    allFlattenValues <- Prelude.map (\UTxO{..} -> flattenValue value) (query paymentAddress)
+    _flattenValues <- Prelude.filter (\(c, t, _) -> assetClass c t == asset) allFlattenValues
+    return $ sum (Prelude.map (\(_, _, a) -> a) _flattenValues)
