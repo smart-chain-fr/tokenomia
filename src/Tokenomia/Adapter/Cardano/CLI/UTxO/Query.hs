@@ -40,6 +40,7 @@ import           Tokenomia.Adapter.Cardano.CLI.Value ()
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import           Tokenomia.Adapter.Cardano.Types
 import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, DisplayMenuItem, displayMenuItem)
+import Ledger (Value)
 
 load SearchPath ["cardano-cli"]
 
@@ -70,7 +71,7 @@ queryAssetClassList :: (MonadIO m, MonadReader Environment m) => Wallet -> m [As
 queryAssetClassList wallet = do
     utxos <- queryUTxOsFilterBy wallet (not . containingStrictlyADAs)
     if null utxos then return [] else do
-        let currencyList = getAssetClassList utxos -- TODO change this
+        let currencyList = getAssetClassList utxos
         return $ removeDuplicates currencyList
 
 queryAssetClassFilterBy ::
@@ -97,9 +98,8 @@ instance DisplayMenuItem AssetClass where
     displayMenuItem _assetClass = show _tokenName <> " - " <> show _currencySymbol --TODO : showHashView for currencySymbol
         where (_currencySymbol, _tokenName) = unAssetClass _assetClass
 
-
-retrieveTotalAmountFromAsset :: AssetClass -> Wallet -> Integer 
-retrieveTotalAmountFromAsset asset Wallet{..} = do
-    allFlattenValues <- Prelude.map (\UTxO{..} -> flattenValue value) (query paymentAddress)
-    _flattenValues <- Prelude.filter (\(c, t, _) -> assetClass c t == asset) allFlattenValues
+retrieveTotalAmountFromAsset :: CurrencySymbol  -> NonEmpty UTxO -> Integer
+retrieveTotalAmountFromAsset currency utxos = do
+    allFlattenValues <- fold (value <$> utxos)
+    _flattenValues <- Prelude.filter (\(c, _, _) -> c == currency) allFlattenValues 
     return $ sum (Prelude.map (\(_, _, a) -> a) _flattenValues)
