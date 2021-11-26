@@ -34,13 +34,11 @@ import Data.Foldable ( Foldable(fold) )
 import Plutus.V1.Ledger.Ada
 import Ledger.Value
 
-
 getTokenFrom :: UTxO -> (CurrencySymbol,TokenName,Integer)
 getTokenFrom UTxO {..} = (head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue) value -- should contains only one native token (filtering ADAs) 
 
 getTokensFrom :: Value -> Value
 getTokensFrom = mkValue . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
-
 
 mkValue :: [(CurrencySymbol, TokenName, Integer)] -> Value
 mkValue = foldMap (\(a,b,c) -> singleton a b c)
@@ -70,6 +68,9 @@ instance Show UTxO where
 
 instance DisplayMenuItem UTxO where
   displayMenuItem UTxO {..} = showTxOutRef txOutRef <> " : " <> showValue value
+
+instance DisplayMenuItem CurrencySymbol where
+  displayMenuItem (CurrencySymbol a) = show a
 
 instance ToCLI TxOutRef where
   toCLI = T.pack . showTxOutRef
