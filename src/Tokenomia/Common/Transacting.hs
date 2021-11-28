@@ -15,21 +15,19 @@
 
 
 module Tokenomia.Common.Transacting
-    ( awaitTxCommitted
-    , TxBuild (..)
+    ( TxBuild (..)
     , TxInFromWallet (..)
     , TxInFromScript (..)
     , TxOut (..)
     , Metadata (..)
     , ValiditySlotRange (..)
     , MonetaryAction (..)
-    , submit
     , createMetadataFile
-    , register_protocol_parameters
-    , submit_tx
-    , submitCollateral
-    , sign_tx
-    , toCardanoCLIOptions
+    , build
+    , buildAndSubmit
+    , buildAndSubmitWithoutCollateral
+    , submitAndWait
+    , BuiltTx (..)
     ) where
 
 import Prelude hiding (head)
@@ -59,8 +57,6 @@ import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Serialise (toCLI, fromCLI)
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 
-
-
 import qualified Tokenomia.Wallet.UTxO as Wallet
 
 
@@ -71,156 +67,103 @@ import           Tokenomia.Wallet.CLI
 import           Tokenomia.Wallet.UTxO
 import           Tokenomia.Common.Hash   
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
-
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import Data.Coerce
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 
 load SearchPath ["echo","cardano-cli","md5sum","mv" ]
 
-newtype Metadata = Metadata FilePath
+data BuiltTx = BuiltTx {oneTxInput :: TxOutRef , txBuiltPath :: FilePath} deriving (Show)
 
-data ValiditySlotRange = ValiditySlotRange Slot Slot
-
-data TxBuild
-        = TxBuild
-            { inputsFromScript :: Maybe (NonEmpty TxInFromScript)
-            , inputsFromWallet  :: NonEmpty TxInFromWallet
-            , outputs :: NonEmpty TxOut
-            , validitySlotRangeMaybe :: Maybe ValiditySlotRange
-            , metadataMaybe :: Maybe Metadata
-            , tokenSupplyChangesMaybe :: Maybe (NonEmpty MonetaryAction)}
-
-
-data MonetaryAction
-        = Mint {script :: FilePath , amount :: Value}
-        | Burn {script :: FilePath , amount :: Value}
-
-
-data TxInFromScript = FromScript { utxoRef :: TxOutRef, script :: FilePath ,datum :: FilePath,redeemer :: FilePath }
-
-newtype TxInFromWallet = FromWallet { walletUTxO :: WalletUTxO}
-
-data TxOut = ToScript  { address :: Address , value :: Value, datumHash :: Hash}
-           | ToWallet  { address :: Address , value :: Value}
-
-
-class ToCardanoCLIOptions a where
-   toCardanoCLIOptions :: a -> [String]
-
-instance ToCardanoCLIOptions TxInFromScript  where
-    toCardanoCLIOptions FromScript {..}  =
-        [ "--tx-in"  , (T.unpack . toCLI) utxoRef
-        , "--tx-in-script-file" , script
-        , "--tx-in-datum-file" , datum
-        , "--tx-in-redeemer-file" , redeemer]
-
-instance ToCardanoCLIOptions TxInFromWallet  where
-    toCardanoCLIOptions FromWallet {walletUTxO = WalletUTxO {utxo = UTxO  {..}}}  =
-        ["--tx-in"  , (T.unpack . toCLI) txOutRef]
-
-instance ToCardanoCLIOptions TxOut  where
-    toCardanoCLIOptions ToScript {..}  =
-        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value
-        , "--tx-out-datum-hash"  , coerce datumHash]
-    toCardanoCLIOptions ToWallet {..}  =
-        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value]
-
-instance ToCardanoCLIOptions ValiditySlotRange  where
-    toCardanoCLIOptions (ValiditySlotRange (Slot x) (Slot y))  =
-        [ "--invalid-before" , show x
-        , "--invalid-hereafter" , show y]
-
-instance ToCardanoCLIOptions MonetaryAction where
-    toCardanoCLIOptions Mint {..}  =
-        [ "--mint" , (T.unpack . toCLI) amount
-        , "--mint-script-file" , script
-        , "--mint-redeemer-value",  "[]" ]
-    toCardanoCLIOptions Burn {..} =
-        [ "--mint" , "-" <> (T.unpack . toCLI) amount
-        , "--mint-script-file" , script
-        , "--mint-redeemer-value",  "[]"]
-
-instance ToCardanoCLIOptions Metadata  where
-    toCardanoCLIOptions (Metadata filepath)  =
-        [ "--metadata-json-file", filepath]
-
-
-instance (Foldable m, ToCardanoCLIOptions a) =>  ToCardanoCLIOptions (m a) where
-    toCardanoCLIOptions  = foldMap toCardanoCLIOptions
-
-instance ToCardanoCLIOptions TxBuild where
-    toCardanoCLIOptions TxBuild {..}
-     =  toCardanoCLIOptions inputsFromWallet
-     <> toCardanoCLIOptions inputsFromScript
-     <> toCardanoCLIOptions outputs
-     <> toCardanoCLIOptions tokenSupplyChangesMaybe
-     <> toCardanoCLIOptions validitySlotRangeMaybe
-     <> toCardanoCLIOptions metadataMaybe
-
-submit
+build
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
 
-    => TxBuild
-    -> m ()
-submit txBuild@TxBuild {..} = do
-    let childAddressRefs =  childAddressRef . walletUTxO <$> inputsFromWallet
+    => CollateralAddressRef
+    -> FeeAddressRef
+    -> TxBuild
+    -> m BuiltTx
+build collateralRef feeAddressRef txBuild@TxBuild {..} = do
+    let childAddressRefs =  
+            (Wallet.childAddressRef . walletUTxO <$> inputsFromWallet)
+            <> (coerce collateralRef :| [coerce feeAddressRef])
 
+    WalletUTxO {utxo = UTxO {txOutRef = collateral}} 
+        <- fetchCollateral (coerce collateralRef) >>= whenNothingThrow WalletWithoutCollateral 
+
+    WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef } 
+        <- selectBiggestStrictlyADAsNotCollateral (coerce feeAddressRef) >>= whenNothingThrow NoADAInWallet 
     
-    WalletUTxO {utxo = UTxO {txOutRef = collateral}} :| _ :: NonEmpty WalletUTxO
-        <- sequence (fetchCollateral <$> childAddressRefs) >>= whenNothingThrow WalletWithoutCollateral . sequence
-
-    biggestUtxosFromChildAddresses <- sequence (selectBiggestStrictlyADAsNotCollateral <$> childAddressRefs) >>= whenNothingThrow NoADAInWallet . sequence
-    let WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef } :: WalletUTxO = head biggestUtxosFromChildAddresses
 
     feesChildAddress <- ChildAddress.address <$> fetchById feesChildAddressRef
-    extendedPrivateKeyJSONPaths <-  (fmap .fmap) extendedPrivateKeyJSONPath $ sequence (fetchById <$> childAddressRefs)
+    extendedPrivateKeyJSONPaths <-  (fmap .fmap) extendedPrivateKeyJSONPath $ sequence (fetchById <$> (childAddressRefs) )
 
-    submit'
-      extendedPrivateKeyJSONPaths
-       fees
-       (toCardanoCLIOptions txBuild
-        <> [ "--tx-in"  , (T.unpack . toCLI) fees]
-        <> [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]
-        <> [ "--change-address"   , coerce feesChildAddress])
+    txBuiltPath <- build'
+                          extendedPrivateKeyJSONPaths
+                          (toCardanoCLIOptions txBuild
+                                <> [ "--tx-in"  , (T.unpack . toCLI) fees]
+                                <> [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]
+                                <> [ "--change-address"   , coerce feesChildAddress])
+    
+    return BuiltTx {oneTxInput = fees,txBuiltPath}
 
-submitCollateral
+
+
+buildAndSubmit
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
 
-    => TxBuild
+    => CollateralAddressRef
+    -> FeeAddressRef
+    -> TxBuild
     -> m ()
-submitCollateral txBuild@TxBuild {..} = do
-    let childAddressRefs =  childAddressRef . walletUTxO <$> inputsFromWallet
+buildAndSubmit collateralRef feeAddressRef txBuild = do
+    builtTx <- build collateralRef feeAddressRef txBuild
+    printLn "Submitting Tx" >> submitAndWait builtTx
 
-    biggestUtxosFromChildAddresses <- sequence (selectBiggestStrictlyADAsNotCollateral <$> childAddressRefs) >>= whenNothingThrow NoADAInWallet . sequence
-    let WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef } :: WalletUTxO =  head biggestUtxosFromChildAddresses
+
+buildAndSubmitWithoutCollateral
+    :: ( MonadIO m
+       , MonadReader Environment m
+       , MonadError TokenomiaError m)
+
+    => FeeAddressRef
+    -> TxBuild
+    -> m ()
+buildAndSubmitWithoutCollateral feeAddressRef txBuild@TxBuild {..} = do
+    let childAddressRefs =  
+            (Wallet.childAddressRef . walletUTxO <$> inputsFromWallet)
+            <> (coerce feeAddressRef :| [])
+
+    WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef } 
+        <- selectBiggestStrictlyADAsNotCollateral (coerce feeAddressRef) >>= whenNothingThrow NoADAInWallet 
 
     feesChildAddress <- ChildAddress.address <$> fetchById feesChildAddressRef
     extendedPrivateKeyJSONPaths <-  (fmap .fmap) extendedPrivateKeyJSONPath $ sequence (fetchById <$> childAddressRefs)
     
-    submit'
+    txBuiltPath <- build'
       extendedPrivateKeyJSONPaths
-       fees
-       (toCardanoCLIOptions txBuild
+      (toCardanoCLIOptions txBuild
         <> [ "--tx-in"  , (T.unpack . toCLI) fees]
         <> [ "--change-address"   , coerce feesChildAddress])
 
-submit'
+    printLn "Submitting Tx" >> submitAndWait BuiltTx {oneTxInput = fees,txBuiltPath}
+
+build'
     :: ( ExecArg a
        , MonadIO m
        , MonadReader Environment m )
     => NonEmpty FilePath
-    -> TxOutRef
     -> a
-    -> m ()
-submit' extendedPrivateKeyJSONPaths aGivenTxOutRef@TxOutRef{..} buildTxBody = do
+    -> m FilePath
+build' extendedPrivateKeyJSONPaths buildTxBody = do
     magicN <- asks magicNumber
     
     randomInt <- liftIO ( abs <$> randomIO :: IO Int )
-    (txFolder, rawTx ) <- (\a-> (a,a <> "tx_" <> show txOutRefId <> "_ " <> show randomInt <> ".raw")) <$> getFolderPath Transactions
+    (txFolder, rawTx ) <- (\a-> (a,a <> "tx_" <> show randomInt <> ".raw")) <$> getFolderPath Transactions
     protocolParametersPath <- register_protocol_parameters
     liftIO $ cardano_cli
         "transaction"
@@ -239,24 +182,25 @@ submit' extendedPrivateKeyJSONPaths aGivenTxOutRef@TxOutRef{..} buildTxBody = do
     liftIO $ mv rawTx rawHashTx
 
     printLn "Signing Tx"    >> sign_tx   rawHashTx signedHashTx extendedPrivateKeyJSONPaths
-    printLn "Submitting Tx" >> submit_tx signedHashTx
-    printLn "Waiting for confirmation..."
-    awaitTxCommitted aGivenTxOutRef 0
-    printLn "\nTx committed into ledger"
+    return signedHashTx
 
     where requiredSigners :: NonEmpty FilePath -> [String]
           requiredSigners xs = foldMap (\a -> ["--required-signer" ,  a ] ) xs
 
-submit_tx
+
+submitAndWait
     :: ( MonadIO m
        , MonadReader Environment m )
-    => FilePath
+    => BuiltTx
     ->  m ()
-submit_tx f = do
+submitAndWait BuiltTx {..} = do
     magicN <- asks magicNumber
     liftIO $ cardano_cli "transaction" "submit"
          "--testnet-magic" magicN
-         "--tx-file" f
+         "--tx-file" txBuiltPath
+    printLn "Waiting for confirmation..."
+    awaitTxCommitted oneTxInput 0
+    printLn "\nTx committed into ledger"
 
 awaitTxCommitted
     :: ( MonadIO m
@@ -321,3 +265,85 @@ createMetadataFile message = do
     liftIO (echo ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
         &> (Truncate . fromString) metadataJsonFilepath)
     return metadataJsonFilepath
+
+newtype Metadata = Metadata FilePath deriving (Eq,Show)
+
+data ValiditySlotRange = ValiditySlotRange Slot Slot deriving (Eq,Show)
+
+data TxBuild
+        = TxBuild
+            { inputsFromScript :: Maybe (NonEmpty TxInFromScript)
+            , inputsFromWallet  :: NonEmpty TxInFromWallet
+            , outputs :: NonEmpty TxOut
+            , validitySlotRangeMaybe :: Maybe ValiditySlotRange
+            , metadataMaybe :: Maybe Metadata
+            , tokenSupplyChangesMaybe :: Maybe (NonEmpty MonetaryAction)} deriving (Eq,Show)
+
+
+data MonetaryAction
+        = Mint {script :: FilePath , amount :: Value}
+        | Burn {script :: FilePath , amount :: Value} deriving (Eq,Show)
+
+
+data TxInFromScript = FromScript { utxoRef :: TxOutRef, script :: FilePath ,datum :: FilePath,redeemer :: FilePath } deriving (Eq,Show)
+
+newtype TxInFromWallet = FromWallet { walletUTxO :: WalletUTxO} deriving (Eq,Show)
+
+data TxOut = ToScript  { address :: Address , value :: Value, datumHash :: Hash}
+           | ToWallet  { address :: Address , value :: Value, datumMaybe :: Maybe FilePath} deriving (Eq,Show)
+
+
+class ToCardanoCLIOptions a where
+   toCardanoCLIOptions :: a -> [String]
+
+instance ToCardanoCLIOptions TxInFromScript  where
+    toCardanoCLIOptions FromScript {..}  =
+        [ "--tx-in"  , (T.unpack . toCLI) utxoRef
+        , "--tx-in-script-file" , script
+        , "--tx-in-datum-file" , datum
+        , "--tx-in-redeemer-file" , redeemer]
+
+instance ToCardanoCLIOptions TxInFromWallet  where
+    toCardanoCLIOptions FromWallet {walletUTxO = WalletUTxO {utxo = UTxO  {..}}}  =
+        ["--tx-in"  , (T.unpack . toCLI) txOutRef]
+
+instance ToCardanoCLIOptions TxOut  where
+    toCardanoCLIOptions ToScript {..}  =
+        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value
+        , "--tx-out-datum-hash"  , coerce datumHash]
+    toCardanoCLIOptions ToWallet {datumMaybe = Nothing , ..}  =
+        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value]
+    toCardanoCLIOptions ToWallet {datumMaybe = Just datum , ..}  =
+        [ "--tx-out" , coerce address <> "  " <> (T.unpack . toCLI) value
+        , "--tx-out-datum-embed-file", datum ]
+instance ToCardanoCLIOptions ValiditySlotRange  where
+    toCardanoCLIOptions (ValiditySlotRange (Slot x) (Slot y))  =
+        [ "--invalid-before" , show x
+        , "--invalid-hereafter" , show y]
+
+instance ToCardanoCLIOptions MonetaryAction where
+    toCardanoCLIOptions Mint {..}  =
+        [ "--mint" , (T.unpack . toCLI) amount
+        , "--mint-script-file" , script
+        , "--mint-redeemer-value",  "[]" ]
+    toCardanoCLIOptions Burn {..} =
+        [ "--mint" , "-" <> (T.unpack . toCLI) amount
+        , "--mint-script-file" , script
+        , "--mint-redeemer-value",  "[]"]
+
+instance ToCardanoCLIOptions Metadata  where
+    toCardanoCLIOptions (Metadata filepath)  =
+        [ "--metadata-json-file", filepath]
+
+
+instance (Foldable m, ToCardanoCLIOptions a) =>  ToCardanoCLIOptions (m a) where
+    toCardanoCLIOptions  = foldMap toCardanoCLIOptions
+
+instance ToCardanoCLIOptions TxBuild where
+    toCardanoCLIOptions TxBuild {..}
+     =  toCardanoCLIOptions inputsFromWallet
+     <> toCardanoCLIOptions inputsFromScript
+     <> toCardanoCLIOptions outputs
+     <> toCardanoCLIOptions tokenSupplyChangesMaybe
+     <> toCardanoCLIOptions validitySlotRangeMaybe
+     <> toCardanoCLIOptions metadataMaybe

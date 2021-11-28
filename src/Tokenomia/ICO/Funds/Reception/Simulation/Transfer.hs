@@ -1,0 +1,88 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
+
+module Tokenomia.ICO.Funds.Reception.Simulation.Transfer
+    ( dispatchAdasOnChildAdresses) where
+
+import           Prelude
+import           Control.Monad.Reader hiding (ask)
+import           Control.Monad.Except
+
+import           Tokenomia.Common.Environment
+import           Tokenomia.Common.Transacting
+
+import Data.List.NonEmpty as NEL
+import           Ledger.Ada as Ada
+import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.LocalRepository
+import           Tokenomia.Common.Error
+import           Tokenomia.Wallet.Collateral.Read
+import           Tokenomia.Wallet.CLI
+import           Tokenomia.Common.Shell.Console (printLn)
+import           Tokenomia.Common.Shell.InteractiveMenu (ask)
+import           Tokenomia.Common.Value
+import           Tokenomia.Wallet.Type
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.ChildAddress.LocalRepository
+
+
+dispatchAdasOnChildAdresses ::
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+    => m ()
+dispatchAdasOnChildAdresses = do
+    Wallet {name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
+        >>= \wallets -> do
+            printLn "Select the wallet containing funds : "
+            askToChooseAmongGivenWallets wallets
+    source@WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAInWallet
+
+    printLn $ "- We'll dispatch this amount " <> showValue value <> " from the 4th to the last child address generated "
+    chunkSize <- Ada.adaOf . fromIntegral <$> ask @Integer "- Chunk size : "
+    from <-  ask @Int "- From which index : "
+    to <-  ask @Int "- To which index : "
+    dispatchAdasOnChildAdresses' name source from to chunkSize
+
+dispatchAdasOnChildAdresses' ::
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+    => WalletName
+    -> WalletUTxO
+    -> Int
+    -> Int
+    -> Ada
+    -> m ()
+dispatchAdasOnChildAdresses' walletName source@WalletUTxO {utxo = UTxO {value}} from to chunkSize  = do
+
+    indexes <-  Prelude.take (to - from) . NEL.drop from  <$> fetByWalletIndexedAddress walletName
+    let collateral = CollateralAddressRef $ ChildAddressRef walletName 0
+        fees       = FeeAddressRef $ ChildAddressRef walletName 1
+        adaUtxosNumber = fromIntegral $ Ada.fromValue value `div` chunkSize
+        utxoPerIndex = adaUtxosNumber `div` Prelude.length indexes
+
+    printLn $ "nb utxos = " <> show adaUtxosNumber
+    printLn $ "utxoPerIndex = " <> show utxoPerIndex
+
+    buildAndSubmit
+      collateral
+      fees
+      TxBuild
+        { inputsFromWallet  = FromWallet source :| []
+        , inputsFromScript  = Nothing
+        , outputs = NEL.fromList $ txOUtForIndex utxoPerIndex chunkSize =<< indexes
+        , validitySlotRangeMaybe = Nothing
+        , tokenSupplyChangesMaybe = Nothing
+        , metadataMaybe = Nothing}
+
+txOUtForIndex :: Int -> Ada -> IndexedAddress -> [TxOut]
+txOUtForIndex utxoPerIndex chunkSize IndexedAddress {..} =
+    replicate utxoPerIndex
+     ToWallet
+        { address= address
+        , value = Ada.toValue chunkSize
+        , datumMaybe = Nothing }

@@ -32,12 +32,21 @@ import           Tokenomia.Common.Hash
 
 data WalletUTxO = WalletUTxO
               { childAddressRef :: ChildAddressRef 
-              , utxo :: UTxO} deriving (Eq)
+              , utxo :: UTxO} 
+              deriving (Eq)
+
+instance Ord WalletUTxO where 
+  compare x y = compare (utxo x) (utxo y)
+
 
 data UTxO = UTxO
               { txOutRef :: TxOutRef
               , value :: Value
               , maybeDatumHash :: Maybe Hash } deriving (Eq)
+
+instance Ord UTxO where 
+  compare x y = compare (txOutRef x) (txOutRef y)
+
 
 instance Show WalletUTxO where
   show WalletUTxO {utxo = UTxO {..}} = showTxOutRef txOutRef <> " : " <> showValue value

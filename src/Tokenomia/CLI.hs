@@ -40,8 +40,9 @@ import qualified Tokenomia.Vesting.Retrieve as Vesting
 
 import qualified Tokenomia.Node.Status as Node
 import qualified Tokenomia.ICO.Funds.Reception.DryRun as ICO
+import qualified Tokenomia.ICO.Funds.Reception.Simulation.Transfer as ICO
 
-
+import qualified Streamly.Prelude as S
 
 load SearchPath ["cardano-cli"]
 
@@ -96,7 +97,7 @@ instance DisplayMenuItem SelectEnvironment where
 
 
 recursiveMenu 
-  :: ( MonadIO m
+  :: ( S.MonadAsync m
      , MonadReader Environment m
      , MonadError TokenomiaError m) =>  m ()
 recursiveMenu = do
@@ -122,6 +123,11 @@ recursiveMenu = do
         FundAlreadyRetrieved      -> printLn "All the funds are locked and can't be retrieve so far.."
         BlockFrostError e         -> printLn $ "Blockfrost issue " <> show e
         NoActiveAddressesOnWallet -> printLn "No Active Addresses, add funds on this wallet"
+        InconsistenciesBlockFrostVSLocalNode errorMsg ->
+                                     printLn $ "Inconsistencies Blockfrost vs Local Node  :" <> errorMsg
+        NoICOTransactionsToBePerformOnThisWallet  
+                                  -> printLn $ "No ICO Transactions to be performed on wallet used "
+        NoDerivedChildAddress  -> printLn $ "No derived child adresses on this wallet"
         ChildAddressNotIndexed w address 
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")
             
@@ -129,7 +135,8 @@ recursiveMenu = do
   recursiveMenu
 
 
-runAction :: ( MonadIO m
+runAction 
+  :: ( S.MonadAsync m
      , MonadReader Environment m
      , MonadError TokenomiaError m) 
      => Action 
@@ -142,7 +149,6 @@ runAction = \case
       WalletCollateral -> Wallet.createCollateral 
       WalletRestore    -> Wallet.restoreByMnemonics
       WalletRemove     -> Wallet.remove
-      ICOReceptionPlanList  -> ICO.dryRun
       TokenMint        -> Token.mint
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
@@ -150,6 +156,8 @@ runAction = \case
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
+      ICOFundsValidationDryRun  -> ICO.dryRun
+      ICOFundsDispatchSimulation -> ICO.dispatchAdasOnChildAdresses
 
 actions :: NonEmpty Action
 actions = NonEmpty.fromList [
@@ -166,7 +174,8 @@ actions = NonEmpty.fromList [
     VestingVestFunds,
     VestingRetrieveFunds,
     NodeStatus,
-    ICOReceptionPlanList
+    ICOFundsValidationDryRun,
+    ICOFundsDispatchSimulation
     ]
 
 data Action
@@ -183,7 +192,8 @@ data Action
   | VestingVestFunds
   | VestingRetrieveFunds
   | NodeStatus 
-  | ICOReceptionPlanList
+  | ICOFundsValidationDryRun
+  | ICOFundsDispatchSimulation
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
@@ -201,6 +211,7 @@ instance DisplayMenuItem Action where
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     NodeStatus            ->  "[Node]    - Status"
-    ICOReceptionPlanList  ->  "[ICO]     - List Reception Funds Plans from a Stake Address"
+    ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
+    ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch on child addresses ADAs)"
 
 

@@ -8,15 +8,15 @@ module Tokenomia.Ada.Transfer
     ( transfer
     , transfer' ) where
 
-import           Data.List.NonEmpty
+import           Prelude
 import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
-import           Ledger.Ada ( lovelaceValueOf )
 import           Tokenomia.Common.Environment
-import           Tokenomia.Common.Transacting hiding (value)
+import           Tokenomia.Common.Transacting
 
-
+import Data.List.NonEmpty as NEL
+import           Ledger.Ada as Ada
 import           Tokenomia.Wallet.UTxO
 import           Tokenomia.Wallet.LocalRepository
 import           Tokenomia.Common.Error
@@ -29,7 +29,7 @@ import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Common.Address
 
-transfer :: 
+transfer ::
     ( MonadIO m
     , MonadReader Environment m
     , MonadError TokenomiaError m)
@@ -37,7 +37,7 @@ transfer ::
 transfer = do
     Wallet {name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
-            printLn "Select the minter wallet : "
+            printLn "Select the wallet containing funds : "
             askToChooseAmongGivenWallets wallets
     WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAInWallet
 
@@ -50,7 +50,7 @@ transfer = do
 
 type MetadataLabel = String
 
-transfer' :: 
+transfer' ::
     ( MonadIO m
     , MonadReader Environment m
     , MonadError TokenomiaError m)
@@ -64,14 +64,14 @@ transfer' senderWallet receiverAddr amount labelMaybe = do
     ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAInWallet
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
 
-    submit
+    buildAndSubmit
+      (CollateralAddressRef firstAddress)
+      (FeeAddressRef firstAddress)
       TxBuild
         { inputsFromWallet  = FromWallet ada :| []
-        , inputsFromScript  = Nothing 
-        , outputs = ToWallet receiverAddr (lovelaceValueOf amount) :| []
+        , inputsFromScript  = Nothing
+        , outputs = ToWallet receiverAddr (lovelaceValueOf amount) Nothing :| []
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}
-
-
 

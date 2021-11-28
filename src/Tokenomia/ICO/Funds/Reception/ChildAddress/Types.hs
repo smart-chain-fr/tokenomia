@@ -81,7 +81,10 @@ data ReceivedFunds
             , receivedAt :: Slot } deriving Eq
 
 instance Ord ReceivedFunds where 
-    compare x y = compare (receivedAt x) (receivedAt y)
+    compare x y = case compare (receivedAt x) (receivedAt y) of 
+      LT -> LT
+      EQ -> compare (txOutRef x) (txOutRef y) 
+      GT -> GT
 
 instance Show ReceivedFunds where
     show ReceivedFunds {..}

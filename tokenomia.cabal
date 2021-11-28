@@ -44,6 +44,7 @@ library
       Tokenomia.Token.CLAPStyle.Mint
       Tokenomia.Token.CLAPStyle.Burn
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
+      Tokenomia.ICO.Funds.Reception.CardanoCLI.Command
       Tokenomia.Script.LocalRepository
       Tokenomia.Script.ChainIndex
       Tokenomia.Script.UTxO
@@ -74,15 +75,18 @@ library
       Tokenomia.Common.Shell.InteractiveMenu
       Tokenomia.Common.Shell.Console
       Tokenomia.Common.Environment
-      Tokenomia.Common.Data
+      Tokenomia.Common.Datum
       Tokenomia.Common.Address
       Tokenomia.Common.Hash
       Tokenomia.ICO.Funds.Reception.Command
       Tokenomia.ICO.Funds.Reception.Plan
-      Tokenomia.ICO.Funds.Reception.Transact
       Tokenomia.ICO.Funds.Reception.DryRun
       Tokenomia.ICO.Funds.Reception.ChildAddress.State
       Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+      Tokenomia.ICO.Funds.Reception.CardanoCLI.Transact
+      Tokenomia.ICO.Funds.Reception.CardanoCLI.Convert
+      Tokenomia.ICO.Funds.Reception.Simulation.Transfer
+      Tokenomia.Common.PageNumber 
       Tokenomia.ICO.RoundSettings
     build-depends:
       base >= 4.9 && < 5,
@@ -125,7 +129,9 @@ library
       safe-money,
       ordered-containers,
       nonempty-containers,
-      streamly
+      streamly,
+      deepseq,
+      hashable
     hs-source-dirs: src 
 
 test-suite tokenomia-tests

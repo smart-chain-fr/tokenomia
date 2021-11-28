@@ -22,6 +22,8 @@ import           Control.Monad.Except
 import           Ledger.Value 
 import           Plutus.V1.Ledger.Ada
 
+
+import qualified Tokenomia.Common.Datum as Script
 import qualified Tokenomia.Script.LocalRepository as Script
 
 import           Tokenomia.Wallet.UTxO as Wallet
@@ -119,11 +121,13 @@ vestFunds'
 
     datumVoidHash <- Script.getDataHash ()
 
-    submit
+    buildAndSubmit
+      (CollateralAddressRef $ ChildAddressRef ownerWalletName 0)
+      (FeeAddressRef $ ChildAddressRef ownerWalletName 0)
       TxBuild
         { inputsFromWallet =  FromWallet utxoWithTokens :| []
         , inputsFromScript = Nothing
-        , outputs = ToWallet ownerAddr (changeBackToOwner + lovelaceValueOf 1379280) 
+        , outputs = ToWallet ownerAddr (changeBackToOwner + lovelaceValueOf 1379280) Nothing 
                 :| [ ToScript 
                      { address = Script.onChain scriptLocation
                      , value =  (vestingTrancheAmount . vestingTranche1) params

@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Tokenomia.Common.TxOutRef 
-    (showTxOutRef
+    ( showTxOutRef
+    , TxOutRef (..)
     ) where
 
 import qualified Data.Text as T

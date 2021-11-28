@@ -82,11 +82,13 @@ mint' walletName tokenName amount = do
 
     monetaryScript <- registerMintingScriptFile monetaryPolicy
 
-    submit
+    buildAndSubmit
+      (CollateralAddressRef firstChildAddress)
+      (FeeAddressRef firstChildAddress)
       TxBuild
         { inputsFromWallet =  FromWallet walletUTxOToConsume :| []
         , inputsFromScript = Nothing
-        , outputs = ToWallet address (valueToMint + lovelaceValueOf 1379280 ):| [] 
+        , outputs = ToWallet address (valueToMint + lovelaceValueOf 1379280 ) Nothing :| [] 
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Mint { amount = valueToMint, script = monetaryScript} :| []
         , metadataMaybe = Nothing 

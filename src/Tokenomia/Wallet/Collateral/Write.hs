@@ -31,6 +31,7 @@ import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.Type as Wallet
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef 
 import           Tokenomia.Wallet.ChildAddress.LocalRepository 
+
 createCollateral :: 
     ( MonadIO m
     , MonadReader Environment m
@@ -55,11 +56,12 @@ createCollateral' walletName = do
     assertCollateralNotAlreadyCreated firstAddress
     ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAInWallet
     ChildAddress {address = senderAddr} <- fetchById firstAddress
-    submitCollateral
+    buildAndSubmitWithoutCollateral
+      (FeeAddressRef firstAddress )
       TxBuild
         { inputsFromWallet =  FromWallet ada :| []
         , inputsFromScript = Nothing
-        , outputs = ToWallet senderAddr (adaValueOf 2.0) :| [] 
+        , outputs = ToWallet senderAddr (adaValueOf 2.0) Nothing :| [] 
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , metadataMaybe = Nothing }

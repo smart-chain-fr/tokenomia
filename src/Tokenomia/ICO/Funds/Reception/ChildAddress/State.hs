@@ -31,7 +31,7 @@ import           Ledger ( Slot(..), TxOutRef(..) )
 
 
 
-import Control.Monad.Reader 
+import Control.Monad.Reader
 
 import qualified Blockfrost.Client as B
 
@@ -45,22 +45,32 @@ import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.Common.PageNumber
 
-fetchActiveAddresses 
+import           Data.Coerce
+
+fetchActiveAddresses
     :: ( MonadIO m
        , MonadError  TokenomiaError m)
-    => Wallet
-    -> m (NonEmpty Address)
-fetchActiveAddresses  Wallet {stakeAddress = Address stakeAddress}= do 
-    prj <- liftIO B.projectFromEnv
-    liftIO $ B.runBlockfrost prj $ do 
-        addresses :: [Address] <- (fmap . fmap) (Address . T.unpack . coerce)  (B.getAccountAssociatedAddresses $ fromString stakeAddress)
-        (return . nonEmpty) addresses  
-    >>= (\case
-            Left e -> throwError $ BlockFrostError e
-            Right Nothing -> throwError NoActiveAddressesOnWallet
-            Right (Just xs) ->  return xs)
+    => RoundAddresses
+    -> PageNumber
+    -> Wallet
+    -> m (Maybe (NonEmpty Address))
+fetchActiveAddresses roundAddresses pageNumber Wallet {stakeAddress = Address stakeAddress} 
+    = do
+        let paged = B.Paged {countPerPage = 100, pageNumber = coerce pageNumber } 
+        prj <- liftIO B.projectFromEnv
+        liftIO $ B.runBlockfrost prj $ do
+            addresses :: [Address] <- (fmap . fmap) (Address . T.unpack . coerce)  
+                                        (B.getAccountAssociatedAddresses' (fromString stakeAddress) paged B.asc )
+            (return . nonEmpty . Prelude.filter (notElemFromRoundAddreses roundAddresses )) addresses
+        >>= (\case
+                Left e -> throwError $ BlockFrostError e
+                Right res -> return res)
 
+notElemFromRoundAddreses :: RoundAddresses -> Address -> Bool
+notElemFromRoundAddreses r address = address `notElem` getRoundAddresses r
 
 fetchAllWhiteListedFunds
     :: ( MonadIO m
@@ -69,7 +79,7 @@ fetchAllWhiteListedFunds
     -> m (NonEmpty WhiteListedInvestorState)
 fetchAllWhiteListedFunds whiteListedInvestorRefs = do
     prj <- liftIO B.projectFromEnv
-    liftIO $ B.runBlockfrost prj $ do 
+    liftIO $ B.runBlockfrost prj $ do
         fetchAllWhiteListedFunds' whiteListedInvestorRefs
     >>= (\case
             Left e -> throwError $ BlockFrostError e
@@ -77,11 +87,11 @@ fetchAllWhiteListedFunds whiteListedInvestorRefs = do
 
 mkWhiteListedInvestorState
     :: WhiteListedInvestorRef
-    -> AddressVolumes 
-    -> OSet ReceivedFunds 
-    -> WhiteListedInvestorState 
-mkWhiteListedInvestorState investorRef volumes allReceivedFunds 
-    = WhiteListedInvestorState {..} 
+    -> AddressVolumes
+    -> OSet ReceivedFunds
+    -> WhiteListedInvestorState
+mkWhiteListedInvestorState investorRef volumes allReceivedFunds
+    = WhiteListedInvestorState {..}
 
 fetchAllWhiteListedFunds'
     :: NonEmpty WhiteListedInvestorRef

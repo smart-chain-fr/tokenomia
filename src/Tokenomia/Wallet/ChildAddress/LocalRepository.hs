@@ -24,7 +24,9 @@ module Tokenomia.Wallet.ChildAddress.LocalRepository
     , getAddressIndexesPath
     , Wallet (..)
     , ChildAddress (..)
-    , fetchIndexedAddresses
+    , fetchByAddresses
+    , toIndexedAddress
+    , fetByWalletIndexedAddress
     ) where
 
 import           Data.String
@@ -50,18 +52,21 @@ import           System.Directory
 import           Tokenomia.Common.Error
 import           Control.Monad.Except
 
+
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
 
 data ChildAddress = ChildAddress
-              { index :: ChildAddressIndex
+              { childAddressRef :: ChildAddressRef
               , address :: Address
               , extendedPrivateKeyJSONPath :: FilePath
               , publicKeyHash :: PubKeyHash  } deriving Eq
 
 
+toIndexedAddress :: ChildAddress -> IndexedAddress
+toIndexedAddress ChildAddress {..} = IndexedAddress {..}
 
 instance Ord ChildAddress where
-    compare ChildAddress {index = x} ChildAddress {index = y} = compare x y
+    compare ChildAddress {childAddressRef = x} ChildAddress {childAddressRef = y} = compare x y
 
 data ChildAddressFile
         = AddressTxt
@@ -117,23 +122,23 @@ getChildAddressFilePath childAddressRef file
      <$> getChildAddressPath childAddressRef
 
 
-fetchIndexedAddresses
+fetchByAddresses
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> NEL.NonEmpty Address
     -> m (NEL.NonEmpty IndexedAddress)
-fetchIndexedAddresses walletName = mapM (fetchIndexedAddress walletName)
+fetchByAddresses walletName = mapM (fetchByAddress walletName)
 
-fetchIndexedAddress
+fetchByAddress
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> Address
     -> m IndexedAddress
-fetchIndexedAddress walletName address = do
+fetchByAddress walletName address = do
     addressIndexPath <- getAddressIndexPath walletName address
     (liftIO $ doesFileExist addressIndexPath)
      >>= \case
@@ -145,20 +150,41 @@ fetchIndexedAddress walletName address = do
                     , childAddressRef = ChildAddressRef walletName (coerce index)}
 
 
-fetchByWallet
+
+fetByWalletIndexedAddress
     :: ( MonadIO m
-       , MonadReader Environment m )
+       , MonadReader Environment m 
+       , MonadError  TokenomiaError m)
     => WalletName
-    -> m (NESet ChildAddress)
-fetchByWallet name = do
+    -> m (NEL.NonEmpty IndexedAddress  )
+fetByWalletIndexedAddress a = (fmap . fmap) toIndexedAddress (toAscList <$> fetchByWallet a) 
+
+
+fetchDerivedChildAddressIndexes 
+    :: ( MonadIO m
+       , MonadReader Environment m 
+       , MonadError  TokenomiaError m)
+    => WalletName
+    -> m (NEL.NonEmpty ChildAddressIndex)
+fetchDerivedChildAddressIndexes  name = do 
     childAddressesPath <- getChildAddressesPath name
     liftIO $
         (fmap.fmap.fmap) (ChildAddressIndex . read @Integer . last . splitOn "/" . C.unpack)
         NEL.nonEmpty . tail <$>  -- remove ./    
         (find childAddressesPath "-type" "d" |> captureWords) -- return ./ ./0 ./1
     >>= \case
-        Nothing -> error $ "inconsistency : no child address in wallet " <> name
-        Just indexes -> fromList <$> mapM fetchById (ChildAddressRef name <$> indexes)
+        Nothing -> throwError NoDerivedChildAddress
+        Just indexes -> return indexes
+
+fetchByWallet
+    :: ( MonadIO m
+       , MonadReader Environment m 
+       , MonadError  TokenomiaError m)
+    => WalletName
+    -> m (NESet ChildAddress)
+fetchByWallet name = do
+    fetchDerivedChildAddressIndexes name 
+    >>= \indexes -> fromList <$> mapM fetchById (ChildAddressRef name <$> indexes)
 
 
 fetchById
@@ -166,7 +192,7 @@ fetchById
        , MonadReader Environment m )
     => ChildAddressRef
     -> m ChildAddress
-fetchById childAddressRef@ChildAddressRef {..} = do
+fetchById childAddressRef = do
     let getPath = getChildAddressFilePath childAddressRef
     address       <- getPath AddressTxt
                         >>= \path -> Address . C.unpack  <$> liftIO (cat path |> captureTrim)

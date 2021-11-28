@@ -18,11 +18,8 @@ module Tokenomia.Script.LocalRepository
     , getScriptLocation
     , ScriptLocation (..)
     , getMonetaryPolicyPath
-    , getDataHash
-    , persistDataInTMP
     ) where
 
-import           Data.String
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Lazy as LB
@@ -30,7 +27,6 @@ import qualified Data.ByteString.Lazy as LB
 
 import           Control.Monad.Reader
 
-import           System.Random
 import           System.Directory
 
 import           Shh.Internal
@@ -44,16 +40,10 @@ import qualified Cardano.Api.Shelley  as Shelley
 import           Ledger hiding (Address)
 
 import qualified Plutus.V1.Ledger.Scripts as Script
-import           PlutusTx.IsData.Class ( ToData )
 
 import           Tokenomia.Common.Environment
-
-
-import           Tokenomia.Common.Data (dataToJSONString)
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-
 import           Tokenomia.Common.Address
-import           Tokenomia.Common.Hash
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -118,15 +108,3 @@ toPlutusScriptV1
   . LB.toStrict
   . serialise
 
-getDataHash :: (MonadIO m, MonadReader Environment m, ToData a) => a -> m Hash
-getDataHash a = do
-    filePath <- persistDataInTMP a
-    liftIO $ Hash . init . C.unpack  <$>  (cardano_cli "transaction" "hash-script-data" "--script-data-file" filePath |> capture)
-
-persistDataInTMP :: (MonadIO m, MonadReader Environment m, ToData a) => a -> m FilePath
-persistDataInTMP a = do
-    tmpFolder <- getFolderPath TMP
-    randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
-    let filePath = tmpFolder <> show randomInt <> ".txt"
-    liftIO $ echo  (dataToJSONString a) &> (Truncate . fromString) filePath
-    return filePath

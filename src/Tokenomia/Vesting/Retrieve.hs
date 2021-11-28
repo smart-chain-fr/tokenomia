@@ -26,7 +26,7 @@ import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Node
 import           Tokenomia.Common.Transacting
 import           Tokenomia.Wallet.UTxO as Wallet
-
+import qualified Tokenomia.Common.Datum as Script
 import qualified Tokenomia.Wallet.LocalRepository as Wallet
 import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
 
@@ -61,7 +61,7 @@ retrieveFunds' walletName (Vesting
     let firstChildAddress = ChildAddressRef walletName 0
     adas <- selectBiggestStrictlyADAsNotCollateral firstChildAddress >>= whenNothingThrow NoADAInWallet
     currentSlot <- getCurrentSlotSynced
-    voidDataFilePath <- Script.persistDataInTMP ()
+    voidDataFilePath <- Script.registerDatum ()
     datumVoidHash <- Script.getDataHash ()
     ChildAddress {address = walletAddress0} <- fetchById firstChildAddress 
     let inputsFromWallet = FromWallet adas :| [] 
@@ -79,11 +79,11 @@ retrieveFunds' walletName (Vesting
         outputsEither = case (s1,s2) of
             (Available,Available) ->  
                 let tokensThatCanBeVested = v1 + v2
-                in Right $ ToWallet walletAddress0 tokensThatCanBeVested :| [] 
+                in Right $ ToWallet walletAddress0 tokensThatCanBeVested Nothing :| [] 
             (Available,Locked ) -> 
                 let tokensThatCanBeVested = v1
                     remainingTokensOnScript = v2
-                in Right $ ToWallet walletAddress0 tokensThatCanBeVested 
+                in Right $ ToWallet walletAddress0 tokensThatCanBeVested Nothing
                    :| [ToScript 
                         { address   = Script.onChain scriptLocation
                         , value     = remainingTokensOnScript
@@ -91,22 +91,25 @@ retrieveFunds' walletName (Vesting
             (Locked,Available) -> 
                 let remainingTokensOnScript = v1
                     tokensThatCanBeVested = v2
-                in Right $ ToWallet walletAddress0 tokensThatCanBeVested 
+                in Right $ ToWallet walletAddress0 tokensThatCanBeVested Nothing
                     :| [ToScript 
                         { address   = Script.onChain scriptLocation
                         , value     = remainingTokensOnScript
                         , datumHash = datumVoidHash}] 
             (Retrieved ,Available) -> 
                 let tokensThatCanBeVested = v2
-                in Right $ ToWallet walletAddress0 tokensThatCanBeVested :| [] 
+                in Right $ ToWallet walletAddress0 tokensThatCanBeVested Nothing :| [] 
             (Available ,Retrieved) -> 
                 let tokensThatCanBeVested = v1
-                in Right $ ToWallet walletAddress0 tokensThatCanBeVested :| []               
+                in Right $ ToWallet walletAddress0 tokensThatCanBeVested Nothing :| []               
             (Retrieved ,Locked )  -> Left NoFundsToBeRetrieved
             (Locked  ,Retrieved) -> Left NoFundsToBeRetrieved
             (Retrieved ,Retrieved) -> Left FundAlreadyRetrieved 
             (Locked   ,Locked )  -> Left AllFundsLocked
             
     outputs <- liftEither outputsEither
-    submit TxBuild{..} 
+    buildAndSubmit
+        (CollateralAddressRef firstChildAddress)
+        (FeeAddressRef firstChildAddress) 
+        TxBuild{..} 
 

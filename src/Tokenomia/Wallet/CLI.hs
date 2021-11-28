@@ -45,7 +45,7 @@ import           Tokenomia.Wallet.UTxO
 
 import           Tokenomia.Common.Value
 import           Tokenomia.Common.Address
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef 
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Wallet.ChildAddress.LocalRepository
 
 askWalletName :: (MonadIO m) => m String
@@ -75,11 +75,11 @@ askUTxO = askUTxOFilterBy (const True)
 selectBiggestStrictlyADAsNotCollateral
   ::( MonadIO m
     , MonadReader Environment m)
-  => ChildAddressRef 
+  => ChildAddressRef
   -> m (Maybe WalletUTxO)
 selectBiggestStrictlyADAsNotCollateral childAddressRef  = do
-  adas :: Maybe (NonEmpty WalletUTxO) 
-    <- nonEmpty 
+  adas :: Maybe (NonEmpty WalletUTxO)
+    <- nonEmpty
        . P.filter ((&&) <$> containingStrictlyADAs . value . utxo <*> not . containsCollateral . value . utxo)  <$> queryUTxO childAddressRef
   return (last . sortWith (\WalletUTxO { utxo = UTxO {value}} ->
                         maybe
@@ -120,19 +120,22 @@ askToChooseAmongGivenUTxOs = askMenu
 
 
 generateChildAddresses
-  ::( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m)
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
   => m ()
 generateChildAddresses = do
    w@Wallet {name} <- Repository.fetchAll >>= whenNullThrow NoWalletRegistered
         >>= \wallets -> do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets
-   number <- ChildAddressIndex <$> askFilterM @Integer "> please enter the number of child adresses you need : " (\i -> return $ 0 < i)
+   from <- askFilterM @Integer "> from : " (\i -> return $ 0 < i)
+   to <-   askFilterM @Integer "> to : " (\i -> return $ from < i)
 
    mapM_ (\childAddressRef@ChildAddressRef{index} -> do
            deriveChildAddress childAddressRef
            printLn $ " - Derived Child Address " <> (show @Integer . coerce $ index)
-            ) $ ChildAddressRef name <$> [0..number-1]
+            ) $ ChildAddressRef name . ChildAddressIndex <$> [from..to]
 
    displayOne w
 
@@ -148,25 +151,29 @@ register = do
 
 
 displayOne
-  ::( MonadIO m, MonadReader Environment m)
-  => Wallet 
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+  => Wallet
   -> m ()
 displayOne Wallet{..} =  do
   addresses <- fetchByWallet name
   printLn $ "| " <> name
         <> "\n   | Stake Address: " <> coerce stakeAddress
         <> "\n   | Child Addresses: " <> (show . size) addresses
-  mapM_ (\ChildAddress {index = index@(ChildAddressIndex indexInt),..} -> do
+  mapM_ (\ChildAddress {childAddressRef = ChildAddressRef {index = index@(ChildAddressIndex indexInt)},..} -> do
       printLn $ "      [" <> show indexInt <> "] " <> coerce address
       utxos <- queryUTxO $ ChildAddressRef name index
       case utxos of
         [] -> return ()
         a  -> mapM_ (\utxo -> printLn ("         - " <> show utxo)) a) (toAscList addresses)
-            
+
 
 
 displayAll
-  ::( MonadIO m, MonadReader Environment m)
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
   => m ()
 displayAll =
   Repository.fetchAll

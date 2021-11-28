@@ -28,7 +28,10 @@ data TokenomiaError
     | FundAlreadyRetrieved
     | BlockFrostError B.BlockfrostError 
     | NoActiveAddressesOnWallet 
-    | ChildAddressNotIndexed WalletName Address 
+    | ChildAddressNotIndexed WalletName Address
+    | InconsistenciesBlockFrostVSLocalNode String 
+    | NoICOTransactionsToBePerformOnThisWallet 
+    | NoDerivedChildAddress
     deriving Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)

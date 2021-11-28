@@ -35,7 +35,6 @@ import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 import           Tokenomia.Common.Address
 
 import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef 
 import           Tokenomia.Wallet.LocalRepository.Folder 
 
 import           Tokenomia.Wallet.ChildAddress.LocalRepository hiding (fetchById)
