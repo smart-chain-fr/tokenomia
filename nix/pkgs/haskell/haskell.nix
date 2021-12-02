@@ -36,7 +36,6 @@ let
       "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" = "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
       "https://github.com/input-output-hk/cardano-wallet"."ae7569293e94241ef6829139ec02bd91abd069df" = "1mv1dhpkdj9ridm1fvq6jc85qs6zvbp172228rq72gyawjwrgvi6";
       "https://github.com/input-output-hk/cardano-addresses"."d2f86caa085402a953920c6714a0de6a50b655ec" = "0p6jbnd7ky2yf7bwb1350k8880py8dgqg39k49q02a6ij4ld01ay";
-      "https://github.com/smart-chain-fr/blockfrost-haskell"."175cf5da3c173f89dbeec06c64d136be215d2439" = "0x0529rl99jsvkcy28m7bg5lq2z7yjj8pbcc0yz1lkfccnmpv7g1";
     };
 
     modules = [

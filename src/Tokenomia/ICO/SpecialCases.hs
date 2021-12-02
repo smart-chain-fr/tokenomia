@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Tokenomia.ICO.Funds.Emission.SpecialCases where
+module Tokenomia.ICO.SpecialCases where
 import           Control.Concurrent
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Ledger.Value as L
@@ -18,9 +18,9 @@ import           Tokenomia.Adapter.Cardano.CLI.Environment ( Environment )
 import           Tokenomia.Adapter.Cardano.CLI.UTxO.Query (queryUTxOsFilterBy)
 import           Tokenomia.Adapter.Cardano.CLI.UTxO
 
-import           Tokenomia.ICO.Funds.Emission.SpecialCases.Multisig (multisigOneUTxO, multisigTwoUTxOs)
-import           Tokenomia.ICO.Funds.Emission.SpecialCases.MultiUTxOs ( multiUTxOsSameAddress )
-import           Tokenomia.ICO.Funds.Emission.SpecialCases.NativeTokens ( sendTokensAndADAs )
+import           Tokenomia.ICO.SpecialCases.Multisig (multisigOneUTxO, multisigTwoUTxOs)
+import           Tokenomia.ICO.SpecialCases.MultiUTxOs ( multiUTxOsSameAddress )
+import           Tokenomia.ICO.SpecialCases.NativeTokens ( sendTokensAndADAs )
 
 
 specialCases :: 

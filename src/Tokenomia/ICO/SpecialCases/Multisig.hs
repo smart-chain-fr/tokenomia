@@ -3,9 +3,8 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-module Tokenomia.ICO.Funds.Emission.SpecialCases.Multisig 
+
+module Tokenomia.ICO.SpecialCases.Multisig 
         ( multisigOneUTxO
         , multisigTwoUTxOs ) 
         where

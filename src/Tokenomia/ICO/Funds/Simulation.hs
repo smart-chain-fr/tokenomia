@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
-module Tokenomia.ICO.Funds.Emission.Simulation ( simulation ) where
+module Tokenomia.ICO.Funds.Simulation ( simulation ) where
 import           Control.Monad.Reader
 import           Control.Monad.Except
 import           Data.Coerce ( coerce )
@@ -21,8 +21,8 @@ import           Tokenomia.Adapter.Cardano.CLI.UTxO
 import           Tokenomia.Adapter.Cardano.CLI.Transaction
 import           Tokenomia.Adapter.Cardano.CLI.Environment
 
-import           Tokenomia.ICO.Funds.Emission.HappyPath ( happyPath )
-import           Tokenomia.ICO.Funds.Emission.SpecialCases ( specialCases )
+import           Tokenomia.ICO.HappyPath ( happyPath )
+import           Tokenomia.ICO.SpecialCases ( specialCases )
 
 
 simulation :: IO ()
@@ -37,7 +37,7 @@ simulation = do
     let a = runExceptT $ runReaderT setup environment
         b = runExceptT $ runReaderT (specialCases (coerce "addr_test1vzzj78m4jw2sudver47u3ad9v92n3kzeusqdk2ply32znysqx0835") 10000000) environment
         c = runExceptT $ runReaderT happyPath environment
-    sequence_ [a,b,c]
+    result <- sequence [a,b,c]
     
 
     printLn "#############################"
