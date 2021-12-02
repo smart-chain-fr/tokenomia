@@ -22,33 +22,43 @@ import           Control.Monad.Except
 import           Ledger.Value 
 import           Plutus.V1.Ledger.Ada
 
-import           Tokenomia.Adapter.Cardano.CLI.UTxO
+
+import qualified Tokenomia.Common.Datum as Script
+import qualified Tokenomia.Script.LocalRepository as Script
+
+import           Tokenomia.Wallet.UTxO as Wallet
+
+import qualified Tokenomia.Wallet.LocalRepository as Wallet
+import           Tokenomia.Wallet.LocalRepository hiding (fetchById) 
 
 import           Tokenomia.Vesting.Contract
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-import           Tokenomia.Adapter.Cardano.CLI.Transaction 
+import           Tokenomia.Common.Environment
+import           Tokenomia.Common.Transacting 
 
-import           Tokenomia.Adapter.Cardano.CLI.Scripts
-import           Tokenomia.Vesting.Repository
-import           Tokenomia.Adapter.Cardano.CLI.Wallet
+
+import qualified Tokenomia.Vesting.Repository as Vesting.Repository
+
 import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
 import           Tokenomia.Common.Shell.Console
 import           Tokenomia.Common.Shell.InteractiveMenu
-
+import           Tokenomia.Common.Value
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.Type
+import           Tokenomia.Wallet.ChildAddress.LocalRepository 
 
 vestFunds
     :: (  MonadIO m
         , MonadReader Environment m
-        , MonadError BuildingTxError m)
+        , MonadError TokenomiaError m)
     => m ()
 vestFunds = do
-    ownerWallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+    Wallet {name = ownerWalletName} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
             printLn "Select the token owner wallet :"
             askToChooseAmongGivenWallets wallets 
-    utxosWithOneToken <- fetchUTxOFilterBy containingOneToken ownerWallet >>= whenNothingThrow NoUTxOWithOnlyOneToken
+    utxosWithOneToken <- fetchUTxOFilterBy (containingOneToken . Wallet.value . utxo ) (ChildAddressRef ownerWalletName 0) >>= whenNothingThrow NoUTxOWithOnlyOneToken
     printLn "- Select the utxo and associated tokens to vest  :" 
     utxoWithToken <- askToChooseAmongGivenUTxOs utxosWithOneToken
 
@@ -62,10 +72,10 @@ vestFunds = do
 
     printLn "- Select the investor's wallet :"
 
-    investorWallet <- askAmongAllWallets >>= whenNothingThrow NoWalletRegistered
+    Wallet {name = investorWalletName} <- askAmongAllWallets >>= whenNothingThrow NoWalletRegistered
     vestFunds' 
-        ownerWallet
-        investorWallet 
+        ownerWalletName
+        investorWalletName 
         utxoWithToken 
         (nbSecondsTranche1,nbTokenTranche1)
         (nbSecondsTranche2,nbTokenTranche2)
@@ -73,21 +83,21 @@ vestFunds = do
 vestFunds'
     :: (  MonadIO m
         , MonadReader Environment m
-        , MonadError BuildingTxError m)
-    => Wallet
-    -> Wallet 
-    -> UTxO 
+        , MonadError TokenomiaError m)
+    => WalletName
+    -> WalletName 
+    -> WalletUTxO 
     -> (Integer,Integer)
     -> (Integer,Integer)
     -> m ()
 vestFunds'
-    ownerWallet 
-    investorWallet 
+    ownerWalletName 
+    investorWalletName 
     utxoWithTokens
     (nbSecondsTranche1,nbTokenTranche1)
     (nbSecondsTranche2,nbTokenTranche2) = do
 
-    let (cu,tn,totalAmountToken) = getTokenFrom utxoWithTokens
+    let (cu,tn,totalAmountToken) = getTokenFrom . Wallet.value . utxo$ utxoWithTokens
         valueTotalToken = singleton cu tn totalAmountToken
         valueTokenTranche1 =  singleton cu tn nbTokenTranche1
         valueTokenTranche2 = singleton cu tn nbTokenTranche2 
@@ -95,6 +105,8 @@ vestFunds'
         changeBackToOwner  =  valueTotalToken - valueToBeVested
 
     now <- liftIO POSIX.getPOSIXTime
+    ChildAddress {publicKeyHash = investorPublicKeyHash} <- fetchById $ ChildAddressRef investorWalletName 0
+    ChildAddress {address = ownerAddr}                   <- fetchById $ ChildAddressRef ownerWalletName 0
     let params = VestingParams
                     {   vestingTranche1 = VestingTranche
                                 { vestingTrancheDate = convertToInternalPosix (now P.+ fromIntegral nbSecondsTranche1)
@@ -102,24 +114,26 @@ vestFunds'
                     ,   vestingTranche2 = VestingTranche
                                 { vestingTrancheDate = convertToInternalPosix (now P.+ fromIntegral nbSecondsTranche2)
                                 , vestingTrancheAmount = valueTokenTranche2 + lovelaceValueOf 1689618}
-                    , vestingOwner = publicKeyHash investorWallet }
+                    , vestingOwner = investorPublicKeyHash}
         
     let vscript = vestingScript params
-    scriptLocation <- registerValidatorScriptFile vscript
+    scriptLocation <- Script.registerValidatorScriptFile vscript
 
-    datumVoidHash <- getDataHash ()
+    datumVoidHash <- Script.getDataHash ()
 
-    submit'
+    buildAndSubmit
+      (CollateralAddressRef $ ChildAddressRef ownerWalletName 0)
+      (FeeAddressRef $ ChildAddressRef ownerWalletName 0)
       TxBuild
-        { wallet = ownerWallet
-        , txIns =  FromWallet (txOutRef  utxoWithTokens) :| []
-        , txOuts = ToWallet (paymentAddress ownerWallet) (changeBackToOwner + lovelaceValueOf 1344798) 
+        { inputsFromWallet =  FromWallet utxoWithTokens :| []
+        , inputsFromScript = Nothing
+        , outputs = ToWallet ownerAddr (changeBackToOwner + lovelaceValueOf 1379280) Nothing 
                 :| [ ToScript 
-                     { address = onChain scriptLocation
+                     { address = Script.onChain scriptLocation
                      , value =  (vestingTrancheAmount . vestingTranche1) params
                      , datumHash = datumVoidHash}
                    , ToScript 
-                     { address = onChain scriptLocation
+                     { address = Script.onChain scriptLocation
                      , value =  (vestingTrancheAmount . vestingTranche2) params
                      , datumHash = datumVoidHash}] 
         , validitySlotRangeMaybe = Nothing
@@ -131,7 +145,7 @@ vestFunds'
     printLn   "- Investor can retrieve the funds from :"
     printLn $ "\t - Tranche 1 after " <> (formatISO8601 . convertToExternalPosix . vestingTrancheDate . vestingTranche1) params
     printLn $ "\t - Tranche 2 after " <> (formatISO8601 . convertToExternalPosix . vestingTrancheDate . vestingTranche2) params
-    printLn $ "- Funds location : " <> show (onChain scriptLocation)
+    printLn $ "- Funds location : " <> show (Script.onChain scriptLocation)
     printLn   "-----------------------------------------"
     
-    register params
+    Vesting.Repository.register params

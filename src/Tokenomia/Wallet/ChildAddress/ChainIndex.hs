@@ -16,8 +16,8 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
-module Tokenomia.Adapter.Cardano.CLI.UTxO.Query
-    ( query
+module Tokenomia.Wallet.ChildAddress.ChainIndex
+    ( queryUTxO
     , queryUTxOsFilterBy
     ) where
 
@@ -29,30 +29,33 @@ import           Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
 import           Shh.Internal
 
 
-import           Tokenomia.Adapter.Cardano.CLI.Wallet
-import           Tokenomia.Adapter.Cardano.CLI.Serialise
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-import           Tokenomia.Adapter.Cardano.CLI.Value ()
-import           Tokenomia.Adapter.Cardano.CLI.UTxO
-import            Tokenomia.Adapter.Cardano.Types
+import           Tokenomia.Common.Address
+import           Tokenomia.Common.Serialise
+import           Tokenomia.Common.Environment
+import           Tokenomia.Common.Value ()
 
+import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.ChildAddress.LocalRepository
 
 load SearchPath ["cardano-cli"]
 
-query :: 
+queryUTxO ::
   ( MonadIO m
   , MonadReader Environment m )
-  => Address
-  -> m [UTxO]
-query (Address address) = do
+  => ChildAddressRef
+  -> m [WalletUTxO]
+queryUTxO childAddressRef = do
+    ChildAddress {address = Address address} <- fetchById childAddressRef
     magicN <- asks magicNumber
-    fromCLI . TL.toStrict . TLE.decodeUtf8 <$> liftIO (cardano_cli "query" "utxo" "--testnet-magic" magicN "--address" address |> capture)
+    utxos <- fromCLI . TL.toStrict . TLE.decodeUtf8 <$> liftIO (cardano_cli "query" "utxo" "--testnet-magic" magicN "--address" address |> capture)
+    return $ WalletUTxO childAddressRef <$> utxos
 
 
 queryUTxOsFilterBy ::
     ( MonadIO m
     , MonadReader Environment m )
-    => Wallet
-    -> (UTxO -> Bool)
-    -> m [UTxO]
-queryUTxOsFilterBy Wallet {..} f = filter f <$> query paymentAddress
+    => ChildAddressRef
+    -> (WalletUTxO -> Bool)
+    -> m [WalletUTxO]
+queryUTxOsFilterBy childAddressRef f = fmap (filter f)  (queryUTxO childAddressRef)

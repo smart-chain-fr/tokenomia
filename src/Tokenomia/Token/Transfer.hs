@@ -2,11 +2,13 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
-module Tokenomia.Token.Transfer 
+module Tokenomia.Token.Transfer
     ( transfer
     , transfer'
     ) where
@@ -19,64 +21,68 @@ import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
 import           Ledger.Value
-import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Common.Environment
 
 import           Ledger.Ada
-import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import           Tokenomia.Adapter.Cardano.CLI.Transaction 
-import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import           Tokenomia.Wallet.UTxO as UTxO
+import           Tokenomia.Common.Transacting
+import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu  (ask,askString, askStringLeaveBlankOption)
-
-
-
-transfer :: 
+import           Tokenomia.Common.Value
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.Type
+import           Tokenomia.Wallet.ChildAddress.LocalRepository
+import           Tokenomia.Common.Address
+transfer ::
     ( MonadIO m
     , MonadReader Environment m
-    , MonadError BuildingTxError m )  
+    , MonadError TokenomiaError m )
     => m ()
 transfer = do
-    wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+    Wallet {name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
-            printLn "Select the minter wallet : "
-            askToChooseAmongGivenWallets wallets 
-    utxoWithToken <- askUTxOFilterBy containingOneToken wallet >>= whenNothingThrow NoUTxOWithOnlyOneToken        
+            printLn "Select the wallet containing the tokens: "
+            askToChooseAmongGivenWallets wallets
+    utxoWithToken <- askUTxOFilterBy (containingOneToken . UTxO.value . utxo) (ChildAddressRef name 0) >>= whenNothingThrow NoUTxOWithOnlyOneToken
     amount <- ask @Integer                  "- Amount of Token to transfer : "
     receiverAddr <- Address <$> askString   "- Receiver address : "
-    labelMaybe <- askStringLeaveBlankOption "- Add label to your transaction (leave blank if no) : " 
-    
-    transfer' wallet receiverAddr utxoWithToken  amount labelMaybe
+    labelMaybe <- askStringLeaveBlankOption "- Add label to your transaction (leave blank if no) : "
+
+    transfer' name receiverAddr utxoWithToken  amount labelMaybe
 
 type MetadataLabel = String
 
-transfer' :: 
+transfer' ::
     (  MonadIO m
     , MonadReader Environment m
-    , MonadError BuildingTxError m )  
-    => Wallet 
-    -> Address 
-    -> UTxO
+    , MonadError TokenomiaError m )
+    => WalletName
+    -> Address
+    -> WalletUTxO
     -> Integer
-    -> Maybe MetadataLabel    
+    -> Maybe MetadataLabel
     -> m ()
-transfer' senderWallet receiverAddr utxoWithToken amount labelMaybe = do
-    
+transfer' walletName receiverAddr utxoWithToken amount labelMaybe = do
+    let firstChildAddress = ChildAddressRef walletName 0
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
-
-    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom utxoWithToken
+    ChildAddress {address = senderWalletChildAddress} <- fetchById firstChildAddress
+    let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom . UTxO.value  . utxo $ utxoWithToken
         tokenId = singleton tokenPolicyHash tokenNameSelected
-        valueToTransfer = tokenId amount + lovelaceValueOf 1344798
-        change = tokenId (totalAmount - amount) + lovelaceValueOf 1344798
+        valueToTransfer = tokenId amount + lovelaceValueOf 1379280
+        change = tokenId (totalAmount - amount) + lovelaceValueOf 1379280
 
-    submit'
+    buildAndSubmit
+      (CollateralAddressRef firstChildAddress)
+      (FeeAddressRef firstChildAddress)
       TxBuild
-        { wallet = senderWallet
-        , txIns =  FromWallet (txOutRef utxoWithToken) :| []
-        , txOuts = ToWallet receiverAddr valueToTransfer 
-                :| [ToWallet (paymentAddress senderWallet) change]
+        { inputsFromWallet =  FromWallet utxoWithToken :| []
+        , inputsFromScript = Nothing
+        , outputs = ToWallet receiverAddr valueToTransfer Nothing
+                :| [ToWallet senderWalletChildAddress change Nothing]
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}

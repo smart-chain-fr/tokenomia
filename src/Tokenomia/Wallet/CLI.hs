@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Tokenomia.Wallet.CLI
   ( askToChooseAmongGivenWallets
@@ -14,15 +15,20 @@ module Tokenomia.Wallet.CLI
   , fetchUTxOFilterBy
   , askToChooseAmongGivenUTxOs
   , selectBiggestStrictlyADAsNotCollateral
-  , createAndRegister
-  , restore
-  , list
+  , generateChildAddresses
+  -- "UI" for Wallet Repository
+  , displayAll
+  , register
+  , restoreByMnemonics
   , remove)
   where
 
 import           Prelude hiding (filter,head,last)
+import           Tokenomia.Common.Error
+import           Control.Monad.Except
 import qualified Prelude as P
-
+import           Data.Set.NonEmpty
+import           Data.Coerce
 import           Data.List.NonEmpty
 
 import           Control.Monad.Reader hiding (ask)
@@ -30,24 +36,28 @@ import           Control.Monad.Reader hiding (ask)
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Plutus.V1.Ledger.Value (flattenValue)
 
-import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, askFilterM, askString)
+import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, askStringFilterM, askFilterM,askString)
 
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-import           Tokenomia.Adapter.Cardano.CLI.Wallet as CardanoCLI
-import           Tokenomia.Adapter.Cardano.CLI.UTxO
+import           Tokenomia.Common.Environment
+import qualified Tokenomia.Wallet.LocalRepository as Repository
+import           Tokenomia.Wallet.ChildAddress.ChainIndex
+import           Tokenomia.Wallet.UTxO
 
-import qualified Tokenomia.Adapter.Cardano.CLI.UTxO.Query as UTxOs
+import           Tokenomia.Common.Value
+import           Tokenomia.Common.Address
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.ChildAddress.LocalRepository
 
 askWalletName :: (MonadIO m) => m String
 askWalletName = askString "Wallet Name : "
 
 askAmongAllWallets :: (MonadIO m, MonadReader Environment m) => m (Maybe Wallet)
 askAmongAllWallets =
-    CardanoCLI.query_registered_wallets
-  >>=  \case
-        Nothing -> return Nothing
-        Just a -> Just <$> askMenu a
-      . nonEmpty
+    Repository.fetchAll
+      >>=  \case
+            Nothing -> return Nothing
+            Just a -> Just <$> askMenu a
+          . nonEmpty
 
 askToChooseAmongGivenWallets :: (MonadIO m, MonadReader Environment m)
   => NonEmpty Wallet
@@ -57,20 +67,21 @@ askToChooseAmongGivenWallets = askMenu
 askUTxO
   ::( MonadIO m
     , MonadReader Environment m)
-  =>  Wallet
-  ->  m (Maybe UTxO)
+  =>  ChildAddressRef
+  ->  m (Maybe WalletUTxO)
 askUTxO = askUTxOFilterBy (const True)
-
 
 
 selectBiggestStrictlyADAsNotCollateral
   ::( MonadIO m
     , MonadReader Environment m)
-  => Wallet
-  -> m (Maybe UTxO)
-selectBiggestStrictlyADAsNotCollateral Wallet {..} = do
-  adas :: Maybe (NonEmpty UTxO) <- nonEmpty . P.filter ((&&) <$> containingStrictlyADAs <*> not . containsCollateral)  <$> UTxOs.query paymentAddress
-  return (last . sortWith (\UTxO {value} ->
+  => ChildAddressRef
+  -> m (Maybe WalletUTxO)
+selectBiggestStrictlyADAsNotCollateral childAddressRef  = do
+  adas :: Maybe (NonEmpty WalletUTxO)
+    <- nonEmpty
+       . P.filter ((&&) <$> containingStrictlyADAs . value . utxo <*> not . containsCollateral . value . utxo)  <$> queryUTxO childAddressRef
+  return (last . sortWith (\WalletUTxO { utxo = UTxO {value}} ->
                         maybe
                           0
                           (third . head)
@@ -83,11 +94,12 @@ selectBiggestStrictlyADAsNotCollateral Wallet {..} = do
 askUTxOFilterBy
   ::( MonadIO m
     , MonadReader Environment m)
-  => (UTxO -> Bool)
-  -> Wallet
-  ->  m (Maybe UTxO)
-askUTxOFilterBy predicate  Wallet {..}  =
-  UTxOs.query paymentAddress >>= (\case
+  => (WalletUTxO -> Bool)
+  -> ChildAddressRef
+  ->  m (Maybe WalletUTxO)
+askUTxOFilterBy predicate  childAddressRef  =
+  queryUTxO childAddressRef
+  >>= (\case
           Nothing -> return Nothing
           Just a -> Just <$> askMenu a) . nonEmpty . P.filter predicate
 
@@ -95,51 +107,83 @@ askUTxOFilterBy predicate  Wallet {..}  =
 fetchUTxOFilterBy
   ::( MonadIO m
     , MonadReader Environment m)
-  => (UTxO -> Bool)
-  -> Wallet
-  ->  m (Maybe (NonEmpty UTxO))
-fetchUTxOFilterBy predicate  Wallet {..}  =  nonEmpty . P.filter predicate  <$> UTxOs.query paymentAddress
+  => (WalletUTxO -> Bool)
+  -> ChildAddressRef
+  ->  m (Maybe (NonEmpty WalletUTxO))
+fetchUTxOFilterBy predicate childAddressRef  =  nonEmpty <$> queryUTxOsFilterBy childAddressRef predicate
 
 
 askToChooseAmongGivenUTxOs :: (MonadIO m, MonadReader Environment m)
-  => NonEmpty UTxO
-  -> m UTxO
+  => NonEmpty WalletUTxO
+  -> m WalletUTxO
 askToChooseAmongGivenUTxOs = askMenu
 
 
+generateChildAddresses
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+  => m ()
+generateChildAddresses = do
+   w@Wallet {name} <- Repository.fetchAll >>= whenNullThrow NoWalletRegistered
+        >>= \wallets -> do
+            printLn "Select the minter wallet : "
+            askToChooseAmongGivenWallets wallets
+   from <- askFilterM @Integer "> from : " (\i -> return $ 0 < i)
+   to <-   askFilterM @Integer "> to : " (\i -> return $ from < i)
 
+   mapM_ (\childAddressRef@ChildAddressRef{index} -> do
+           deriveChildAddress childAddressRef
+           printLn $ " - Derived Child Address " <> (show @Integer . coerce $ index)
+            ) $ ChildAddressRef name . ChildAddressIndex <$> [from..to]
 
-createAndRegister
+   displayOne w
+
+register
   ::( MonadIO m, MonadReader Environment m)
   => m ()
-createAndRegister = do
+register = do
   printLn "-----------------------------------"
   walletName <- askWalletName
-  CardanoCLI.register_shelley_wallet walletName
+  _ <- Repository.register walletName
   printLn "Wallet Created and Registered!"
   printLn "-----------------------------------"
 
 
-list
-  ::( MonadIO m, MonadReader Environment m)
+displayOne
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+  => Wallet
+  -> m ()
+displayOne Wallet{..} =  do
+  addresses <- fetchByWallet name
+  printLn $ "| " <> name
+        <> "\n   | Stake Address: " <> coerce stakeAddress
+        <> "\n   | Child Addresses: " <> (show . size) addresses
+  mapM_ (\ChildAddress {childAddressRef = ChildAddressRef {index = index@(ChildAddressIndex indexInt)},..} -> do
+      printLn $ "      [" <> show indexInt <> "] " <> coerce address
+      utxos <- queryUTxO $ ChildAddressRef name index
+      case utxos of
+        [] -> return ()
+        a  -> mapM_ (\utxo -> printLn ("         - " <> show utxo)) a) (toAscList addresses)
+
+
+
+displayAll
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
   => m ()
-list =
-  CardanoCLI.query_registered_wallets
+displayAll =
+  Repository.fetchAll
  >>= \case
        [] -> printLn "No Wallet Registered!"
        wallets -> do
          printLn "-----------------------------------"
          printLn "Wallets Registered"
          printLn "-----------------------------------"
-         mapM_ (\Wallet{..} -> do
-            printLn ("> " <> name)
-            printLn ("    Public key : "      <> show publicKeyHash)
-            printLn ("    Payment Address : " <> show paymentAddress)
-            utxos <- UTxOs.query paymentAddress
-            case utxos of
-              [] -> printLn "\t(No UTxOs Available)"
-              a  -> mapM_ (\utxo -> printLn ("\t- " <> show utxo)) a
-            ) wallets
+         mapM_ displayOne wallets
          printLn "-----------------------------------"
 
 remove :: (MonadIO m, MonadReader Environment m) => m ()
@@ -150,7 +194,7 @@ remove = do
     >>= \case
         Nothing ->
           printLn "No Wallet Registered !"
-        Just Wallet {..} -> CardanoCLI.remove_shelley_wallet name
+        Just Wallet {..} -> Repository.remove name
 
   printLn "-----------------------------------"
 
@@ -162,14 +206,14 @@ getSeedPhrase' seedPhrase =  if Prelude.length (words seedPhrase) /= 24 then
   else return True
 
 getSeedPhrase :: MonadIO m => m String
-getSeedPhrase = askFilterM "> please enter your 24 words mnemonics then press enter : " getSeedPhrase'
+getSeedPhrase = askStringFilterM "> please enter your 24 words mnemonics then press enter : " getSeedPhrase'
 
-restore :: (MonadIO m, MonadReader Environment m) => m ()
-restore = do
+restoreByMnemonics :: (MonadIO m, MonadReader Environment m) => m ()
+restoreByMnemonics = do
   printLn "-----------------------------------"
   walletName <- askWalletName
-  seedPhrase <- getSeedPhrase
-  CardanoCLI.restore_from_seed_phrase walletName seedPhrase
+  seedPhrase <- words <$> getSeedPhrase
+  _ <- Repository.restoreByMnemonics walletName seedPhrase
   printLn "-----------------------------------"
 
 

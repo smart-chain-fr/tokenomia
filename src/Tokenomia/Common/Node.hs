@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 
-module Tokenomia.Adapter.Cardano.CLI.Node
+module Tokenomia.Common.Node
     ( getCurrentSlotSynced
     ) where
 
@@ -11,7 +11,7 @@ import Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
 
 import Cardano.Api
 import Ledger 
-import Tokenomia.Adapter.Cardano.CLI.Environment
+import Tokenomia.Common.Environment
     
 
 getCurrentSlotSynced

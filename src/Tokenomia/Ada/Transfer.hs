@@ -2,72 +2,76 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Tokenomia.Ada.Transfer
     ( transfer
     , transfer' ) where
 
-import           Data.List.NonEmpty
+import           Prelude
 import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
-import           Ledger.Ada ( lovelaceValueOf )
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-import           Tokenomia.Adapter.Cardano.CLI.UTxO
-import           Tokenomia.Adapter.Cardano.CLI.Transaction hiding (value)
+import           Tokenomia.Common.Environment
+import           Tokenomia.Common.Transacting
 
-
-import           Tokenomia.Adapter.Cardano.CLI.Wallet
+import Data.List.NonEmpty as NEL
+import           Ledger.Ada as Ada
+import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.LocalRepository
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (askString, ask, askStringLeaveBlankOption)
+import           Tokenomia.Common.Value
+import           Tokenomia.Wallet.Type
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Common.Address
 
-
-transfer :: 
+transfer ::
     ( MonadIO m
     , MonadReader Environment m
-    , MonadError BuildingTxError m)
+    , MonadError TokenomiaError m)
     => m ()
 transfer = do
-    wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
+    Wallet {name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
-            printLn "Select the minter wallet : "
+            printLn "Select the wallet containing funds : "
             askToChooseAmongGivenWallets wallets
-    utxo <- selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet
+    WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAInWallet
 
-    printLn  $                                       "- Amount Available                : " <> showValue (value utxo)
+    printLn  $                                       "- Amount Available                : " <> showValue value
     amount <- ask @Integer                           "- Amount of Lovelaces to transfer : "
     receiverAddr <- Address <$> askString         "- Receiver address : "
     labelMaybe <- askStringLeaveBlankOption "- Add label to your transaction (leave blank if no) : "
-    transfer' wallet  receiverAddr amount labelMaybe
+    transfer' name  receiverAddr amount labelMaybe
 
 
 type MetadataLabel = String
 
-transfer' :: 
+transfer' ::
     ( MonadIO m
     , MonadReader Environment m
-    , MonadError BuildingTxError m)
-    => Wallet
+    , MonadError TokenomiaError m)
+    => WalletName
     -> Address
     -> Integer
     -> Maybe MetadataLabel
     -> m ()
 transfer' senderWallet receiverAddr amount labelMaybe = do
-    
-    ada <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral senderWallet >>= whenNothingThrow NoADAInWallet)
+    let firstAddress = ChildAddressRef senderWallet 0
+    ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAInWallet
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
 
-    submit'
+    buildAndSubmit
+      (CollateralAddressRef firstAddress)
+      (FeeAddressRef firstAddress)
       TxBuild
-        { wallet = senderWallet
-        , txIns = FromWallet ada :| []
-        , txOuts = ToWallet receiverAddr (lovelaceValueOf amount) :| []
+        { inputsFromWallet  = FromWallet ada :| []
+        , inputsFromScript  = Nothing
+        , outputs = ToWallet receiverAddr (lovelaceValueOf amount) Nothing :| []
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}
-
-
 

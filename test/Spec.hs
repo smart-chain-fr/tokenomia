@@ -3,8 +3,8 @@ module Spec(main) where
 
 -- import qualified Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy 
 -- import qualified Spec.Tokenomia.Vesting.Contract 
-import qualified Spec.Tokenomia.Adapter.Cardano.CLI.UTxO
-import qualified Spec.Tokenomia.Adapter.Cardano.CLI.Value
+import qualified Spec.Tokenomia.Common.UTxO
+import qualified Spec.Tokenomia.Common.Value
 import           Test.Tasty
 import           Test.Tasty.Hedgehog       (HedgehogTestLimit (..))
 
@@ -22,6 +22,6 @@ tests :: TestTree
 tests = localOption limit $ testGroup "use cases" [
     -- Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy.tests,
     -- Spec.Tokenomia.Vesting.Contract.tests,
-    Spec.Tokenomia.Adapter.Cardano.CLI.UTxO.tests ,
-    Spec.Tokenomia.Adapter.Cardano.CLI.Value.tests
+    Spec.Tokenomia.Common.UTxO.tests ,
+    Spec.Tokenomia.Common.Value.tests
     ]

@@ -35,7 +35,7 @@ tests :: TestTree
 tests = testGroup "Monetary CLAP Policy"
     [ checkPredicate
         "minting provides 10^9 CLAPs token to caller" -- To improve
-           -- CheckWalletFundsChange w1 (\value -> value & filter (isToken == "CLAP" and amount == 10^9) == 1  )
+           -- CheckWalletUTxOChange w1 (\value -> value & filter (isToken == "CLAP" and amount == 10^9) == 1  )
           -- (walletFundsChange w1 (Ada.lovelaceValueOf (-20)) .&&. 
         (assertDone mintCLAPContract' (Trace.walletInstanceTag w1) (const True) "CLAPs not minted")
         $ do

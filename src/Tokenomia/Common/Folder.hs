@@ -12,40 +12,19 @@
 {-# LANGUAGE RecordWildCards #-}
 
 
-module Tokenomia.Adapter.Cardano.CLI.Folder
+module Tokenomia.Common.Folder
     ( getFolderPath
     , getRootCLIFolder
     , Folder (..)
     ) where
 
-
-import           Data.String
-import qualified Data.ByteString.Lazy.Char8 as C
-import qualified Data.ByteString.Short as SBS
-import qualified Data.ByteString.Lazy as LB
- 
 import           Control.Monad.Reader
-
-
-import           System.Random
-
 import           System.Environment (getEnv)
 import           Shh.Internal
 
-import           Codec.Serialise ( serialise )
-
-import qualified Cardano.Api.Shelley  as Shelley
+import           Tokenomia.Common.Environment
 
 
-
-import qualified Plutus.V1.Ledger.Scripts as Script
-import           PlutusTx.IsData.Class ( ToData )
-
-import           Tokenomia.Adapter.Cardano.CLI.Environment
-
-
-import           Tokenomia.Adapter.Cardano.CLI.Data (dataToJSONString)
-import           Tokenomia.Common.Shell.Console (printLn)
 
 
 
@@ -53,20 +32,25 @@ import           Tokenomia.Common.Shell.Console (printLn)
 
 load SearchPath ["mkdir","cardano-cli" ]
 
-
-
-
-data Folder = Transactions | Keys | Parameters | MonetaryPolicies | Validators | TMP
+data Folder  
+    = Transactions 
+    | Wallets 
+    | Parameters 
+    | MonetaryPolicies 
+    | Validators
+    | Datum 
+    | TMP
 
 getFolderPath :: (MonadIO m, MonadReader Environment m) => Folder -> m FilePath
 getFolderPath folder
     =  getFolderPath'
             $ case folder of
                 Transactions -> "transactions"
-                Keys ->  "keys"
+                Wallets ->  "wallets"
                 Parameters -> "parameters"
                 MonetaryPolicies -> "monetary-policies"
                 Validators -> "validators"
+                Datum -> "datums"
                 TMP -> "tmp"
 
 
@@ -84,23 +68,3 @@ getRootCLIFolder = do
     a <- ( <> "/.tokenomia-cli/" <> environmentFolder) <$> (liftIO . getEnv) "HOME"
     liftIO $ mkdir "-p" a
     return a
-
-toPlutusScriptV1 :: Script.Script -> Shelley.PlutusScript Shelley.PlutusScriptV1
-toPlutusScriptV1
-  = Shelley.PlutusScriptSerialised
-  . SBS.toShort
-  . LB.toStrict
-  . serialise
-
-getDataHash :: (MonadIO m, MonadReader Environment m, ToData a) => a -> m String
-getDataHash a = do
-    filePath <- persistDataInTMP a
-    liftIO $ init . C.unpack  <$>  (cardano_cli "transaction" "hash-script-data" "--script-data-file" filePath |> capture)
-
-persistDataInTMP :: (MonadIO m, MonadReader Environment m, ToData a) => a -> m FilePath
-persistDataInTMP a = do
-    tmpFolder <- getFolderPath TMP
-    randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
-    let filePath = tmpFolder <> show randomInt <> ".txt"
-    liftIO $ printLn (dataToJSONString a) &> (Truncate . fromString) filePath
-    return filePath

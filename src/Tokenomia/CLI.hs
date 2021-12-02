@@ -16,7 +16,7 @@ module Tokenomia.CLI (main) where
 
 import           Control.Monad.Reader
 import           Control.Monad.Except
-
+import           Tokenomia.Common.Error
 
 import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
 
@@ -24,7 +24,7 @@ import Shh
 
 import           Tokenomia.Common.Shell.InteractiveMenu
 import           Tokenomia.Common.Shell.Console (printLn, clearConsole, printOpt)
-import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Common.Environment
 
 import qualified Tokenomia.Wallet.CLI as Wallet
 import qualified Tokenomia.Wallet.Collateral.Write as Wallet
@@ -39,9 +39,10 @@ import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
 
 import qualified Tokenomia.Node.Status as Node
+import qualified Tokenomia.ICO.Funds.Reception.DryRun as ICO
+import qualified Tokenomia.ICO.Funds.Reception.Simulation.Transfer as ICO
 
-import           Tokenomia.Adapter.Cardano.CLI.Transaction
-
+import qualified Streamly.Prelude as S
 
 load SearchPath ["cardano-cli"]
 
@@ -72,7 +73,7 @@ selectNetwork = do
       SelectTestnet     -> getTestnetEnvironmment 1097911063 
       SelectMainnet     -> getMainnetEnvironmment 764824073
   clearConsole
-  result :: Either BuildingTxError () <- runExceptT $ runReaderT recursiveMenu environment 
+  result :: Either TokenomiaError () <- runExceptT $ runReaderT recursiveMenu environment 
   case result of 
           Left e -> printLn $ "An unexpected error occured :" <> show e
           Right _ -> return ()
@@ -96,9 +97,9 @@ instance DisplayMenuItem SelectEnvironment where
 
 
 recursiveMenu 
-  :: ( MonadIO m
+  :: ( S.MonadAsync m
      , MonadReader Environment m
-     , MonadError BuildingTxError m) =>  m ()
+     , MonadError TokenomiaError m) =>  m ()
 recursiveMenu = do
   printLn "----------------------"
   printLn "  Select an action"
@@ -111,7 +112,7 @@ recursiveMenu = do
         NoWalletWithoutCollateral -> printLn "All Wallets contain collateral..."  
         NoWalletWithCollateral    -> printLn "No Wallets with collateral..."
         WalletWithoutCollateral   -> printLn "Wallets selected without a required collateral..."
-        AlreadyACollateral utxo   -> printLn ("Collateral Already Created..." <> show utxo)
+        AlreadyACollateral        -> printLn "Collateral Already Created..."
         NoADAInWallet ->             printLn "Please, add ADAs to your wallet..."
         NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
         TryingToBurnTokenWithoutScriptRegistered 
@@ -119,22 +120,34 @@ recursiveMenu = do
         NoVestingInProgress       -> printLn "No vesting in progress"
         NoFundsToBeRetrieved      -> printLn "No funds to be retrieved"
         AllFundsLocked            -> printLn "All the funds alerady retrieved" 
-        FundAlreadyRetrieved      -> printLn "All the funds are locked and can't be retrieve so far..")
+        FundAlreadyRetrieved      -> printLn "All the funds are locked and can't be retrieve so far.."
+        BlockFrostError e         -> printLn $ "Blockfrost issue " <> show e
+        NoActiveAddressesOnWallet -> printLn "No Active Addresses, add funds on this wallet"
+        InconsistenciesBlockFrostVSLocalNode errorMsg ->
+                                     printLn $ "Inconsistencies Blockfrost vs Local Node  :" <> errorMsg
+        NoICOTransactionsToBePerformOnThisWallet  
+                                  -> printLn $ "No ICO Transactions to be performed on wallet used "
+        NoDerivedChildAddress  -> printLn $ "No derived child adresses on this wallet"
+        ChildAddressNotIndexed w address 
+                                  -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")
             
   liftIO waitAndClear         
   recursiveMenu
 
 
-runAction :: ( MonadIO m
+runAction 
+  :: ( S.MonadAsync m
      , MonadReader Environment m
-     , MonadError BuildingTxError m) 
+     , MonadError TokenomiaError m) 
      => Action 
      -> m ()
 runAction = \case    
-      WalletList       -> Wallet.list
-      WalletCreate     -> Wallet.createAndRegister
+      WalletList       -> Wallet.displayAll
+      WalletCreate     -> Wallet.register
+      WalletGenerateChildAddresses
+                      -> Wallet.generateChildAddresses
       WalletCollateral -> Wallet.createCollateral 
-      WalletRestore    -> Wallet.restore
+      WalletRestore    -> Wallet.restoreByMnemonics
       WalletRemove     -> Wallet.remove
       TokenMint        -> Token.mint
       TokenBurn        -> Token.burn
@@ -143,11 +156,14 @@ runAction = \case
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
+      ICOFundsValidationDryRun  -> ICO.dryRun
+      ICOFundsDispatchSimulation -> ICO.dispatchAdasOnChildAdresses
 
 actions :: NonEmpty Action
 actions = NonEmpty.fromList [
     WalletList,
     WalletCreate,
+    WalletGenerateChildAddresses,
     WalletCollateral,
     WalletRemove,
     WalletRestore,
@@ -157,7 +173,9 @@ actions = NonEmpty.fromList [
     AdaTransfer,
     VestingVestFunds,
     VestingRetrieveFunds,
-    NodeStatus
+    NodeStatus,
+    ICOFundsValidationDryRun,
+    ICOFundsDispatchSimulation
     ]
 
 data Action
@@ -166,6 +184,7 @@ data Action
   | WalletCollateral
   | WalletRestore
   | WalletRemove
+  | WalletGenerateChildAddresses
   | TokenMint
   | TokenBurn
   | TokenTransfer
@@ -173,20 +192,26 @@ data Action
   | VestingVestFunds
   | VestingRetrieveFunds
   | NodeStatus 
+  | ICOFundsValidationDryRun
+  | ICOFundsDispatchSimulation
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
     WalletList            -> " [Wallet]  - List Registered Wallets" 
     WalletRestore         -> " [Wallet]  - Restore Wallets from your 24 words seed phrase (Shelley Wallet)"
     WalletCreate          -> " [Wallet]  - Create a new Wallet"
+    WalletGenerateChildAddresses 
+                          -> " [Wallet]  - Derive Child Adresses"
     WalletCollateral      -> " [Wallet]  - Create a unique collateral for transfer"
     WalletRemove          -> " [Wallet]  - Remove an existing Wallet"
     TokenMint             -> " [Token]   - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy)"
     TokenBurn             -> " [Token]   - Burn Tokens with CLAP type policy"
     TokenTransfer         -> " [Token]   - Transfer Tokens"
-    AdaTransfer           -> " [Ada]     - Transfer ADAs"
+    AdaTransfer           ->  "[Ada]     - Transfer ADAs"
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     NodeStatus            ->  "[Node]    - Status"
+    ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
+    ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch on child addresses ADAs)"
 
 

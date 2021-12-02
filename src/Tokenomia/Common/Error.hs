@@ -1,13 +1,38 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Tokenomia.Common.Error
-    ( whenNullThrow
+    ( TokenomiaError (..)
+    , whenNullThrow
     , whenSomethingThrow
     , whenNothingThrow) where
 
 
 import           Control.Monad.Except
 import           Data.List.NonEmpty (nonEmpty, NonEmpty)
+import           Tokenomia.Common.Address ( Address(..) )
+import qualified Blockfrost.Client as B
+import           Tokenomia.Wallet.Type
+
+data TokenomiaError 
+    = NoWalletRegistered
+    | NoWalletWithoutCollateral
+    | NoWalletWithCollateral
+    | WalletWithoutCollateral
+    | AlreadyACollateral 
+    | NoADAInWallet
+    | NoUTxOWithOnlyOneToken 
+    | TryingToBurnTokenWithoutScriptRegistered 
+    | NoVestingInProgress
+    | NoFundsToBeRetrieved
+    | AllFundsLocked
+    | FundAlreadyRetrieved
+    | BlockFrostError B.BlockfrostError 
+    | NoActiveAddressesOnWallet 
+    | ChildAddressNotIndexed WalletName Address
+    | InconsistenciesBlockFrostVSLocalNode String 
+    | NoICOTransactionsToBePerformOnThisWallet 
+    | NoDerivedChildAddress
+    deriving Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)
 whenNullThrow err = 

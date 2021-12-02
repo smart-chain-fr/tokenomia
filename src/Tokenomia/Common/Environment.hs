@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Tokenomia.Adapter.Cardano.CLI.Environment
+module Tokenomia.Common.Environment
     ( getTestnetEnvironmment
     , getMainnetEnvironmment
     , Environment (..)

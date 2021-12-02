@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Tokenomia.Token.CLAPStyle.Mint
     ( mint
@@ -25,50 +26,53 @@ import qualified Ledger.Value as L
 import           Ledger.Ada
 
 import           Tokenomia.Token.CLAPStyle.MonetaryPolicy
-import           Tokenomia.Adapter.Cardano.CLI.Environment
+import           Tokenomia.Common.Environment
 import           Tokenomia.Wallet.CLI
 
-import           Tokenomia.Adapter.Cardano.CLI.UTxO 
-import           Tokenomia.Adapter.Cardano.CLI.Transaction
+import           Tokenomia.Wallet.UTxO 
+import           Tokenomia.Common.Transacting
 
-import           Tokenomia.Adapter.Cardano.CLI.Wallet
-import           Tokenomia.Adapter.Cardano.CLI.Scripts
+import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
+import           Tokenomia.Script.LocalRepository
 import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Common.Error
 
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (ask,askString)
 
+import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import           Tokenomia.Wallet.Type
+import           Tokenomia.Wallet.ChildAddress.LocalRepository
 
 
 mint :: 
     ( MonadIO m
     , MonadReader Environment m
-    , MonadError BuildingTxError m)  
+    , MonadError TokenomiaError m)  
     => m ()
 mint = do
-    wallet <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+    Wallet{name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
         >>= \wallets -> do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
     tokenNameToMint  <- L.tokenName . BSU.fromString <$> askString "> Token Name : "
     amountToMint     <- ask @Integer "> Total Supply to Mint : "
-    _ <- mint' wallet tokenNameToMint amountToMint  
+    _ <- mint' name tokenNameToMint amountToMint  
     return ()
 
 mint' :: 
     ( MonadIO m
     , MonadReader Environment m
-    , MonadError BuildingTxError m)  
-    => Wallet
+    , MonadError TokenomiaError m)  
+    => WalletName
     -> TokenName
     -> Integer
     -> m CurrencySymbol
-mint' wallet tokenName amount = do
-
-    txOutRefToConsume <- txOutRef <$> (selectBiggestStrictlyADAsNotCollateral wallet >>= whenNothingThrow NoADAInWallet)
-
-    let monetaryPolicy = mkMonetaryPolicyScript Params { .. }
+mint' walletName tokenName amount = do
+    let firstChildAddress = ChildAddressRef walletName 0
+    walletUTxOToConsume <- selectBiggestStrictlyADAsNotCollateral firstChildAddress >>= whenNothingThrow NoADAInWallet
+    ChildAddress {address} <- fetchById firstChildAddress
+    let monetaryPolicy = mkMonetaryPolicyScript Params { txOutRefToConsume = txOutRef . utxo $ walletUTxOToConsume , .. }
         policyhash = scriptCurrencySymbol monetaryPolicy
         valueToMint = L.singleton policyhash tokenName amount
       
@@ -78,10 +82,13 @@ mint' wallet tokenName amount = do
 
     monetaryScript <- registerMintingScriptFile monetaryPolicy
 
-    submit'
+    buildAndSubmit
+      (CollateralAddressRef firstChildAddress)
+      (FeeAddressRef firstChildAddress)
       TxBuild
-        { txIns =  FromWallet txOutRefToConsume :| []
-        , txOuts = ToWallet (paymentAddress wallet) (valueToMint + lovelaceValueOf 1344798 ):| [] 
+        { inputsFromWallet =  FromWallet walletUTxOToConsume :| []
+        , inputsFromScript = Nothing
+        , outputs = ToWallet address (valueToMint + lovelaceValueOf 1379280 ) Nothing :| [] 
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Mint { amount = valueToMint, script = monetaryScript} :| []
         , metadataMaybe = Nothing 
