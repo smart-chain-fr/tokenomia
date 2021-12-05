@@ -18,6 +18,7 @@ module Tokenomia.Wallet.CLI
   , generateChildAddresses
   -- "UI" for Wallet Repository
   , displayAll
+  , askDisplayOne
   , register
   , restoreByMnemonics
   , remove)
@@ -149,6 +150,19 @@ register = do
   printLn "Wallet Created and Registered!"
   printLn "-----------------------------------"
 
+
+
+askDisplayOne
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+  => m ()
+askDisplayOne = do
+  w <- Repository.fetchAll >>= whenNullThrow NoWalletRegistered
+          >>= \wallets -> do
+              printLn "Select the wallet to display : "
+              askToChooseAmongGivenWallets wallets
+  displayOne w
 
 displayOne
   ::( MonadIO m

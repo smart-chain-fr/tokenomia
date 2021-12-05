@@ -26,7 +26,8 @@ module Tokenomia.Wallet.ChildAddress.LocalRepository
     , ChildAddress (..)
     , fetchByAddresses
     , toIndexedAddress
-    , fetByWalletIndexedAddress
+    , fetchByWalletIndexedAddress
+    , retrieveAddressesNotFromWallet
     ) where
 
 import           Data.String
@@ -52,6 +53,7 @@ import           System.Directory
 import           Tokenomia.Common.Error
 import           Control.Monad.Except
 
+import           Data.Maybe
 
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
 
@@ -129,35 +131,60 @@ fetchByAddresses
     => WalletName
     -> NEL.NonEmpty Address
     -> m (NEL.NonEmpty IndexedAddress)
-fetchByAddresses walletName = mapM (fetchByAddress walletName)
+fetchByAddresses walletName = mapM (fetchByAddressStrict walletName)
 
-fetchByAddress
+fetchByAddressStrict
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> Address
     -> m IndexedAddress
+fetchByAddressStrict walletName address = 
+    fetchByAddress walletName address 
+    >>= whenNothingThrow (ChildAddressNotIndexed walletName address)
+
+
+retrieveAddressesNotFromWallet
+    :: ( MonadIO m
+       , MonadReader Environment m)
+    => WalletName
+    -> NEL.NonEmpty Address
+    -> m (Maybe (NEL.NonEmpty Address))
+retrieveAddressesNotFromWallet walletName addresses = do
+    maybeAddresses  <- mapM (\address ->  
+        fetchByAddress walletName address
+         >>= (\case
+                Nothing -> (return . Just) address
+                Just _ -> return Nothing) ) addresses
+    (return . NEL.nonEmpty . catMaybes . NEL.toList) maybeAddresses
+
+fetchByAddress
+    :: ( MonadIO m
+       , MonadReader Environment m)
+    => WalletName
+    -> Address
+    -> m (Maybe IndexedAddress)
 fetchByAddress walletName address = do
     addressIndexPath <- getAddressIndexPath walletName address
     (liftIO $ doesFileExist addressIndexPath)
      >>= \case
-            False -> throwError $ ChildAddressNotIndexed walletName address
+            False -> return Nothing 
             True  -> do
                 index <- read @Integer . C.unpack <$> (liftIO $ cat addressIndexPath |> captureTrim)
-                return IndexedAddress
+                return . Just $ IndexedAddress
                     { address = address
                     , childAddressRef = ChildAddressRef walletName (coerce index)}
 
 
 
-fetByWalletIndexedAddress
+fetchByWalletIndexedAddress
     :: ( MonadIO m
        , MonadReader Environment m 
        , MonadError  TokenomiaError m)
     => WalletName
     -> m (NEL.NonEmpty IndexedAddress  )
-fetByWalletIndexedAddress a = (fmap . fmap) toIndexedAddress (toAscList <$> fetchByWallet a) 
+fetchByWalletIndexedAddress a = (fmap . fmap) toIndexedAddress (toAscList <$> fetchByWallet a) 
 
 
 fetchDerivedChildAddressIndexes 

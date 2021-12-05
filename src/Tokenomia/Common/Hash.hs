@@ -4,4 +4,4 @@
 module Tokenomia.Common.Hash 
     ( Hash(..)) where
 
-newtype Hash = Hash String deriving (Show,Eq)
+newtype Hash = Hash String deriving (Show,Eq,Ord)

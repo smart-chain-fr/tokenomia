@@ -78,9 +78,9 @@ library
       Tokenomia.Common.Datum
       Tokenomia.Common.Address
       Tokenomia.Common.Hash
-      Tokenomia.ICO.Funds.Reception.Command
-      Tokenomia.ICO.Funds.Reception.Plan
-      Tokenomia.ICO.Funds.Reception.DryRun
+      Tokenomia.ICO.Funds.Reception.Investor.Command
+      Tokenomia.ICO.Funds.Reception.Investor.Plan
+      Tokenomia.ICO.Funds.Reception.Run
       Tokenomia.ICO.Funds.Reception.ChildAddress.State
       Tokenomia.ICO.Funds.Reception.ChildAddress.Types
       Tokenomia.ICO.Funds.Reception.CardanoCLI.Transact
@@ -88,6 +88,20 @@ library
       Tokenomia.ICO.Funds.Reception.Simulation.Transfer
       Tokenomia.Common.PageNumber 
       Tokenomia.ICO.RoundSettings
+      Tokenomia.ICO.Funds.Exchange.DryRun
+      Tokenomia.ICO.Funds.Exchange.ReceivedFunds
+      Tokenomia.ICO.Funds.Exchange.Command
+      Tokenomia.ICO.Funds.Exchange.Plan
+      Tokenomia.ICO.Funds.Reception.CardanoCLI.Datum
+      Tokenomia.ICO.Funds.WhiteListing.Repository
+      Tokenomia.Common.Token 
+      Tokenomia.ICO.Funds.Exchange.Tokens
+      Tokenomia.ICO.Funds.Exchange.Transact
+      Tokenomia.ICO.Funds.Exchange.Plan.Settings
+      Tokenomia.ICO.Funds.Exchange.Balanceable
+      Tokenomia.ICO.Funds.Reception.Debug
+      Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan
+      Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
     build-depends:
       base >= 4.9 && < 5,
       lens,
@@ -142,8 +156,12 @@ test-suite tokenomia-tests
   other-modules:
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
-    Spec.Tokenomia.Common.UTxO
+    Spec.Tokenomia.Wallet.UTxO
     Spec.Tokenomia.Common.Value
+    Spec.Tokenomia.ICO.Funds.Exchange.Plan
+    Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
+    Spec.Tokenomia.ICO.Funds.Reception.Investor.GenInputs
+    Spec.Tokenomia.ICO.Funds.Reception.Investor.Plan
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,
@@ -156,10 +174,18 @@ test-suite tokenomia-tests
     tasty -any,
     tasty-hunit -any,
     tasty-hedgehog >=0.2.0.0,
+    tasty-quickcheck,
+    quickcheck-instances,
+    QuickCheck,
+    random,
+    nonempty-containers,
     freer-simple -any,
     bytestring,
     text,
+    ordered-containers,
     interpolatedstring-perl6,
+    blockfrost-api,
+    safe-money,
     data-default
 
 
@@ -174,23 +200,3 @@ executable tokenomia-cli
     tokenomia
 
 
-executable addresses-generator 
-  import: lang
-  main-is: AddressesGenerator.hs
-  hs-source-dirs: app
-  ghc-options:
-    -threaded
-  build-depends:
-    base >= 4.9 && < 5,
-    tokenomia
-
-
-executable ico-simulator 
-  import: lang
-  main-is: ICOSimulation.hs
-  hs-source-dirs: app
-  ghc-options:
-    -threaded
-  build-depends:
-    base >= 4.9 && < 5,
-    tokenomia

@@ -39,10 +39,11 @@ import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
 
 import qualified Tokenomia.Node.Status as Node
-import qualified Tokenomia.ICO.Funds.Reception.DryRun as ICO
-import qualified Tokenomia.ICO.Funds.Reception.Simulation.Transfer as ICO
-
+import qualified Tokenomia.ICO.Funds.Reception.Run as ICO.Reception
+import qualified Tokenomia.ICO.Funds.Reception.Simulation.Transfer as ICO.Simulation
+import qualified Tokenomia.ICO.Funds.Exchange.DryRun as ICO.Exchange
 import qualified Streamly.Prelude as S
+
 
 load SearchPath ["cardano-cli"]
 
@@ -113,7 +114,7 @@ recursiveMenu = do
         NoWalletWithCollateral    -> printLn "No Wallets with collateral..."
         WalletWithoutCollateral   -> printLn "Wallets selected without a required collateral..."
         AlreadyACollateral        -> printLn "Collateral Already Created..."
-        NoADAInWallet ->             printLn "Please, add ADAs to your wallet..."
+        NoADAsOnChildAddress ->             printLn "Please, add ADAs to your wallet..."
         NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
         TryingToBurnTokenWithoutScriptRegistered 
                                   -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
@@ -126,8 +127,15 @@ recursiveMenu = do
         InconsistenciesBlockFrostVSLocalNode errorMsg ->
                                      printLn $ "Inconsistencies Blockfrost vs Local Node  :" <> errorMsg
         NoICOTransactionsToBePerformOnThisWallet  
-                                  -> printLn $ "No ICO Transactions to be performed on wallet used "
-        NoDerivedChildAddress  -> printLn $ "No derived child adresses on this wallet"
+                                  -> printLn "No ICO Transactions to be performed on wallet used "
+        NoDerivedChildAddress  -> printLn "No derived child adresses on this wallet"
+        NoUTxOsFound           -> printLn "No UTxOs found"
+        ICOExchangeUtxoWithoutHash 
+                               -> printLn "ICO - Echange UTxOs without Hashes"
+        ICOTokensDispatchedOnMultipleUTxOs 
+                               -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
+        ICONoValidTxs -> printLn "ICO - No Valid Txs Found" 
+        InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         ChildAddressNotIndexed w address 
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")
             
@@ -143,6 +151,7 @@ runAction
      -> m ()
 runAction = \case    
       WalletList       -> Wallet.displayAll
+      WalletDisplay    -> Wallet.askDisplayOne
       WalletCreate     -> Wallet.register
       WalletGenerateChildAddresses
                       -> Wallet.generateChildAddresses
@@ -156,12 +165,17 @@ runAction = \case
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
-      ICOFundsValidationDryRun  -> ICO.dryRun
-      ICOFundsDispatchSimulation -> ICO.dispatchAdasOnChildAdresses
+      ICOFundsValidationDryRun   -> ICO.Reception.dryRun
+      ICOFundsValidationRun      -> ICO.Reception.run
+      ICOExchangeDryRun          -> ICO.Exchange.dryRun
+      ICOExchangeRun             -> ICO.Exchange.run  
+      ICOFundsDispatchSimulation -> ICO.Simulation.dispatchAdasOnChildAdresses
+
 
 actions :: NonEmpty Action
 actions = NonEmpty.fromList [
     WalletList,
+    WalletDisplay,
     WalletCreate,
     WalletGenerateChildAddresses,
     WalletCollateral,
@@ -175,11 +189,15 @@ actions = NonEmpty.fromList [
     VestingRetrieveFunds,
     NodeStatus,
     ICOFundsValidationDryRun,
+    ICOFundsValidationRun,
+    ICOExchangeDryRun,
+    ICOExchangeRun,
     ICOFundsDispatchSimulation
     ]
 
 data Action
   = WalletList
+  | WalletDisplay
   | WalletCreate
   | WalletCollateral
   | WalletRestore
@@ -193,11 +211,15 @@ data Action
   | VestingRetrieveFunds
   | NodeStatus 
   | ICOFundsValidationDryRun
+  | ICOFundsValidationRun
+  | ICOExchangeDryRun
+  | ICOExchangeRun
   | ICOFundsDispatchSimulation
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
     WalletList            -> " [Wallet]  - List Registered Wallets" 
+    WalletDisplay         -> " [Wallet]  - Display a specific wallets"    
     WalletRestore         -> " [Wallet]  - Restore Wallets from your 24 words seed phrase (Shelley Wallet)"
     WalletCreate          -> " [Wallet]  - Create a new Wallet"
     WalletGenerateChildAddresses 
@@ -212,6 +234,9 @@ instance DisplayMenuItem Action where
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     NodeStatus            ->  "[Node]    - Status"
     ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
+    ICOFundsValidationRun      ->  "[ICO]     - Funds Validation Run"
+    ICOExchangeDryRun          ->  "[ICO]     - Funds Exchange Dry Run"
+    ICOExchangeRun             ->  "[ICO]     - Funds Exchange Run"
     ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch on child addresses ADAs)"
 
 

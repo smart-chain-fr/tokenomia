@@ -39,12 +39,12 @@ dispatchAdasOnChildAdresses = do
         >>= \wallets -> do
             printLn "Select the wallet containing funds : "
             askToChooseAmongGivenWallets wallets
-    source@WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAInWallet
+    source@WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAsOnChildAddress
 
     printLn $ "- We'll dispatch this amount " <> showValue value <> " from the 4th to the last child address generated "
     chunkSize <- Ada.adaOf . fromIntegral <$> ask @Integer "- Chunk size : "
     from <-  ask @Int "- From which index : "
-    to <-  ask @Int "- To which index : "
+    to   <-  ask @Int "- To which index : "
     dispatchAdasOnChildAdresses' name source from to chunkSize
 
 dispatchAdasOnChildAdresses' ::
@@ -59,18 +59,18 @@ dispatchAdasOnChildAdresses' ::
     -> m ()
 dispatchAdasOnChildAdresses' walletName source@WalletUTxO {utxo = UTxO {value}} from to chunkSize  = do
 
-    indexes <-  Prelude.take (to - from) . NEL.drop from  <$> fetByWalletIndexedAddress walletName
-    let collateral = CollateralAddressRef $ ChildAddressRef walletName 0
-        fees       = FeeAddressRef $ ChildAddressRef walletName 1
+    indexes <-  Prelude.take (to - from) . NEL.drop from  <$> fetchByWalletIndexedAddress walletName
+    let collateral     = CollateralAddressRef $ ChildAddressRef walletName 0
+        fees           = FeeAddressRef $ ChildAddressRef walletName 1
         adaUtxosNumber = fromIntegral $ Ada.fromValue value `div` chunkSize
-        utxoPerIndex = adaUtxosNumber `div` Prelude.length indexes
+        utxoPerIndex   = adaUtxosNumber `div` Prelude.length indexes
 
     printLn $ "nb utxos = " <> show adaUtxosNumber
     printLn $ "utxoPerIndex = " <> show utxoPerIndex
 
     buildAndSubmit
-      collateral
-      fees
+      (Unbalanced fees)
+      (Just collateral)
       TxBuild
         { inputsFromWallet  = FromWallet source :| []
         , inputsFromScript  = Nothing

@@ -17,8 +17,6 @@ import qualified Data.Text as T
 import           Data.Text (Text)
 import           Data.List as L
            
-import           Ledger ( TxOutRef (..) )
-
 import           Data.String
 import           Tokenomia.Common.Serialise
 import           Tokenomia.Common.Value 
@@ -48,7 +46,8 @@ instance FromCLI [ScriptUTxO] where
       parse = fmap (\(txHash,txIx,x) ->
                       ScriptUTxO
                         { txOutRef = TxOutRef((fromString . T.unpack) txHash) ((read @Integer . T.unpack)  txIx)
-                        , value = ( fromCLI . T.unwords ) x})
+                        , value = ( fromCLI . T.unwords ) x
+                        , datumHash = Hash "TODO" })
 
 
       tokenize :: Text ->  [(Text,Text,[Text])]

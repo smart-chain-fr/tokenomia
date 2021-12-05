@@ -66,8 +66,8 @@ burn' walletName walletUTxO@WalletUTxO {utxo = UTxO {value = totalAmountBurnable
     monetaryScript <- getMonetaryPolicyPath tokenPolicyHash >>= whenNothingThrow TryingToBurnTokenWithoutScriptRegistered
     ChildAddress {address} <- fetchById firstChildAddress
     buildAndSubmit
-      (CollateralAddressRef firstChildAddress)
-      (FeeAddressRef firstChildAddress)
+      (Unbalanced (FeeAddressRef firstChildAddress))
+      (Just $ CollateralAddressRef firstChildAddress)
       TxBuild
         { inputsFromWallet =  FromWallet walletUTxO :| []
         , inputsFromScript =  Nothing

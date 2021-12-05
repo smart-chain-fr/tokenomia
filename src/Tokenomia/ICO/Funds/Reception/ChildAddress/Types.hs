@@ -15,6 +15,7 @@ module Tokenomia.ICO.Funds.Reception.ChildAddress.Types
     , ReceivedFunds (..)
     , NativeTokens
     , Funds
+    , getIndex
     , ) where
 
 import           Prelude hiding (round,print)
@@ -42,7 +43,7 @@ import Control.Monad.Reader ()
 
 data AddressVolumes = AddressVolumes
                 { received :: Ada
-                , sent :: Ada}
+                , sent :: Ada} deriving (Eq)
 
 
 instance Show AddressVolumes where
@@ -57,6 +58,9 @@ data WhiteListedInvestorRef
           { exchangePaybackAddress :: Address
           , indexedAddress         :: IndexedAddress} deriving (Eq)
 
+getIndex :: WhiteListedInvestorRef -> ChildAddressIndex
+getIndex = index . childAddressRef . indexedAddress
+
 instance Show WhiteListedInvestorRef where
     show WhiteListedInvestorRef {indexedAddress = IndexedAddress {childAddressRef = ChildAddressRef {..},..}, ..}
         =    "\n> reception location"
@@ -69,7 +73,7 @@ data WhiteListedInvestorState
     = WhiteListedInvestorState 
         { investorRef :: WhiteListedInvestorRef 
         , volumes :: AddressVolumes
-        , allReceivedFunds :: OSet ReceivedFunds} 
+        , allReceivedFunds :: OSet ReceivedFunds} deriving (Show,Eq) 
 
 type Funds = Either NativeTokens Ada
 type NativeTokens = [Amount]

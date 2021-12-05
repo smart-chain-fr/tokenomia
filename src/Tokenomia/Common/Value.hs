@@ -7,6 +7,7 @@ module Tokenomia.Common.Value
   , getTokensFrom
   , containingOneToken
   , containingGivenNativeToken
+  , containingOnlyGivenAssetClass
   , containingStrictlyADAs
   , containsCollateral
   , showValue) where
@@ -40,6 +41,10 @@ containingOneToken value
 containingGivenNativeToken :: CurrencySymbol -> Value -> Bool
 containingGivenNativeToken policyhash value
     = 1 == (length . filter (\(c,_,_) -> c == policyhash ) .flattenValue) value
+
+containingOnlyGivenAssetClass :: AssetClass -> Value -> Bool
+containingOnlyGivenAssetClass givenAssettClass value
+    = 1 == (length . filter (\(c,tn,_) -> assetClass c tn  == givenAssettClass ) .flattenValue) value
 
 containsCollateral :: Value -> Bool
 containsCollateral = (adaValueOf 2.0 ==) 

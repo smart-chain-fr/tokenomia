@@ -37,6 +37,7 @@ import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.LocalRepository
 import           Tokenomia.Common.Address
+
 transfer ::
     ( MonadIO m
     , MonadReader Environment m
@@ -76,8 +77,8 @@ transfer' walletName receiverAddr utxoWithToken amount labelMaybe = do
         change = tokenId (totalAmount - amount) + lovelaceValueOf 1379280
 
     buildAndSubmit
-      (CollateralAddressRef firstChildAddress)
-      (FeeAddressRef firstChildAddress)
+      (Unbalanced (FeeAddressRef firstChildAddress))
+      (Just $ CollateralAddressRef firstChildAddress)
       TxBuild
         { inputsFromWallet =  FromWallet utxoWithToken :| []
         , inputsFromScript = Nothing

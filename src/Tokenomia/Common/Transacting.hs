@@ -15,7 +15,8 @@
 
 
 module Tokenomia.Common.Transacting
-    ( TxBuild (..)
+    ( TxBalance (..)
+    , TxBuild (..)
     , TxInFromWallet (..)
     , TxInFromScript (..)
     , TxOut (..)
@@ -25,9 +26,9 @@ module Tokenomia.Common.Transacting
     , createMetadataFile
     , build
     , buildAndSubmit
-    , buildAndSubmitWithoutCollateral
     , submitAndWait
     , BuiltTx (..)
+    , Fees
     ) where
 
 import Prelude hiding (head)
@@ -37,7 +38,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 import qualified Data.ByteString.Lazy.Char8 as C
-import           Data.List.NonEmpty hiding (take,repeat)
+import           Data.List.NonEmpty as NEL
 import           Data.String (fromString)
 
 
@@ -65,50 +66,16 @@ import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Common.Hash   
+import           Tokenomia.Common.Hash
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import Data.Coerce
+import           Ledger.Ada as Ada
+
+
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
-
+type Fees = Ada
 load SearchPath ["echo","cardano-cli","md5sum","mv" ]
-
-data BuiltTx = BuiltTx {oneTxInput :: TxOutRef , txBuiltPath :: FilePath} deriving (Show)
-
-build
-    :: ( MonadIO m
-       , MonadReader Environment m
-       , MonadError TokenomiaError m)
-
-    => CollateralAddressRef
-    -> FeeAddressRef
-    -> TxBuild
-    -> m BuiltTx
-build collateralRef feeAddressRef txBuild@TxBuild {..} = do
-    let childAddressRefs =  
-            (Wallet.childAddressRef . walletUTxO <$> inputsFromWallet)
-            <> (coerce collateralRef :| [coerce feeAddressRef])
-
-    WalletUTxO {utxo = UTxO {txOutRef = collateral}} 
-        <- fetchCollateral (coerce collateralRef) >>= whenNothingThrow WalletWithoutCollateral 
-
-    WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef } 
-        <- selectBiggestStrictlyADAsNotCollateral (coerce feeAddressRef) >>= whenNothingThrow NoADAInWallet 
-    
-
-    feesChildAddress <- ChildAddress.address <$> fetchById feesChildAddressRef
-    extendedPrivateKeyJSONPaths <-  (fmap .fmap) extendedPrivateKeyJSONPath $ sequence (fetchById <$> (childAddressRefs) )
-
-    txBuiltPath <- build'
-                          extendedPrivateKeyJSONPaths
-                          (toCardanoCLIOptions txBuild
-                                <> [ "--tx-in"  , (T.unpack . toCLI) fees]
-                                <> [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]
-                                <> [ "--change-address"   , coerce feesChildAddress])
-    
-    return BuiltTx {oneTxInput = fees,txBuiltPath}
-
 
 
 buildAndSubmit
@@ -116,77 +83,120 @@ buildAndSubmit
        , MonadReader Environment m
        , MonadError TokenomiaError m)
 
-    => CollateralAddressRef
-    -> FeeAddressRef
+    => TxBalance
+    -> Maybe CollateralAddressRef
     -> TxBuild
     -> m ()
-buildAndSubmit collateralRef feeAddressRef txBuild = do
-    builtTx <- build collateralRef feeAddressRef txBuild
+buildAndSubmit txBalance collateralMaybe txBuild = do
+    builtTx <- build txBalance collateralMaybe txBuild
     printLn "Submitting Tx" >> submitAndWait builtTx
+ 
 
-
-buildAndSubmitWithoutCollateral
+build
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-
-    => FeeAddressRef
+    => TxBalance
+    -> Maybe CollateralAddressRef 
     -> TxBuild
-    -> m ()
-buildAndSubmitWithoutCollateral feeAddressRef txBuild@TxBuild {..} = do
-    let childAddressRefs =  
-            (Wallet.childAddressRef . walletUTxO <$> inputsFromWallet)
-            <> (coerce feeAddressRef :| [])
+    -> m BuiltTx
+build txBalance collateralMaybe txBuild@TxBuild {..}  = do
+    let childAddressRefs = getTxChildAddressRefs txBalance txBuild collateralMaybe
+        firstInputTxOutRef = (txOutRef. utxo . walletUTxO . NEL.head) inputsFromWallet
+    extendedPrivateKeyJSONPaths <-  fmap extendedPrivateKeyJSONPath <$> sequence (fetchById <$> childAddressRefs)
+    collateralOptions <- getCollateralCardanoCLIOptions collateralMaybe
+    feesOptions <- getFeesCardanoCLIOptions txBalance
+    (txBuiltPath,txSignedPath,estimatedFees) 
+        <- build' 
+            txBalance
+            extendedPrivateKeyJSONPaths
+            (toCardanoCLIOptions txBuild <> collateralOptions <> feesOptions)
 
-    WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef } 
-        <- selectBiggestStrictlyADAsNotCollateral (coerce feeAddressRef) >>= whenNothingThrow NoADAInWallet 
+    return BuiltTx {oneTxInput = firstInputTxOutRef,txSignedPath, txBuiltPath,estimatedFees }
 
-    feesChildAddress <- ChildAddress.address <$> fetchById feesChildAddressRef
-    extendedPrivateKeyJSONPaths <-  (fmap .fmap) extendedPrivateKeyJSONPath $ sequence (fetchById <$> childAddressRefs)
-    
-    txBuiltPath <- build'
-      extendedPrivateKeyJSONPaths
-      (toCardanoCLIOptions txBuild
-        <> [ "--tx-in"  , (T.unpack . toCLI) fees]
-        <> [ "--change-address"   , coerce feesChildAddress])
+getCollateralCardanoCLIOptions 
+ :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) 
+ => Maybe CollateralAddressRef 
+ -> m [String]
+getCollateralCardanoCLIOptions (Just collateralRef)  = do
+    WalletUTxO {utxo = UTxO {txOutRef = collateral}}
+        <- fetchCollateral (coerce collateralRef) >>= whenNothingThrow WalletWithoutCollateral
+    return [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]  
+getCollateralCardanoCLIOptions Nothing = return []     
+        
+getFeesCardanoCLIOptions 
+ :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) 
+ => TxBalance 
+ -> m [String] 
+getFeesCardanoCLIOptions Balanced {..} = return ["--fee", show $ getLovelace txFees ]
+getFeesCardanoCLIOptions (Unbalanced feeAddressRef) = do
+    WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef }
+        <- selectBiggestStrictlyADAsNotCollateral (coerce feeAddressRef) >>= whenNothingThrow NoADAsOnChildAddress
+    feesChildAddress <- ChildAddress.address <$>  fetchById feesChildAddressRef
+    magicN <- asks magicNumber
+    return $ [ "--tx-in"  , (T.unpack . toCLI) fees] 
+          <> [ "--change-address"   , coerce feesChildAddress]
+          <> ["--testnet-magic" , show magicN]
 
-    printLn "Submitting Tx" >> submitAndWait BuiltTx {oneTxInput = fees,txBuiltPath}
+
+getTxChildAddressRefs  :: TxBalance -> TxBuild -> Maybe CollateralAddressRef-> NonEmpty ChildAddressRef 
+getTxChildAddressRefs a TxBuild {..} c 
+    = let childaddressesFromInputWallet = Wallet.childAddressRef . walletUTxO <$> inputsFromWallet
+      in case (a, c) of 
+        (Balanced {},  Nothing) -> childaddressesFromInputWallet
+        (Balanced {}, Just collateralRef) -> childaddressesFromInputWallet <> (coerce collateralRef :| [])   
+        (Unbalanced feeAddressRef , Just collateralRef) -> childaddressesFromInputWallet <> (coerce collateralRef :| [coerce feeAddressRef])
+        (Unbalanced feeAddressRef , Nothing) -> childaddressesFromInputWallet <> (coerce feeAddressRef :| [])
+
+
+
+data TxBalance = Unbalanced { feeAddressRef :: FeeAddressRef} | Balanced { txFees :: Fees}
+
+
+getBuildMode :: TxBalance -> String 
+getBuildMode (Unbalanced _) = "build"
+getBuildMode Balanced {}  = "build-raw"   
+
 
 build'
     :: ( ExecArg a
        , MonadIO m
-       , MonadReader Environment m )
-    => NonEmpty FilePath
+       , MonadReader Environment m
+       , MonadError TokenomiaError m)
+    => TxBalance
+    -> NonEmpty FilePath
     -> a
-    -> m FilePath
-build' extendedPrivateKeyJSONPaths buildTxBody = do
-    magicN <- asks magicNumber
-    
+    -> m (FilePath,FilePath,Ada)
+build' buildMode extendedPrivateKeyJSONPaths buildTxBody = do
     randomInt <- liftIO ( abs <$> randomIO :: IO Int )
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx_" <> show randomInt <> ".raw")) <$> getFolderPath Transactions
     protocolParametersPath <- register_protocol_parameters
-    liftIO $ cardano_cli
-        "transaction"
-        "build"
-        "--alonzo-era"
-        "--testnet-magic" magicN
-        (asArg buildTxBody)
-        (asArg $ requiredSigners extendedPrivateKeyJSONPaths)
-        "--protocol-params-file" protocolParametersPath
-        "--out-file" rawTx
+    fees  <- (liftIO $ cardano_cli
+                "transaction"
+                (getBuildMode buildMode)
+                "--alonzo-era"
+                (asArg buildTxBody)
+                (asArg $ requiredSigners extendedPrivateKeyJSONPaths)
+                "--protocol-params-file" protocolParametersPath
+                "--out-file" rawTx |> captureWords) 
+                >>= whenLeftThrow InvalidTransaction . translate buildMode . ( fmap C.unpack)
 
-    -- Hashing the tx.raw and getting its hash x for renaming the tx.raw into x.raw    
-    (rawHashTx,signedHashTx) <- (\txHash -> ( txFolder <> txHash <> ".raw"
+    (builtTxPath,signedTxPath) <- (\txHash -> ( txFolder <> txHash <> ".raw"
                                             , txFolder <> txHash <> ".signed" ) )
                                     . C.unpack . Prelude.head <$> liftIO (md5sum rawTx |> captureWords )
-    liftIO $ mv rawTx rawHashTx
+    liftIO $ mv rawTx builtTxPath
 
-    printLn "Signing Tx"    >> sign_tx   rawHashTx signedHashTx extendedPrivateKeyJSONPaths
-    return signedHashTx
+    printLn "> Signing Tx"    >> sign_tx   builtTxPath signedTxPath extendedPrivateKeyJSONPaths
+    printLn "> Tx Built and Signed" 
+    return (builtTxPath,signedTxPath,fees)
 
     where requiredSigners :: NonEmpty FilePath -> [String]
           requiredSigners xs = foldMap (\a -> ["--required-signer" ,  a ] ) xs
-
+          
+          translate :: TxBalance ->  [String] -> Either String Ada
+          translate Unbalanced {} ["Estimated" , "transaction","fee:","Lovelace",feesAsString] = (Right . fromIntegral . read @Integer) feesAsString
+          translate Balanced {txFees} [] = Right txFees 
+          translate _ issue = (Left . unwords) issue
 
 submitAndWait
     :: ( MonadIO m
@@ -197,7 +207,7 @@ submitAndWait BuiltTx {..} = do
     magicN <- asks magicNumber
     liftIO $ cardano_cli "transaction" "submit"
          "--testnet-magic" magicN
-         "--tx-file" txBuiltPath
+         "--tx-file" txSignedPath
     printLn "Waiting for confirmation..."
     awaitTxCommitted oneTxInput 0
     printLn "\nTx committed into ledger"
@@ -210,11 +220,11 @@ awaitTxCommitted
     -> m ()
 awaitTxCommitted aGivenTxOutRef duration = do
     magicN <- asks magicNumber
-    liftIO (cardano_cli 
-                "query" 
+    liftIO (cardano_cli
+                "query"
                 "utxo"
                 "--tx-in" ((T.unpack . toCLI  ) aGivenTxOutRef)
-                "--testnet-magic" magicN |> capture) 
+                "--testnet-magic" magicN |> capture)
             >>= (\case
                     []     -> return ()
                     [utxo] -> do
@@ -256,7 +266,11 @@ register_protocol_parameters = do
         "--out-file" filePath
     return filePath
 
-createMetadataFile :: (MonadIO m, MonadReader Environment m) => String -> m FilePath
+
+createMetadataFile
+    :: (MonadIO m, MonadReader Environment m)
+    => String
+    -> m FilePath
 createMetadataFile message = do
     tmpFolder <- getFolderPath TMP
     randomInt <- liftIO ( abs <$> randomIO :: IO Integer)
@@ -265,6 +279,13 @@ createMetadataFile message = do
     liftIO (echo ("{\"" ++ show randomInt ++ "\":{\"message\":\"" ++ message ++ "\"}}")
         &> (Truncate . fromString) metadataJsonFilepath)
     return metadataJsonFilepath
+
+data BuiltTx
+    = BuiltTx
+      { oneTxInput :: TxOutRef
+      , txBuiltPath :: FilePath
+      , txSignedPath :: FilePath
+      , estimatedFees :: Ada} deriving (Show)
 
 newtype Metadata = Metadata FilePath deriving (Eq,Show)
 
