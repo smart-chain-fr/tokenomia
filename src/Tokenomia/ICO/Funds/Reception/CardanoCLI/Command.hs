@@ -18,10 +18,11 @@ import           Tokenomia.Wallet.UTxO
 
 import           Tokenomia.Common.Address
 
+
 data Command
-    = TransferAndPartiallyRefund  
+    = SendOnExchangeAddressWithPartialRefund  
         { source :: WalletUTxO  
-        , adas :: Ada 
+        , adasToSendOnExchange :: Ada 
         , datum :: FilePath 
         , refundAddress :: Address 
         , adasToBeRefund :: Ada
@@ -31,9 +32,9 @@ data Command
         , refundAddress :: Address 
         , adasToBeRefund :: Ada
         , receivedAt :: Slot}
-    | Transfer          
+    | SendOnExchangeAddress          
         { source :: WalletUTxO 
-        , adas :: Ada 
+        , adasToSendOnExchange :: Ada 
         , datum :: FilePath
         , receivedAt :: Slot} deriving (Eq)
 
@@ -45,7 +46,7 @@ instance Ord Command where
 
 
 instance Show Command where
-    show TransferAndPartiallyRefund {..} 
+    show SendOnExchangeAddressWithPartialRefund {..} 
         =  show (getSlot receivedAt) 
             <> " - TransferAndPartiallyRefund : "
             <> show source 
@@ -53,7 +54,7 @@ instance Show Command where
         =  show (getSlot receivedAt) 
             <> " - Refund   : "
             <> show source 
-    show Transfer {..} 
+    show SendOnExchangeAddress {..} 
         =  show (getSlot receivedAt) 
             <> " - Transfer : "
             <> show source 

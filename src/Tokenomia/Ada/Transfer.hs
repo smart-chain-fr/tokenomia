@@ -39,7 +39,7 @@ transfer = do
         >>= \wallets -> do
             printLn "Select the wallet containing funds : "
             askToChooseAmongGivenWallets wallets
-    WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAInWallet
+    WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAsOnChildAddress
 
     printLn  $                                       "- Amount Available                : " <> showValue value
     amount <- ask @Integer                           "- Amount of Lovelaces to transfer : "
@@ -61,12 +61,12 @@ transfer' ::
     -> m ()
 transfer' senderWallet receiverAddr amount labelMaybe = do
     let firstAddress = ChildAddressRef senderWallet 0
-    ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAInWallet
+    ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAsOnChildAddress
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
 
     buildAndSubmit
-      (CollateralAddressRef firstAddress)
-      (FeeAddressRef firstAddress)
+      (Unbalanced $ FeeAddressRef firstAddress)
+      (Just $ CollateralAddressRef firstAddress)
       TxBuild
         { inputsFromWallet  = FromWallet ada :| []
         , inputsFromScript  = Nothing

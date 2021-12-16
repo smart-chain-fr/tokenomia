@@ -59,7 +59,7 @@ retrieveFunds' walletName (Vesting
                                                         , TrancheContext {valueVested = v2}) , ..}
                             VestingState { tranches = (s1,s2), ..}) = do
     let firstChildAddress = ChildAddressRef walletName 0
-    adas <- selectBiggestStrictlyADAsNotCollateral firstChildAddress >>= whenNothingThrow NoADAInWallet
+    adas <- selectBiggestStrictlyADAsNotCollateral firstChildAddress >>= whenNothingThrow NoADAsOnChildAddress
     currentSlot <- getCurrentSlotSynced
     voidDataFilePath <- Script.registerDatum ()
     datumVoidHash <- Script.getDataHash ()
@@ -109,7 +109,7 @@ retrieveFunds' walletName (Vesting
             
     outputs <- liftEither outputsEither
     buildAndSubmit
-        (CollateralAddressRef firstChildAddress)
-        (FeeAddressRef firstChildAddress) 
+        (Unbalanced (FeeAddressRef firstChildAddress)) 
+        (Just $ CollateralAddressRef firstChildAddress)
         TxBuild{..} 
 

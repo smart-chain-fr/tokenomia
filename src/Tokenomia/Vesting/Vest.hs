@@ -122,8 +122,8 @@ vestFunds'
     datumVoidHash <- Script.getDataHash ()
 
     buildAndSubmit
-      (CollateralAddressRef $ ChildAddressRef ownerWalletName 0)
-      (FeeAddressRef $ ChildAddressRef ownerWalletName 0)
+      (Unbalanced (FeeAddressRef $ ChildAddressRef ownerWalletName 0))
+      (Just $ CollateralAddressRef $ ChildAddressRef ownerWalletName 0)
       TxBuild
         { inputsFromWallet =  FromWallet utxoWithTokens :| []
         , inputsFromScript = Nothing

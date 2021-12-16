@@ -54,10 +54,11 @@ createCollateral'
 createCollateral' walletName = do
     let firstAddress = ChildAddressRef walletName 0
     assertCollateralNotAlreadyCreated firstAddress
-    ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAInWallet
+    ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAsOnChildAddress
     ChildAddress {address = senderAddr} <- fetchById firstAddress
-    buildAndSubmitWithoutCollateral
-      (FeeAddressRef firstAddress )
+    buildAndSubmit  
+      (Unbalanced (FeeAddressRef firstAddress ))
+      Nothing
       TxBuild
         { inputsFromWallet =  FromWallet ada :| []
         , inputsFromScript = Nothing

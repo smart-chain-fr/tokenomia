@@ -70,7 +70,7 @@ mint' ::
     -> m CurrencySymbol
 mint' walletName tokenName amount = do
     let firstChildAddress = ChildAddressRef walletName 0
-    walletUTxOToConsume <- selectBiggestStrictlyADAsNotCollateral firstChildAddress >>= whenNothingThrow NoADAInWallet
+    walletUTxOToConsume <- selectBiggestStrictlyADAsNotCollateral firstChildAddress >>= whenNothingThrow NoADAsOnChildAddress
     ChildAddress {address} <- fetchById firstChildAddress
     let monetaryPolicy = mkMonetaryPolicyScript Params { txOutRefToConsume = txOutRef . utxo $ walletUTxOToConsume , .. }
         policyhash = scriptCurrencySymbol monetaryPolicy
@@ -83,8 +83,8 @@ mint' walletName tokenName amount = do
     monetaryScript <- registerMintingScriptFile monetaryPolicy
 
     buildAndSubmit
-      (CollateralAddressRef firstChildAddress)
-      (FeeAddressRef firstChildAddress)
+      (Unbalanced (FeeAddressRef firstChildAddress))
+      (Just $ CollateralAddressRef firstChildAddress)
       TxBuild
         { inputsFromWallet =  FromWallet walletUTxOToConsume :| []
         , inputsFromScript = Nothing

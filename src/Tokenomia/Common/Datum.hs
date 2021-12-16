@@ -26,7 +26,6 @@ import           Data.Coerce
 import qualified PlutusTx
 import           PlutusTx.IsData.Class ( ToData )
  
-import           Tokenomia.Common.Shell.Console (printLn)
 import           Control.Monad.Reader
 
 import           Shh.Internal
@@ -68,3 +67,5 @@ registerDatum a = do
     let filePath = datumFolder <> coerce datumHash <> ".datum"
     liftIO $ echo  (dataToJSONString a) &> (Truncate . fromString) filePath
     return filePath
+
+    

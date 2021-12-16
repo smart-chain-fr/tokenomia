@@ -9,9 +9,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Tokenomia.ICO.Funds.Reception.CardanoCLI.Convert
-    ( convertAll
-    , discardRejections
-    , displayCommands) where
+    ( convertInvestorPlans) where
 
 import           Prelude hiding (round,print)
 import           Control.Monad.Reader hiding (ask)
@@ -19,11 +17,11 @@ import           Control.Monad.Except
 import           Data.Set.Ordered as Set
 import           Data.List.NonEmpty as NEL
 import           Tokenomia.Common.Environment
-import Data.Foldable
-import           Tokenomia.ICO.Funds.Reception.Command as Plan
+import           Data.Foldable
+import           Tokenomia.ICO.Funds.Reception.Investor.Command as Plan
 import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.Funds.Reception.Plan
+import           Tokenomia.ICO.Funds.Reception.Investor.Plan
 import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Command as CardanoCLI
 import           Tokenomia.Wallet.ChildAddress.ChainIndex
 import Data.Coerce
@@ -32,55 +30,33 @@ import Tokenomia.Wallet.UTxO
 import Ledger.Ada as Ada
 import Plutus.V2.Ledger.Api (TxOutRef)
 import Tokenomia.Common.Datum
-import           Data.Either
-import           Tokenomia.Common.Shell.Console (printLn)
 
-convertAll
+import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Datum
+
+
+convertInvestorPlans
     :: (  MonadIO m
         , MonadReader Environment m
         , MonadError TokenomiaError m)
-    => NonEmpty AddressFundsPlan
-    -> m (OSet (Either Plan.Command CardanoCLI.Command))
-convertAll addressFundsPlans = do
-    res <- mapM convertAddressPlan addressFundsPlans
-    (return . unbiased ) $ fold (toBiasR <$> res)
+    => NonEmpty InvestorPlan
+    -> m [CardanoCLI.Command]
+convertInvestorPlans addressFundsPlans = do
+    res <- mapM convertInvestorPlan addressFundsPlans
+    (return . Set.toAscList . unbiased ) $ fold (toBiasR <$> res)
 
 
 
 toBiasR :: a -> Bias R a
 toBiasR = coerce
 
-discardRejections
-  :: OSet (Either Plan.Command CardanoCLI.Command)
-  -> [CardanoCLI.Command]
-discardRejections = rights . toAscList
 
-displayCommands
-    :: (  MonadIO m)
-    => OSet (Either Plan.Command CardanoCLI.Command)
-    -> m (OSet (Either Plan.Command CardanoCLI.Command))
-displayCommands commandsAndRejections = do
-    printLn "--------------------------------------"
-    printLn "|| Commands and Rejections  ||"
-    mapM_ displayCommand (toAscList commandsAndRejections)
-    printLn "--------------------------------------"
-    return commandsAndRejections
-
-displayCommand
-    :: (  MonadIO m)
-    => Either Plan.Command CardanoCLI.Command
-    -> m ()
-displayCommand (Left x) = printLn $  "<Discarded> " <> show x
-displayCommand (Right ccCommand) = printLn $ show ccCommand
-
-
-convertAddressPlan
+convertInvestorPlan
     :: (  MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-    => AddressFundsPlan  -> m (OSet (Either Plan.Command CardanoCLI.Command))
-convertAddressPlan
-    Plan {investorRef = WhiteListedInvestorRef {indexedAddress = IndexedAddress {..}}
+    => InvestorPlan  -> m (OSet CardanoCLI.Command)
+convertInvestorPlan
+    InvestorPlan {investorRef = WhiteListedInvestorRef {indexedAddress = IndexedAddress {..}}
          , ..}
     = do
     sources <- queryUTxO childAddressRef
@@ -93,36 +69,36 @@ convertCommand
        ,  MonadError TokenomiaError m)
     => [WalletUTxO]
     -> Plan.Command
-    -> m (Either Plan.Command CardanoCLI.Command)
+    -> m CardanoCLI.Command
 convertCommand sources planCommand =
     case planCommand of
-        c@RejectFundsWithNativeTokens {} -> (return . Left) c
-        c@Reject {reason = InsufficientFundsReceived } -> (return . Left) c
-        Reject   {investorRef = WhiteListedInvestorRef {..},..} -> do
-            source <- findUTxOInCardanoCLI sources txOutRef adas
-            (return . Right)
-                Refund { source  = source
+        c@Plan.Refund   {investorRef = WhiteListedInvestorRef {..},..} -> do
+            source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c)
+            return 
+                CardanoCLI.Refund { source  = source
                        , refundAddress = exchangePaybackAddress
-                       , adasToBeRefund = adas
+                       , adasToBeRefund = refundAmount 
                        , receivedAt = receivedAt}
-        AcceptWithPartialRefund {investorRef = WhiteListedInvestorRef {..},..} -> do
-            source <- findUTxOInCardanoCLI sources txOutRef adas
-            datumFile <- registerDatum receivedAt
-            (return . Right)
-                TransferAndPartiallyRefund
+        c@Plan.SendOnExchangeAddressWithPartialRefund {investorRef = w@WhiteListedInvestorRef {..},..} -> do
+            source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c) 
+            datumFile <- registerDatum 
+                            $ mkExchangeDatum receivedAt (getIndex w) 
+            return 
+                CardanoCLI.SendOnExchangeAddressWithPartialRefund
                  { source  = source
                  , refundAddress = exchangePaybackAddress
-                 , adas = adas
+                 , adasToSendOnExchange = adasToSendOnExchange
                  , adasToBeRefund = refundAmount
                  , receivedAt = receivedAt
                  , datum = datumFile}
-        Accept {..} -> do
-            source <- findUTxOInCardanoCLI sources txOutRef adas
-            datumFile <- registerDatum receivedAt
-            (return . Right)
-                Transfer
+        c@Plan.SendOnExchangeAddress {investorRef = w,..} -> do
+            source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c)
+            datumFile <- registerDatum 
+                            $ mkExchangeDatum receivedAt (getIndex w) 
+            return 
+                CardanoCLI.SendOnExchangeAddress
                   { source  = source
-                  , adas = adas
+                  , adasToSendOnExchange = adasToSendOnExchange
                   , receivedAt = receivedAt
                   , datum = datumFile}
 

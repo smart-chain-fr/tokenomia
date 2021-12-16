@@ -9,7 +9,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Tokenomia.ICO.Funds.Reception.CardanoCLI.Transact
-    (buildTx,buildAndSubmitTx) where
+    ( transact
+    , buildTx) where
 
 import           Prelude hiding (round,print)
 import           Control.Monad.Reader hiding (ask)
@@ -24,30 +25,38 @@ import           Tokenomia.Common.Error
 import           Tokenomia.ICO.RoundSettings
 import           Tokenomia.Common.Address
 import           Ledger.Ada as Ada
+import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan (Plan(..),getTxBalance)
+
+
 
 buildTx
     :: (  MonadIO m
         , MonadReader Environment m
         , MonadError TokenomiaError m)
-    => RoundAddresses -> NESet Command  -> m BuiltTx
-buildTx roundAddresses commands =
+    => RoundAddresses 
+    -> Plan Command  
+    -> m BuiltTx
+buildTx roundAddresses plan = do
     build
-      (getCollateral roundAddresses)
-      (getFees roundAddresses)
+      (getTxBalance roundAddresses plan)
+      (Just $ getCollateral roundAddresses)
       TxBuild
-        { inputsFromWallet  = txInputs commands
-        , outputs = txOutputs (getExchangeAddress roundAddresses) commands
-        , validitySlotRangeMaybe = Nothing
-        , tokenSupplyChangesMaybe = Nothing
-        , inputsFromScript  = Nothing
-        , metadataMaybe = Nothing}
+              { inputsFromWallet  = txInputs (commands plan)
+              , outputs = txOutputs (getExchangeAddress roundAddresses) (commands plan)
+              , validitySlotRangeMaybe = Nothing
+              , tokenSupplyChangesMaybe = Nothing
+              , inputsFromScript  = Nothing
+              , metadataMaybe = Nothing}
+     
 
-buildAndSubmitTx
+transact
     :: (  MonadIO m
         , MonadReader Environment m
         , MonadError TokenomiaError m)
-    => RoundAddresses -> NESet Command  -> m ()
-buildAndSubmitTx a b =  buildTx a b >>= submitAndWait   
+    => RoundAddresses 
+    -> Plan Command  
+    -> m ()
+transact a b =  buildTx a b >>= submitAndWait   
 
 txInputs :: NESet Command -> NonEmpty TxInFromWallet
 txInputs xs = FromWallet . source <$> toAscList xs
@@ -58,10 +67,10 @@ txOutputs exchangeAddress xs = txCommandOutputs exchangeAddress =<< toAscList xs
 
 txCommandOutputs :: Address -> Command -> NonEmpty TxOut
 txCommandOutputs exchangeAddress = \case
-  TransferAndPartiallyRefund {..} -> 
+  SendOnExchangeAddressWithPartialRefund {..} -> 
       ToWallet 
         { address = exchangeAddress
-        , value = Ada.toValue adas
+        , value = Ada.toValue adasToSendOnExchange
         , datumMaybe = Just datum } :| 
       [ToWallet 
         { address = refundAddress
@@ -72,8 +81,8 @@ txCommandOutputs exchangeAddress = \case
         { address = refundAddress
         , value = Ada.toValue adasToBeRefund
         , datumMaybe = Nothing } :| []
-  Transfer {..} -> 
+  SendOnExchangeAddress {..} -> 
       ToWallet 
         { address = exchangeAddress
-        , value = Ada.toValue adas
+        , value = Ada.toValue adasToSendOnExchange
         , datumMaybe = Just datum } :| []

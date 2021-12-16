@@ -36,7 +36,6 @@ import Control.Monad.Reader
 import qualified Blockfrost.Client as B
 
 import Data.String ( IsString(fromString) )
-import Data.Coerce ( coerce )
 import Data.List.NonEmpty hiding (fromList)
 
 import Tokenomia.Common.Address ( Address(..) )
@@ -69,8 +68,6 @@ fetchActiveAddresses roundAddresses pageNumber Wallet {stakeAddress = Address st
                 Left e -> throwError $ BlockFrostError e
                 Right res -> return res)
 
-notElemFromRoundAddreses :: RoundAddresses -> Address -> Bool
-notElemFromRoundAddreses r address = address `notElem` getRoundAddresses r
 
 fetchAllWhiteListedFunds
     :: ( MonadIO m
