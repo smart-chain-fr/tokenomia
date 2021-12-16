@@ -6,7 +6,7 @@ Tokenomia aims to simplify the use of Native Tokens and Smart Contracts above th
 ## What you can do on (Testnet/Mainnet)
  
 	1-  [Wallet]  - List Registered Wallets
-	2-  [Wallet]  - Display a specific wallets
+	2-  [Wallet]  - Display a specific wallet
 	3-  [Wallet]  - Create a new Wallet
 	4-  [Wallet]  - Derive Child Adresses
 	5-  [Wallet]  - Create a unique collateral for transfer
@@ -23,7 +23,7 @@ Tokenomia aims to simplify the use of Native Tokens and Smart Contracts above th
 	16- [ICO]     - Funds Validation Run
 	17- [ICO]     - Funds Exchange Dry Run
 	18- [ICO]     - Funds Exchange Run
-	19- [ICO]     - Funds Simulation (Dispatch on child addresses ADAs)
+	19- [ICO]     - Funds Simulation (Dispatch ADAs on child addresses )
 
 
 
