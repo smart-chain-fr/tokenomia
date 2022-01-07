@@ -1,7 +1,10 @@
 
 <img src="./tokenomia-logo.png" width="500"  />
 
-Tokenomia aims to simplify the use of Native Tokens and Smart Contracts above the Cardano Platform for the needs of [Smart Chain](https://smart-chain.fr/en/) Developments.
+Tokenomia is built for the Cardashift [ICO](https://ico.cardashift.com/), it aims to simplify the use of Native Tokens and Smart Contracts above the Cardano Platform.
+[Cardashift](https://cardashift.com/) is a community-driven startup platform that raises funds, builds and accelerates startups that solve social and environmental problems.
+[video to be uploaded]
+Video explaining our [Catalyst proposal](https://cardano.ideascale.com/a/dtd/Boost-impact-projects-with-Catalyst/384977-48088)
 
 ## What you can do on (Testnet/Mainnet)
  
