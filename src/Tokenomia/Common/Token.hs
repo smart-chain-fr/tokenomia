@@ -10,7 +10,7 @@ module Tokenomia.Common.Token
 
 import Plutus.V1.Ledger.Value hiding (assetClass)
 import Plutus.V1.Ledger.Ada
-import Tokenomia.ICO.Funds.Exchange.Balanceable
+import Tokenomia.ICO.Balanceable
 
 data Token 
     = Token 

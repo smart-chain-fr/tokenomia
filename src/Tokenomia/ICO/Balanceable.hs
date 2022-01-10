@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Tokenomia.ICO.Funds.Exchange.Balanceable
+module Tokenomia.ICO.Balanceable
     ( AdaBalanceable (..)
     , TokenBalanceable (..) ) where
 import           Prelude hiding (round,print)

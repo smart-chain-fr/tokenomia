@@ -17,7 +17,7 @@ import           Ledger ( Slot(..) )
 import           Tokenomia.Wallet.UTxO
 
 import           Tokenomia.Common.Address
-
+import           Tokenomia.ICO.Balanceable
 
 data Command
     = SendOnExchangeAddressWithPartialRefund  
@@ -45,17 +45,29 @@ instance Ord Command where
       GT -> GT
 
 
+instance AdaBalanceable Command where 
+    adaBalance Refund {..} = getAdas source - adasToBeRefund
+    adaBalance SendOnExchangeAddressWithPartialRefund {..}  = getAdas source - adasToSendOnExchange - adasToBeRefund
+    adaBalance SendOnExchangeAddress {..}  = getAdas source - adasToSendOnExchange
+
+
 instance Show Command where
-    show SendOnExchangeAddressWithPartialRefund {..} 
-        =  show (getSlot receivedAt) 
-            <> " - TransferAndPartiallyRefund : "
-            <> show source 
-    show Refund {..} 
-        =  show (getSlot receivedAt) 
-            <> " - Refund   : "
-            <> show source 
-    show SendOnExchangeAddress {..} 
-        =  show (getSlot receivedAt) 
-            <> " - Transfer : "
-            <> show source 
-    
+    show Refund { ..}
+        =  "\n Command : Refund "
+        <> "\n   | received at : " <> show (getSlot receivedAt)
+        <> "\n   | source  : " <> show (getAdas source)
+        <> "\n   | refund  : " <> show adasToBeRefund
+    show SendOnExchangeAddressWithPartialRefund { ..}
+        =  "\n Command : SendOnExchangeAddressWithPartialRefund "
+        <> "\n   | received at : " <> show (getSlot receivedAt)
+        <> "\n   | source  : "     <> show (getAdas source)
+        <> "\n   | adasToBeRefund  : "     <> show adasToBeRefund
+        <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
+        
+
+    show SendOnExchangeAddress {..}
+        =  "\n Command : SendOnExchangeAddress "
+        <> "\n   | received at : " <> show (getSlot receivedAt)
+        <> "\n   | source      : " <> show (getAdas source)
+        <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
+        

@@ -23,7 +23,7 @@ import           Tokenomia.Common.Address
 import           Tokenomia.Wallet.UTxO
 import           Tokenomia.Common.Token
 import           Data.Set.Ordered
-import Tokenomia.ICO.Funds.Exchange.Balanceable
+import Tokenomia.ICO.Balanceable
 
 data Command
     = RefundBecauseTokensSoldOut

@@ -26,14 +26,15 @@ import qualified Money
 import           Blockfrost.Types.Shared.Amount ( Amount(..) )
 import           Data.Set.Ordered
 import           Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+import Data.Coerce
 
 
 instance Arbitrary WhiteListedInvestorState where
   arbitrary =
-      WhiteListedInvestorState
-       <$> pure constWhiteListedInvestorRef
+      (pure (WhiteListedInvestorState constWhiteListedInvestorRef)
        <*> genAddressVolumes
-       <*> arbitrary
+       <*> arbitrary) `suchThat` volumesMatchesFundsReceived
+
 
 
 instance (Ord a,Arbitrary a) => Arbitrary (OSet a) where
@@ -46,19 +47,18 @@ instance Arbitrary PlanSettings where
 genPlanSettings :: Gen PlanSettings
 genPlanSettings = do
     minAdas <- choose (lovelaceOf 5 , lovelaceOf 15)
-    maxAdas <- (minAdas + ) <$> choose (lovelaceOf 5 , lovelaceOf 100)
+    maxAdas <- (minAdas + ) <$> choose (lovelaceOf 5 , lovelaceOf 20)
     minSlot <- Slot <$> choose (0,10000)
     maxSlot <- (minSlot + ) <$> (Slot <$> choose (0,10000))
-    Settings
-      <$> pure (interval minSlot maxSlot)
+    pure (Settings (interval minSlot maxSlot))
       <*> pure minAdas
       <*> pure maxAdas
 
 genAddressVolumes :: Gen AddressVolumes
 genAddressVolumes = do
-  adasReceived <- choose (lovelaceOf 5 , lovelaceOf 15)
-  adasSent <- (adasReceived + ) <$> choose (lovelaceOf 5 , lovelaceOf 1000)
-  pure (AddressVolumes adasReceived) <*> pure adasSent
+  adasSent <- choose (lovelaceOf 5 , lovelaceOf 15)
+  adasReceived <- (adasSent + ) <$> choose (lovelaceOf 5 , lovelaceOf 100)
+  (AddressVolumes adasReceived) <$> pure adasSent
 
 deriving instance Random Ada
 
@@ -76,9 +76,10 @@ instance  Arbitrary ReceivedFunds where
 
 
 genReceivedFunds :: Gen ReceivedFunds
-genReceivedFunds =
+genReceivedFunds = do
+  slot <- genSlot
   ReceivedFunds
-    <$> genTxOutRef
+    <$> constTxOutRef slot
     <*> genFunds
     <*> genSlot
 
@@ -88,7 +89,7 @@ genFunds :: Gen Funds
 genFunds =
   oneof
     [ pure (Left constNativeTokens)
-    , Right <$> choose (lovelaceOf 5 , lovelaceOf 15) ]
+    , Right <$> choose (lovelaceOf 5 , lovelaceOf 10) ]
 
 
 constNativeTokens :: NativeTokens
@@ -97,11 +98,15 @@ constNativeTokens =
         $ Money.toSomeDiscrete
           (12 :: Money.Discrete'
                     "b0d07d45fe9514f80213f4020e5a61241458be626841cde717cb38a76e7574636f696e"
-                    '(1,1))]
+                    '(1,1)),
+        AdaAmount 5]
 
 genSlot :: Gen Slot
 genSlot = Slot <$> choose (0,10000)
 
 
-genTxOutRef :: Gen TxOutRef
-genTxOutRef = TxOutRef "42e5d56fe31a9ee9bc83b6b88c2254952d9e477ca46e40dc985fe041feec50f2" <$> choose (1,10000)
+constTxOutRef :: Slot -> Gen TxOutRef -- use the Slot Number to make TxOutRef and Slot Number consisten
+constTxOutRef slot = pure
+  (TxOutRef
+     "42e5d56fe31a9ee9bc83b6b88c2254952d9e477ca46e40dc985fe041feec50f2"
+     (coerce slot))

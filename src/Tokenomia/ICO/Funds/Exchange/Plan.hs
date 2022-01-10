@@ -36,7 +36,7 @@ import           Tokenomia.ICO.RoundSettings
 import           Tokenomia.Common.Transacting
 import Data.Set.NonEmpty (NESet)
 
-import Tokenomia.ICO.Funds.Exchange.Balanceable
+import Tokenomia.ICO.Balanceable
 
 mkPlan
     :: PlanSettings

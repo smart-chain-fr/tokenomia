@@ -25,12 +25,12 @@ import qualified Test.Tasty.QuickCheck as QC
 import Spec.Tokenomia.ICO.Funds.Exchange.GenInputs 
 import Tokenomia.ICO.Funds.Exchange.Plan
 import Tokenomia.ICO.Funds.Exchange.Command
-import Tokenomia.ICO.Funds.Exchange.Balanceable
+import Tokenomia.ICO.Balanceable
 import Debug.Trace
 
 
 tests :: TestTree
-tests = testGroup "UTxOs" [properties]
+tests = testGroup "ICO" [properties]
 
 
 properties :: TestTree
