@@ -11,52 +11,63 @@ module Tokenomia.ICO.Funds.Reception.Investor.Plan
     ( mkPlan
     , mkPlan'
     , State (..)
-    , InvestorPlan (..)) where
+    , InvestorPlan (..)
+    , getIgnoredFunds) where
 import           Prelude hiding (round,print)
 
 import           Data.Set.Ordered
 
 import           Plutus.V1.Ledger.Ada
-import           Ledger.Ada as Ada
 import           Plutus.V1.Ledger.Interval as I
 
-import           Tokenomia.ICO.Funds.Reception.Investor.Command
+import           Tokenomia.ICO.Funds.Reception.Investor.Command as C
 import           Tokenomia.ICO.Funds.Reception.ChildAddress.State
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types hiding (getAdas)
 import           Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+
+
 
 data InvestorPlan = InvestorPlan {investorRef :: WhiteListedInvestorRef , commands :: OSet Command} deriving (Show,Eq)
 
-mkPlan 
-    :: PlanSettings 
-    -> WhiteListedInvestorState  
+mkPlan
+    :: PlanSettings
+    -> WhiteListedInvestorState
     ->  InvestorPlan
-mkPlan a b = snd $ mkPlan' a b 
+mkPlan a b = snd $ mkPlan' a b
 
-mkPlan' 
-    :: PlanSettings 
-    -> WhiteListedInvestorState  
+mkPlan'
+    :: PlanSettings
+    -> WhiteListedInvestorState
     ->  (State,InvestorPlan)
-mkPlan'  settings@Settings{..} WhiteListedInvestorState {..}  
-    = let s@State {commands} = foldr 
-                                transition 
+mkPlan'  settings@Settings{..} WhiteListedInvestorState {..}
+    = let s@State {commands} = foldr
+                                transition
                                 State {commands = empty
                                       , fundRange = I.interval minimumAdaPerFund maximumAdaPerAddress
-                                      ,.. } 
-                                allReceivedFunds
-    in (s,InvestorPlan 
+                                      ,.. }
+                                (reverse .toAscList $ allReceivedFunds)
+    in (s,InvestorPlan
       { investorRef = investorRef
       , commands = commands})
 
-data State = State 
+
+getIgnoredFunds :: OSet ReceivedFunds  -> OSet Command -> [ReceivedFunds ]
+getIgnoredFunds allReceivedFunds commands =
+    Prelude.filter
+      (\ReceivedFunds{txOutRef = txOutRefReceeivedFunds}
+        -> not (any (\c -> txOutRefReceeivedFunds == C.txOutRef c ) (toAscList commands)))
+      (toAscList allReceivedFunds)
+
+
+data State = State
              { settings :: PlanSettings
              , fundRange :: Interval Ada
-             , investorRef :: WhiteListedInvestorRef 
+             , investorRef :: WhiteListedInvestorRef
              , volumes :: AddressVolumes
              , commands :: OSet Command} deriving (Show,Eq)
 
 transition :: ReceivedFunds -> State -> State
-transition ReceivedFunds {funds = Left _} State {..} 
+transition ReceivedFunds {funds = Left _} State {..}
     = ignoreFunds -- Funds With Native Tokens
     -- Here : only ADAs
     where
@@ -66,31 +77,24 @@ transition
     State { settings = settings@Settings {..} , volumes = volumes@AddressVolumes {..} ,..}
     -- Here : only ADAs | transaction slot ∈ time range | minimum < funds 
     |  fundsBelowMinimumRequired       = ignoreFunds -- to low to be refund
-    |  notBelongToRoundTimeRange       = addCommand $ Refund {reason = TransactionOutofRoundTimeRange,refundAmount = adas,..}  
+    |  notBelongToRoundTimeRange       = appendCommand $ Refund {reason = TransactionOutofRoundTimeRange,refundAmount = adas,..}
     -- Here : only ADAs | transaction slot ∈ time range | minimum < funds
-    |  adressAlreadySaturated          = addCommand $ Refund {reason = AddressSaturated,refundAmount = adas,..}
+    |  adressAlreadySaturated          = appendCommand $ Refund {reason = AddressSaturated,refundAmount = adas,..}
     -- Here : only ADAs | transaction slot ∈ time range | minimum < funds | in a non already saturated address
-    |  adressSaturatedWithIncomingFund = addCommand $ SendOnExchangeAddressWithPartialRefund 
+    |  adressSaturatedWithIncomingFund = appendCommand $ SendOnExchangeAddressWithPartialRefund
                                                         { refundAmount = fundsOverSaturation
-                                                        , adasToSendOnExchange = adas - fundsOverSaturation, ..} 
-    -- Here : only ADAs | transaction slot ∈ time range | minimum < funds | in a non saturated address with incoming fund
-    |  notBelongToFundRange            = addCommand $ SendOnExchangeAddressWithPartialRefund 
-                                                        { refundAmount = fundsOverMaximumRequired fundRange
                                                         , adasToSendOnExchange = adas - fundsOverSaturation, ..}
-    -- Here : only ADAs | transaction slot ∈ time range | funds ∈ fundsRange | in a non saturated address with incoming fund
-    |  otherwise                       = addCommand $ SendOnExchangeAddress {adasToSendOnExchange = adas,..}
+    -- Here : only ADAs | transaction slot ∈ time range | minimum < funds | in a non saturated address with incoming fund
+    |  otherwise                       = appendCommand $ SendOnExchangeAddress {adasToSendOnExchange = adas,..}
     where
-        
+
         notBelongToRoundTimeRange = not $ I.member receivedAt timeRange
-        notBelongToFundRange      = not $ I.member (Ada.lovelaceOf (fromIntegral adas)) fundRange
         fundsBelowMinimumRequired = before  adas fundRange
-        adressAlreadySaturated = maximumAdaPerAddress < (sent + accumulatedFundsToSent)
-        adressSaturatedWithIncomingFund = maximumAdaPerAddress < sent + accumulatedFundsToSent + adas
+        adressAlreadySaturated = maximumAdaPerAddress  < (sent + accumulatedFundsToSent)
+        adressSaturatedWithIncomingFund = maximumAdaPerAddress + minimumAdaPerFund < sent + accumulatedFundsToSent + adas
+        fundsOverSaturation = sent + accumulatedFundsToSent + adas - maximumAdaPerAddress 
         accumulatedFundsToSent = sumAdaFunds $ toAscList commands
-        fundsOverSaturation = sent + accumulatedFundsToSent + adas - maximumAdaPerAddress
-        fundsOverMaximumRequired (Interval _ (UpperBound (Finite maximumAdaPerTx) _) ) = Ada.lovelaceOf (fromIntegral adas) - maximumAdaPerTx
-        fundsOverMaximumRequired _ = Ada.lovelaceOf 0
-        addCommand command = State { commands = command |< commands , .. }
+        appendCommand command = State { commands = commands |> command    , .. }
         ignoreFunds  = State {  .. }
 
 

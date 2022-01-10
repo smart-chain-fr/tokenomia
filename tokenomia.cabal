@@ -98,7 +98,7 @@ library
       Tokenomia.ICO.Funds.Exchange.Tokens
       Tokenomia.ICO.Funds.Exchange.Transact
       Tokenomia.ICO.Funds.Exchange.Plan.Settings
-      Tokenomia.ICO.Funds.Exchange.Balanceable
+      Tokenomia.ICO.Balanceable
       Tokenomia.ICO.Funds.Reception.Debug
       Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan
       Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
@@ -162,6 +162,8 @@ test-suite tokenomia-tests
     Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
     Spec.Tokenomia.ICO.Funds.Reception.Investor.GenInputs
     Spec.Tokenomia.ICO.Funds.Reception.Investor.Plan
+    Spec.Tokenomia.ICO.Funds.Reception.CardanoCLI.GenInputs
+    Spec.Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,

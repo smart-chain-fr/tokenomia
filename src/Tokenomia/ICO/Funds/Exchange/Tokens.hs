@@ -34,7 +34,7 @@ import Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Environment
 import Tokenomia.Common.Token
 import Plutus.V1.Ledger.Value as Ledger
-import Tokenomia.ICO.Funds.Exchange.Balanceable
+import Tokenomia.ICO.Balanceable
 import Ledger.Ada
 
 data ExchangeToken

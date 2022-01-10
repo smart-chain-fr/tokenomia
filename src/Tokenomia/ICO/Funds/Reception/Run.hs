@@ -60,7 +60,7 @@ dryRun = do
 
     S.drain
          $ streamCommandsToTransact round
-         & S.map (CardanoCLI.plan Nothing)
+         & S.map (CardanoCLI.mkPlan Nothing)
          & S.mapM (buildTx roundAddresses)
          & S.mapM (\fees -> do 
             printLn $ "Tx Fees : " <> show fees
@@ -89,10 +89,10 @@ run = do
     S.drain
          $ streamCommandsToTransact round
          & S.take 1 -- TODO : to be removed
-         & S.map (CardanoCLI.plan Nothing)
+         & S.map (CardanoCLI.mkPlan Nothing)
          & S.mapM (\planWithoutFees@CardanoCLI.Plan{commands} -> do 
              fees <- estimatedFees <$> buildTx roundAddresses planWithoutFees
-             return $ CardanoCLI.plan (Just fees) commands )
+             return $ CardanoCLI.mkPlan (Just fees) commands )
          & S.mapM (transact roundAddresses)
 
     printLn "--------------------------------------"
@@ -110,8 +110,7 @@ streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,wallet 
     let nbFundsPerTx = 10
     S.fromList (PageNumber <$> [1..])
          & S.mapM (\pageNumber -> fetchActiveAddresses roundAddresses pageNumber wallet)
-         & S.takeWhile isJust
-         & S.map fromJust
+         & S.takeWhile isJust & S.map fromJust
          & S.mapM (fetchByAddresses name)
          & S.mapM fetchAllWhiteListedInvestorRef
          & S.mapM fetchAllWhiteListedFunds
@@ -123,5 +122,3 @@ streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,wallet 
          & S.mapM (\commands -> do
             printLn $ "> " <> (show . length)  commands <> " commands will be sent : \n"
             (return . NES.fromList . NEL.fromList) commands) -- TODO : could break ?...
-
-

@@ -16,12 +16,15 @@ module Tokenomia.ICO.Funds.Reception.ChildAddress.Types
     , NativeTokens
     , Funds
     , getIndex
+    , getAdas
+    , volumesMatchesFundsReceived
+    , isNativeTokenFund
     , ) where
 
 import           Prelude hiding (round,print)
 
 import           Data.List (intersperse)
-import Data.Set.Ordered ( OSet )
+import Data.Set.Ordered ( OSet, toAscList )
 import Plutus.V1.Ledger.Ada ( Ada(Lovelace) )
 
 
@@ -73,7 +76,15 @@ data WhiteListedInvestorState
     = WhiteListedInvestorState 
         { investorRef :: WhiteListedInvestorRef 
         , volumes :: AddressVolumes
-        , allReceivedFunds :: OSet ReceivedFunds} deriving (Show,Eq) 
+        , allReceivedFunds :: OSet ReceivedFunds} deriving Eq
+
+instance Show WhiteListedInvestorState where
+    show WhiteListedInvestorState {..}
+        =  "\n || WhiteListedInvestorState || "
+        <>  show volumes
+        <>  (show . toAscList ) allReceivedFunds
+        
+
 
 type Funds = Either NativeTokens Ada
 type NativeTokens = [Amount]
@@ -92,9 +103,10 @@ instance Ord ReceivedFunds where
 
 instance Show ReceivedFunds where
     show ReceivedFunds {..}
-        =    "\n | txOutRef         = " <> showTxOutRef txOutRef
-        <>   "\n | funds            = " <> fold (intersperse ("\n" <> replicate 22 ' ') (showFunds funds))
+        =    "\n || ReceivedFunds || "
         <>   "\n | received at Slot = " <> (show . getSlot) receivedAt
+        <>   "\n | funds            = " <> fold (intersperse ("\n" <> replicate 22 ' ') (showFunds funds))
+        <>   "\n | txOutRef         = " <> showTxOutRef txOutRef
 
      where 
         showFunds :: Funds -> [String]
@@ -104,3 +116,19 @@ instance Show ReceivedFunds where
         showAmount :: Amount -> String
         showAmount (AdaAmount x)   = T.unpack (prettyLovelaces x)
         showAmount (AssetAmount y) = ( show . Money.someDiscreteAmount) y <> " " <> (T.unpack . Money.someDiscreteCurrency) y
+
+volumesMatchesFundsReceived :: WhiteListedInvestorState -> Bool 
+volumesMatchesFundsReceived WhiteListedInvestorState {volumes = AddressVolumes {..},..} 
+  = received - sent == foldMap getAdas allReceivedFunds
+
+getAdas :: ReceivedFunds -> Ada 
+getAdas ReceivedFunds {funds = Right adas} = adas
+getAdas ReceivedFunds {funds = Left nativeTokens} = foldMap filterOnlyLovelaces nativeTokens
+
+filterOnlyLovelaces :: Amount -> Ada
+filterOnlyLovelaces (AdaAmount x)   = fromIntegral x
+filterOnlyLovelaces (AssetAmount _) = 0
+
+isNativeTokenFund :: ReceivedFunds -> Bool 
+isNativeTokenFund ReceivedFunds {funds = Left _} = True 
+isNativeTokenFund _ = False
