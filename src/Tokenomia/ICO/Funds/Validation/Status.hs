@@ -7,10 +7,10 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Tokenomia.ICO.Funds.Reception.Debug
-    ( getStateAndPlans
-    , displayStateAndPlans
-    , showInvestorPlans
+module Tokenomia.ICO.Funds.Validation.Status
+    ( displayStateAndPlans
+    , displayInvestorPlans
+    , getStateAndPlans
     ) where
 
 import Prelude hiding (round,print)
@@ -21,14 +21,14 @@ import Data.List (intersperse)
 import           Tokenomia.Common.Shell.Console (printLn)
 
 import Data.Foldable
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.State
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan (InvestorPlan (..),mkPlan)
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.State
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan (InvestorPlan (..),mkPlan)
 import           Data.Set.Ordered hiding (null)
 import           Tokenomia.ICO.RoundSettings
 import qualified Data.List.NonEmpty as NEL
-import           Tokenomia.ICO.Funds.Reception.Investor.Command as Plan
+import           Tokenomia.ICO.Funds.Validation.Investor.Command as Plan
 import Data.Coerce
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
 
 getStateAndPlans
     :: RoundSettings
@@ -72,11 +72,11 @@ displayStateAndPlan _ InvestorPlan {..}
         <> "\n----------------------------------------"
 
 
-showInvestorPlans
+displayInvestorPlans
     :: ( MonadIO m)
     => NEL.NonEmpty InvestorPlan
     ->  m (NEL.NonEmpty InvestorPlan)
-showInvestorPlans investorplans = do
+displayInvestorPlans investorplans = do
     let funds = toAscList . unbiased $ fold (toBiasR . commands  <$> investorplans)
         nbfunds = length funds
         nbIgnored = nbfunds - nbRefund - nbSendOnExchangeAddressWithPartialRefund - nbSendOnExchangeAddess   

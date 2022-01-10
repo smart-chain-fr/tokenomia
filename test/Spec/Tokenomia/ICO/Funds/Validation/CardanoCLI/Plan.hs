@@ -16,20 +16,20 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Spec.Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan (tests) where
+module Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan (tests) where
 
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as QC
 
 
 
-import Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan
-import Tokenomia.ICO.Funds.Reception.CardanoCLI.Command as C
+import Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+import Tokenomia.ICO.Funds.Validation.CardanoCLI.Command as C
 
-import Spec.Tokenomia.ICO.Funds.Reception.Investor.GenInputs ()
+import Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs ()
 import Debug.Trace
 
-import           Spec.Tokenomia.ICO.Funds.Reception.CardanoCLI.GenInputs ()
+import           Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs ()
 import           Tokenomia.ICO.Balanceable
 
 

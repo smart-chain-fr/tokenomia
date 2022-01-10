@@ -21,7 +21,7 @@ import           Control.Monad.Except
 import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types
 import           Tokenomia.Common.Address ( Address(..) )
 import qualified Data.List.NonEmpty as NEL
 

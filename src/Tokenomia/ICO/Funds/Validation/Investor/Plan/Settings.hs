@@ -8,7 +8,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+module Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
     ( mkPlanSettings, PlanSettings (..) ) where
 import           Prelude hiding (round,print)
 

@@ -8,7 +8,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+module Tokenomia.ICO.Funds.Validation.ChildAddress.Types
     ( WhiteListedInvestorRef (..)
     , WhiteListedInvestorState (..)
     , AddressVolumes (..)

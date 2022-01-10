@@ -7,7 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
-module Tokenomia.ICO.Funds.Reception.Investor.Command
+module Tokenomia.ICO.Funds.Validation.Investor.Command
     ( RejectAdaFundsReason (..)
     , Command (..)
     , isRefund
@@ -26,7 +26,7 @@ import           Plutus.V1.Ledger.Ada
 import           Ledger ( Slot(..) )
 
 import           Tokenomia.Common.TxOutRef
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types hiding (receivedAt,txOutRef,getAdas)
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types hiding (receivedAt,txOutRef,getAdas)
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import Data.Coerce
 
@@ -41,18 +41,18 @@ data Command
         , txOutRef :: TxOutRef
         , refundAmount :: Ada
         , receivedAt :: Slot
-        , reason :: RejectAdaFundsReason}
+        , reason :: RejectAdaFundsReason }
     | SendOnExchangeAddressWithPartialRefund 
         { investorRef :: WhiteListedInvestorRef
         , txOutRef :: TxOutRef
         , adasToSendOnExchange :: Ada
         , receivedAt :: Slot
-        , refundAmount :: Ada}
+        , refundAmount :: Ada }
     | SendOnExchangeAddress 
         { investorRef :: WhiteListedInvestorRef
         , txOutRef :: TxOutRef
         , adasToSendOnExchange :: Ada
-        , receivedAt :: Slot} deriving Eq
+        , receivedAt :: Slot } deriving Eq
 
 
 

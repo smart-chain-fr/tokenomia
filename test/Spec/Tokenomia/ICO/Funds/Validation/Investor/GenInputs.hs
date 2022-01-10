@@ -5,7 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DataKinds #-}
 
-module Spec.Tokenomia.ICO.Funds.Reception.Investor.GenInputs
+module Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
     ( ) where
 
 import           Prelude hiding ((+),(-), print)
@@ -21,11 +21,11 @@ import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 
 import Tokenomia.Common.Address
 
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types
 import qualified Money
 import           Blockfrost.Types.Shared.Amount ( Amount(..) )
 import           Data.Set.Ordered
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
 import Data.Coerce
 
 

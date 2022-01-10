@@ -8,7 +8,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Tokenomia.ICO.Funds.Reception.CardanoCLI.Transact
+module Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
     ( transact
     , buildTx) where
 
@@ -20,12 +20,12 @@ import           Data.List.NonEmpty
 import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Transacting
 
-import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Command
+import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
 import           Tokenomia.Common.Error
 import           Tokenomia.ICO.RoundSettings
 import           Tokenomia.Common.Address
 import           Ledger.Ada as Ada
-import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan (Plan(..),getTxBalance)
+import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan (Plan(..),getTxBalance)
 
 
 

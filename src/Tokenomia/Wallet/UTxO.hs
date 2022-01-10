@@ -74,7 +74,9 @@ instance Ord UTxO where
 
 
 instance Show WalletUTxO where
-  show WalletUTxO {utxo = UTxO {..}} = showTxOutRef txOutRef <> " : " <> showValue value
+  show WalletUTxO {utxo = UTxO {maybeDatumHash = Nothing , ..}} = showTxOutRef txOutRef <> " : " <> showValue value
+  show WalletUTxO {utxo = UTxO {maybeDatumHash = Just datumHash , ..}} = showTxOutRef txOutRef <> " : " <> showValue value <>  " | " <> show datumHash
+
 
 instance DisplayMenuItem WalletUTxO where
   displayMenuItem WalletUTxO {utxo = UTxO {..}} = showTxOutRef txOutRef <> " : " <> showValue value
@@ -117,6 +119,6 @@ instance FromCLI [UTxO] where
 
 
 parseDatumMaybe :: [Text] -> Maybe Hash
-parseDatumMaybe ["TxOutDatumHashNone"] = Nothing 
+parseDatumMaybe ["TxOutDatumNone"] = Nothing 
 parseDatumMaybe ["TxOutDatumHash","ScriptDataInAlonzoEra", hash] = (Just . Hash . T.unpack . T.drop 1 . T.take (T.length hash-1)) hash
 parseDatumMaybe x = error $ "unexpected format :" <> show (T.unpack <$> x)

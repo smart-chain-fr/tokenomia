@@ -7,7 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Tokenomia.ICO.Funds.Reception.Run
+module Tokenomia.ICO.Funds.Validation.Run
     (dryRun
     ,run) where
 
@@ -19,18 +19,18 @@ import           Control.Monad.Except
 import           Tokenomia.Common.Shell.Console (printLn)
 
 import           Tokenomia.Common.Environment
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.State
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan as Plan
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.State
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan as Plan
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.LocalRepository as Wallet
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
 import           Tokenomia.ICO.RoundSettings
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
-import            Tokenomia.ICO.Funds.Reception.CardanoCLI.Convert as CardanoCLICommand
-import qualified  Tokenomia.ICO.Funds.Reception.CardanoCLI.Command as CardanoCLI
-import qualified  Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan as CardanoCLI
-import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Transact
+import            Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert as CardanoCLICommand
+import qualified  Tokenomia.ICO.Funds.Validation.CardanoCLI.Command as CardanoCLI
+import qualified  Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan as CardanoCLI
+import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
 import qualified Data.List.NonEmpty as NEL
 import qualified Streamly.Prelude as S
 import qualified Streamly.Internal.Data.Fold as SF
@@ -39,9 +39,9 @@ import Data.Function ( (&) )
 import Data.Maybe
 import qualified Data.Set.NonEmpty as NES
 import Tokenomia.ICO.Funds.WhiteListing.Repository
-import Tokenomia.ICO.Funds.Reception.Debug
+import Tokenomia.ICO.Funds.Validation.Status
 import           Tokenomia.Common.Transacting
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
 
 dryRun
     :: ( MonadIO m
@@ -115,7 +115,7 @@ streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,wallet 
          & S.mapM fetchAllWhiteListedInvestorRef
          & S.mapM fetchAllWhiteListedFunds
          & S.map  (fmap (mkPlan $ mkPlanSettings round))
-         & S.mapM showInvestorPlans
+         & S.mapM displayInvestorPlans
          & S.mapM CardanoCLICommand.convertInvestorPlans
          & S.concatMap S.fromList
          & S.chunksOf nbFundsPerTx SF.toList

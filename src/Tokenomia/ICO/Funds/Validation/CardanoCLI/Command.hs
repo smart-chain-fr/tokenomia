@@ -6,7 +6,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
-module Tokenomia.ICO.Funds.Reception.CardanoCLI.Command
+module Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
     ( Command (..)) where
 
 import           Prelude hiding (round,print)

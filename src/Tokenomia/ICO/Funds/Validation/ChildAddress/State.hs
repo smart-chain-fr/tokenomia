@@ -6,7 +6,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
-module Tokenomia.ICO.Funds.Reception.ChildAddress.State
+module Tokenomia.ICO.Funds.Validation.ChildAddress.State
     ( fetchActiveAddresses
     , fetchAllWhiteListedFunds
     , AddressVolumes (..)
@@ -40,7 +40,7 @@ import Data.List.NonEmpty hiding (fromList)
 
 import Tokenomia.Common.Address ( Address(..) )
 import           Control.Monad.Except
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef

@@ -39,9 +39,10 @@ import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
 
 import qualified Tokenomia.Node.Status as Node
-import qualified Tokenomia.ICO.Funds.Reception.Run as ICO.Reception
-import qualified Tokenomia.ICO.Funds.Reception.Simulation.Transfer as ICO.Simulation
-import qualified Tokenomia.ICO.Funds.Exchange.DryRun as ICO.Exchange
+import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
+import qualified Tokenomia.ICO.Funds.Validation.Simulation.Transfer as ICO.Simulation
+import qualified Tokenomia.ICO.Funds.Exchange.Run as ICO.Exchange
+import qualified Tokenomia.ICO.Status as ICO
 import qualified Streamly.Prelude as S
 
 
@@ -152,6 +153,7 @@ runAction
 runAction = \case    
       WalletList       -> Wallet.displayAll
       WalletDisplay    -> Wallet.askDisplayOne
+      WalletDisplayWihtinIndexRange -> Wallet.askDisplayOneWithinIndexRange
       WalletCreate     -> Wallet.register
       WalletGenerateChildAddresses
                       -> Wallet.generateChildAddresses
@@ -165,8 +167,9 @@ runAction = \case
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
-      ICOFundsValidationDryRun   -> ICO.Reception.dryRun
-      ICOFundsValidationRun      -> ICO.Reception.run
+      ICOStatus          -> ICO.displayStatus  
+      ICOFundsValidationDryRun   -> ICO.Validation.dryRun
+      ICOFundsValidationRun      -> ICO.Validation.run
       ICOExchangeDryRun          -> ICO.Exchange.dryRun
       ICOExchangeRun             -> ICO.Exchange.run  
       ICOFundsDispatchSimulation -> ICO.Simulation.dispatchAdasOnChildAdresses
@@ -176,6 +179,7 @@ actions :: NonEmpty Action
 actions = NonEmpty.fromList [
     WalletList,
     WalletDisplay,
+    WalletDisplayWihtinIndexRange,
     WalletCreate,
     WalletGenerateChildAddresses,
     WalletCollateral,
@@ -188,6 +192,7 @@ actions = NonEmpty.fromList [
     VestingVestFunds,
     VestingRetrieveFunds,
     NodeStatus,
+    ICOStatus,
     ICOFundsValidationDryRun,
     ICOFundsValidationRun,
     ICOExchangeDryRun,
@@ -198,6 +203,7 @@ actions = NonEmpty.fromList [
 data Action
   = WalletList
   | WalletDisplay
+  | WalletDisplayWihtinIndexRange
   | WalletCreate
   | WalletCollateral
   | WalletRestore
@@ -210,6 +216,7 @@ data Action
   | VestingVestFunds
   | VestingRetrieveFunds
   | NodeStatus 
+  | ICOStatus
   | ICOFundsValidationDryRun
   | ICOFundsValidationRun
   | ICOExchangeDryRun
@@ -219,7 +226,9 @@ data Action
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
     WalletList            -> " [Wallet]  - List Registered Wallets" 
-    WalletDisplay         -> " [Wallet]  - Display a specific wallets"    
+    WalletDisplay         -> " [Wallet]  - Display wallet utxos"
+    WalletDisplayWihtinIndexRange   
+                          -> " [Wallet]  - Display wallet utxos within child address index range"     
     WalletRestore         -> " [Wallet]  - Restore Wallets from your 24 words seed phrase (Shelley Wallet)"
     WalletCreate          -> " [Wallet]  - Create a new Wallet"
     WalletGenerateChildAddresses 
@@ -227,16 +236,17 @@ instance DisplayMenuItem Action where
     WalletCollateral      -> " [Wallet]  - Create a unique collateral for transfer"
     WalletRemove          -> " [Wallet]  - Remove an existing Wallet"
     TokenMint             -> " [Token]   - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy)"
-    TokenBurn             -> " [Token]   - Burn Tokens with CLAP type policy"
-    TokenTransfer         -> " [Token]   - Transfer Tokens"
+    TokenBurn             ->  "[Token]   - Burn Tokens with CLAP type policy"
+    TokenTransfer         ->  "[Token]   - Transfer Tokens"
     AdaTransfer           ->  "[Ada]     - Transfer ADAs"
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     NodeStatus            ->  "[Node]    - Status"
+    ICOStatus                  ->  "[ICO]     - Status"
     ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
     ICOFundsValidationRun      ->  "[ICO]     - Funds Validation Run"
     ICOExchangeDryRun          ->  "[ICO]     - Funds Exchange Dry Run"
     ICOExchangeRun             ->  "[ICO]     - Funds Exchange Run"
-    ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch on child addresses ADAs)"
+    ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch ADAs on child addresses )"
 
 

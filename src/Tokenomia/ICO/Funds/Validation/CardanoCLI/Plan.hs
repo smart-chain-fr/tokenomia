@@ -8,7 +8,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE FlexibleInstances #-}
-module Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan
+module Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
     ( mkPlan
     , mkPlan'
     , Plan (..)
@@ -18,7 +18,7 @@ import           Prelude hiding (round,print)
 
 
 
-import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Command
+import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
 import           Tokenomia.ICO.RoundSettings
 
 

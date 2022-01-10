@@ -37,7 +37,7 @@ import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.LocalRepository
 import           Tokenomia.Common.Address
-
+import           Tokenomia.Common.Token
 transfer ::
     ( MonadIO m
     , MonadReader Environment m
@@ -73,8 +73,8 @@ transfer' walletName receiverAddr utxoWithToken amount labelMaybe = do
     ChildAddress {address = senderWalletChildAddress} <- fetchById firstChildAddress
     let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom . UTxO.value  . utxo $ utxoWithToken
         tokenId = singleton tokenPolicyHash tokenNameSelected
-        valueToTransfer = tokenId amount + lovelaceValueOf 1379280
-        change = tokenId (totalAmount - amount) + lovelaceValueOf 1379280
+        valueToTransfer = tokenId amount + toValue getMinimumUTxOAdaRequired
+        change = tokenId (totalAmount - amount) + toValue getMinimumUTxOAdaRequired
 
     buildAndSubmit
       (Unbalanced (FeeAddressRef firstChildAddress))

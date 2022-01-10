@@ -25,4 +25,4 @@ mkPlanSettings RoundSettings {..} = Settings {..}
 data PlanSettings 
     = Settings 
        { exchangeTokenId :: AssetClass
-       , tokenRate :: RatePerAda } deriving (Show,Eq)
+       , tokenRatePerLovelace :: RatePerLovelace } deriving (Show,Eq)

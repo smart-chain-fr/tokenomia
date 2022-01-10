@@ -44,7 +44,7 @@ library
       Tokenomia.Token.CLAPStyle.Mint
       Tokenomia.Token.CLAPStyle.Burn
       Tokenomia.Token.CLAPStyle.MonetaryPolicy
-      Tokenomia.ICO.Funds.Reception.CardanoCLI.Command
+      Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
       Tokenomia.Script.LocalRepository
       Tokenomia.Script.ChainIndex
       Tokenomia.Script.UTxO
@@ -78,30 +78,31 @@ library
       Tokenomia.Common.Datum
       Tokenomia.Common.Address
       Tokenomia.Common.Hash
-      Tokenomia.ICO.Funds.Reception.Investor.Command
-      Tokenomia.ICO.Funds.Reception.Investor.Plan
-      Tokenomia.ICO.Funds.Reception.Run
-      Tokenomia.ICO.Funds.Reception.ChildAddress.State
-      Tokenomia.ICO.Funds.Reception.ChildAddress.Types
-      Tokenomia.ICO.Funds.Reception.CardanoCLI.Transact
-      Tokenomia.ICO.Funds.Reception.CardanoCLI.Convert
-      Tokenomia.ICO.Funds.Reception.Simulation.Transfer
+      Tokenomia.ICO.Funds.Validation.Investor.Command
+      Tokenomia.ICO.Funds.Validation.Investor.Plan
+      Tokenomia.ICO.Funds.Validation.Run
+      Tokenomia.ICO.Funds.Validation.ChildAddress.State
+      Tokenomia.ICO.Funds.Validation.ChildAddress.Types
+      Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
+      Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
+      Tokenomia.ICO.Funds.Validation.Simulation.Transfer
       Tokenomia.Common.PageNumber 
       Tokenomia.ICO.RoundSettings
-      Tokenomia.ICO.Funds.Exchange.DryRun
+      Tokenomia.ICO.Funds.Exchange.Run
       Tokenomia.ICO.Funds.Exchange.ReceivedFunds
       Tokenomia.ICO.Funds.Exchange.Command
       Tokenomia.ICO.Funds.Exchange.Plan
-      Tokenomia.ICO.Funds.Reception.CardanoCLI.Datum
+      Tokenomia.ICO.Status
+      Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
       Tokenomia.ICO.Funds.WhiteListing.Repository
       Tokenomia.Common.Token 
       Tokenomia.ICO.Funds.Exchange.Tokens
       Tokenomia.ICO.Funds.Exchange.Transact
       Tokenomia.ICO.Funds.Exchange.Plan.Settings
       Tokenomia.ICO.Balanceable
-      Tokenomia.ICO.Funds.Reception.Debug
-      Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan
-      Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+      Tokenomia.ICO.Funds.Validation.Status
+      Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+      Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
     build-depends:
       base >= 4.9 && < 5,
       lens,
@@ -160,10 +161,10 @@ test-suite tokenomia-tests
     Spec.Tokenomia.Common.Value
     Spec.Tokenomia.ICO.Funds.Exchange.Plan
     Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
-    Spec.Tokenomia.ICO.Funds.Reception.Investor.GenInputs
-    Spec.Tokenomia.ICO.Funds.Reception.Investor.Plan
-    Spec.Tokenomia.ICO.Funds.Reception.CardanoCLI.GenInputs
-    Spec.Tokenomia.ICO.Funds.Reception.CardanoCLI.Plan
+    Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
+    Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
+    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
+    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,

@@ -137,11 +137,11 @@ transition AuthentifiedFunds {..} State { exchangeTokenMaybe = exchangeTokenMayb
                                      , minimumAdaRequired = minimumAdaRequiredOnUtxoWithToken }, ..}
     where
         appendCommand command = State { commands = commands |> command    , .. }
-        tokenAmountCurrentFund = fromIntegral tokenRate * (fromIntegral adas - fromIntegral feesPerCommand)
+        tokenAmountCurrentFund =  floor (tokenRatePerLovelace * (fromIntegral adas - fromIntegral feesPerCommand))
         tokenSoldOutWithPreviousFunds = getTokensSum commands >= exchangeTokenAmount
         tokenSoldOutWithIncomingFund = getTokensSum commands + tokenAmountCurrentFund >= exchangeTokenAmount
         availableTokenAmount = exchangeTokenAmount - getTokensSum commands
-        refundAmountWhenSoldOutWithIncomingFund = adas - feesPerCommand - ceiling @Double (fromIntegral availableTokenAmount /  fromIntegral tokenRate)
+        refundAmountWhenSoldOutWithIncomingFund = adas - feesPerCommand - ceiling (fromIntegral availableTokenAmount / tokenRatePerLovelace)
         feesPerCommand = quotientFeesPerFund + addRemainderFeesPerFundIfLastCommand
         addRemainderFeesPerFundIfLastCommand = if totalCommands == size commands +1 then remainderFeesPerFund else 0 
         collectedAmmountWhenSoldoutWithIncomingFund =  adas + adasOnExchangeToken - refundAmountWhenSoldOutWithIncomingFund - minimumAdaRequiredOnUtxoWithToken - feesPerCommand

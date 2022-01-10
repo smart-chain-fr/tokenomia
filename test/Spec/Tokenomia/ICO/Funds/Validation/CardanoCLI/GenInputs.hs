@@ -5,7 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DataKinds #-}
 
-module Spec.Tokenomia.ICO.Funds.Reception.CardanoCLI.GenInputs
+module Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
     ( ) where
 
 
@@ -23,7 +23,7 @@ import           Test.QuickCheck.Instances ()
 import           Tokenomia.Common.Hash
 import           Tokenomia.Wallet.UTxO
 import  Data.Set.NonEmpty as NES
-import  Tokenomia.ICO.Funds.Reception.CardanoCLI.Command
+import  Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
 
 
 instance (Ord a,Arbitrary a) => Arbitrary (NESet a) where
