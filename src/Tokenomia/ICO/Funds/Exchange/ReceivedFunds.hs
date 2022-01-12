@@ -7,6 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Tokenomia.ICO.Funds.Exchange.ReceivedFunds
     ( fetchRawReceivedFundsByTx
@@ -21,7 +22,7 @@ import           Prelude hiding (round,print)
 
 import qualified Data.Text as T
 
-import Ledger ( TxOutRef(..), TxId )
+import Ledger ( TxId )
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import Data.Coerce
 import Tokenomia.Common.Address
@@ -45,8 +46,10 @@ import           Tokenomia.Common.Environment
 import Tokenomia.Wallet.ChildAddress.LocalRepository
 import Ledger.Slot
 import Tokenomia.Common.Hash
-import Tokenomia.ICO.Funds.Reception.CardanoCLI.Datum
+import Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
 import Tokenomia.ICO.Funds.WhiteListing.Repository
+import Tokenomia.Common.TxOutRef
+
 
 
 data RawReceivedFundsByTx
@@ -66,9 +69,17 @@ data AuthentifiedFunds
       { source :: WalletUTxO
       , adas :: Ada
       , receivedAt :: Slot
+      , index :: ChildAddressIndex 
       , paybackAddress :: Address
-      } deriving (Show,Eq)
+      } deriving (Eq)
 
+instance Show AuthentifiedFunds where 
+ show AuthentifiedFunds {..} 
+    = "\n" <> (showTxOutRef . txOutRef . utxo ) source
+        <> "\n   | index : " <> (show @Integer . fromIntegral) index
+        <> "\n   | received at : "      <> show (getSlot receivedAt)
+        <> "\n   | amount  : "          <> (show . getLovelace) adas <> " Lovelaces"
+        -- <> "\n   | payback Address  : " <> show paybackAddress
 
 instance Ord  AuthentifiedFunds where 
     compare x y = case compare (receivedAt x) (receivedAt y) of

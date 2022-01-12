@@ -39,10 +39,10 @@ instance Arbitrary PlanSettings where
 
 genPlanSetings :: Gen PlanSettings
 genPlanSetings =
-  let ratio = choose @Integer (1,3)
+  let ratio = choose @Double (1,3)
   in  Settings
         <$> pure constTokenAssetClass
-        <*> (RatePerAda <$> ratio)
+        <*> (RatePerLovelace <$> ratio)
 
 instance Arbitrary Ada where
   arbitrary = genFees
@@ -93,7 +93,12 @@ genAuthentifiedFunds = do
     <$> genSourceWithAda adasGiven
     <*> pure adasGiven
     <*> genSlot
+    <*> constIndex
     <*> constAddress
+
+constIndex :: Gen ChildAddressIndex
+constIndex =  pure $ 1234
+
 
 constAddress :: Gen Address
 constAddress =  pure $ Address "fakeAddress"

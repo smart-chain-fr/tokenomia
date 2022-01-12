@@ -7,7 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Tokenomia.ICO.Funds.Reception.Investor.Plan
+module Tokenomia.ICO.Funds.Validation.Investor.Plan
     ( mkPlan
     , mkPlan'
     , State (..)
@@ -20,10 +20,10 @@ import           Data.Set.Ordered
 import           Plutus.V1.Ledger.Ada
 import           Plutus.V1.Ledger.Interval as I
 
-import           Tokenomia.ICO.Funds.Reception.Investor.Command as C
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.State
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types hiding (getAdas)
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
+import           Tokenomia.ICO.Funds.Validation.Investor.Command as C
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.State
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types hiding (getAdas)
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
 
 
 
@@ -90,7 +90,7 @@ transition
 
         notBelongToRoundTimeRange = not $ I.member receivedAt timeRange
         fundsBelowMinimumRequired = before  adas fundRange
-        adressAlreadySaturated = maximumAdaPerAddress  < (sent + accumulatedFundsToSent)
+        adressAlreadySaturated = maximumAdaPerAddress  <= (sent + accumulatedFundsToSent)
         adressSaturatedWithIncomingFund = maximumAdaPerAddress + minimumAdaPerFund < sent + accumulatedFundsToSent + adas
         fundsOverSaturation = sent + accumulatedFundsToSent + adas - maximumAdaPerAddress 
         accumulatedFundsToSent = sumAdaFunds $ toAscList commands

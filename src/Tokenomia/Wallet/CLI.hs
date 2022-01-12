@@ -19,6 +19,7 @@ module Tokenomia.Wallet.CLI
   -- "UI" for Wallet Repository
   , displayAll
   , askDisplayOne
+  , askDisplayOneWithinIndexRange
   , register
   , restoreByMnemonics
   , remove)
@@ -29,9 +30,9 @@ import           Tokenomia.Common.Error
 import           Control.Monad.Except
 import qualified Prelude as P
 import           Data.Set.NonEmpty
+import qualified Data.Set as S
 import           Data.Coerce
 import           Data.List.NonEmpty
-
 import           Control.Monad.Reader hiding (ask)
 
 import           Tokenomia.Common.Shell.Console (printLn)
@@ -48,6 +49,7 @@ import           Tokenomia.Common.Value
 import           Tokenomia.Common.Address
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Wallet.ChildAddress.LocalRepository
+
 
 askWalletName :: (MonadIO m) => m String
 askWalletName = askString "Wallet Name : "
@@ -163,6 +165,41 @@ askDisplayOne = do
               printLn "Select the wallet to display : "
               askToChooseAmongGivenWallets wallets
   displayOne w
+
+askDisplayOneWithinIndexRange
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+  => m ()
+askDisplayOneWithinIndexRange = do
+  w <- Repository.fetchAll >>= whenNullThrow NoWalletRegistered
+          >>= \wallets -> do
+              printLn "Select the wallet to display : "
+              askToChooseAmongGivenWallets wallets
+  from <- askFilterM @Int "> from : " (\i -> return $ 0 <= i)
+  to <-   askFilterM @Int "> to : "   (\i -> return $ from < i)
+  displayOneWithinIndexRange from to w
+
+displayOneWithinIndexRange
+  ::( MonadIO m
+    , MonadReader Environment m
+    , MonadError TokenomiaError m)
+  => Int
+  -> Int
+  -> Wallet
+  -> m ()
+displayOneWithinIndexRange from to Wallet{..} =  do
+  addresses <- fetchByWalletWithinIndexRange from to name
+  printLn $ "| " <> name
+        <> "\n   | Stake Address: " <> coerce stakeAddress
+        <> "\n   | Child Addresses: " <> (show . S.size) addresses
+  mapM_ (\ChildAddress {childAddressRef = ChildAddressRef {index = index@(ChildAddressIndex indexInt)},..} -> do
+      printLn $ "      [" <> show indexInt <> "] " <> coerce address
+      utxos <- queryUTxO (ChildAddressRef name index)
+      case utxos of
+        [] -> return ()
+        a  -> mapM_ (\utxo -> printLn ("         - " <> show utxo)) a) (S.toAscList addresses)
+
 
 displayOne
   ::( MonadIO m

@@ -16,23 +16,23 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Spec.Tokenomia.ICO.Funds.Reception.Investor.Plan (tests) where
+module Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan (tests) where
 
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as QC
 
 
 import Ledger.Ada
-import Tokenomia.ICO.Funds.Reception.Investor.Plan
-import Tokenomia.ICO.Funds.Reception.Investor.Command as C
+import Tokenomia.ICO.Funds.Validation.Investor.Plan
+import Tokenomia.ICO.Funds.Validation.Investor.Command as C
 import           Plutus.V1.Ledger.Interval as I
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan.Settings
-import Spec.Tokenomia.ICO.Funds.Reception.Investor.GenInputs ()
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
+import Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs ()
 import Debug.Trace
 import           Data.Set.Ordered
 import Data.Monoid
 import Data.Coerce
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types as S
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types as S
 
 
 

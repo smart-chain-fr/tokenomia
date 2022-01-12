@@ -33,7 +33,7 @@ tests = testGroup "Value" [unitTests]
 unitTests :: TestTree
 unitTests = testGroup "Unit tests"
   [ testCase "fromCLI cardano-cli Value" $
-     fromCLI [qc|  1379280 lovelace + 489999979900 bb71084cb088b07943080a6fd4dc42eb1196d12de663526b5cdf8c5c.CLAP + TxOutDatumHashNone  |] 
+     fromCLI [qc|  1379280 lovelace + 489999979900 bb71084cb088b07943080a6fd4dc42eb1196d12de663526b5cdf8c5c.CLAP + TxOutDatumNone  |] 
       @?= lovelaceValueOf 1379280 <>  singleton "bb71084cb088b07943080a6fd4dc42eb1196d12de663526b5cdf8c5c" "CLAP" 489999979900]
 
 

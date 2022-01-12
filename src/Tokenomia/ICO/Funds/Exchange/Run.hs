@@ -7,7 +7,8 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Tokenomia.ICO.Funds.Exchange.DryRun
+
+module Tokenomia.ICO.Funds.Exchange.Run
     (dryRun,run) where
 
 import Prelude hiding (round,print)

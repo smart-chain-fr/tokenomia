@@ -8,7 +8,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Tokenomia.ICO.Funds.Reception.CardanoCLI.Convert
+module Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
     ( convertInvestorPlans) where
 
 import           Prelude hiding (round,print)
@@ -18,11 +18,11 @@ import           Data.Set.Ordered as Set
 import           Data.List.NonEmpty as NEL
 import           Tokenomia.Common.Environment
 import           Data.Foldable
-import           Tokenomia.ICO.Funds.Reception.Investor.Command as Plan
-import           Tokenomia.ICO.Funds.Reception.ChildAddress.Types
+import           Tokenomia.ICO.Funds.Validation.Investor.Command as Plan
+import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.Funds.Reception.Investor.Plan
-import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Command as CardanoCLI
+import           Tokenomia.ICO.Funds.Validation.Investor.Plan
+import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Command as CardanoCLI
 import           Tokenomia.Wallet.ChildAddress.ChainIndex
 import Data.Coerce
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
@@ -31,7 +31,7 @@ import Ledger.Ada as Ada
 import Plutus.V2.Ledger.Api (TxOutRef)
 import Tokenomia.Common.Datum
 
-import           Tokenomia.ICO.Funds.Reception.CardanoCLI.Datum
+import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
 
 
 convertInvestorPlans

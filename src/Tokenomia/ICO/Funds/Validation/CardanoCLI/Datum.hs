@@ -26,7 +26,7 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Tokenomia.ICO.Funds.Reception.CardanoCLI.Datum
+module Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
     ( ExchangeDatum (..)
     , mkExchangeDatum
     , datumFromJson

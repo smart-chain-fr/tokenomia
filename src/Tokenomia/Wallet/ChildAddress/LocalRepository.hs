@@ -17,6 +17,7 @@
 module Tokenomia.Wallet.ChildAddress.LocalRepository
     ( fetchById
     , fetchByWallet
+    , fetchByWalletWithinIndexRange
     , deriveChildAddressesTill
     , deriveChildAddress
     , getChildAddressPath
@@ -34,7 +35,8 @@ import           Data.String
 import           Data.List.Split (splitOn)
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.ByteString.Lazy.UTF8 as BLU
-import           Data.Set.NonEmpty
+import           Data.Set.NonEmpty as NES
+import qualified Data.Set as Set
 import qualified Data.List.NonEmpty as NEL
 import           Control.Monad.Reader
 import           Shh.Internal
@@ -201,8 +203,21 @@ fetchDerivedChildAddressIndexes  name = do
         (find childAddressesPath "-type" "d" |> captureWords) -- return ./ ./0 ./1
     >>= \case
         Nothing -> throwError NoDerivedChildAddress
-        Just indexes -> return indexes
+        Just indexes -> return $ NEL.sort indexes
 
+
+fetchByWalletWithinIndexRange
+    :: ( MonadIO m
+       , MonadReader Environment m 
+       , MonadError  TokenomiaError m)
+    => Int 
+    -> Int
+    -> WalletName
+    -> m (Set.Set ChildAddress)
+fetchByWalletWithinIndexRange from to name = do
+    indexes <- Prelude.take (to - from + 1) . NEL.drop from <$> fetchDerivedChildAddressIndexes name
+    Set.fromList <$> mapM fetchById (ChildAddressRef name <$> indexes)
+    
 fetchByWallet
     :: ( MonadIO m
        , MonadReader Environment m 

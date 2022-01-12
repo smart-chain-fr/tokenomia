@@ -4,7 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Tokenomia.ICO.Funds.Reception.Simulation.Transfer
+module Tokenomia.ICO.Funds.Validation.Simulation.Transfer
     ( dispatchAdasOnChildAdresses) where
 
 import           Prelude
@@ -37,11 +37,11 @@ dispatchAdasOnChildAdresses ::
 dispatchAdasOnChildAdresses = do
     Wallet {name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
-            printLn "Select the wallet containing funds : "
+            printLn "Select the wallet containing funds and used for the round: "
             askToChooseAmongGivenWallets wallets
     source@WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAsOnChildAddress
 
-    printLn $ "- We'll dispatch this amount " <> showValue value <> " from the 4th to the last child address generated "
+    printLn $ "- We'll dispatch this amount " <> showValue value 
     chunkSize <- Ada.adaOf . fromIntegral <$> ask @Integer "- Chunk size : "
     from <-  ask @Int "- From which index : "
     to   <-  ask @Int "- To which index : "
