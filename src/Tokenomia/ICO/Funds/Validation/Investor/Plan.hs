@@ -90,9 +90,12 @@ transition
 
         notBelongToRoundTimeRange = not $ I.member receivedAt timeRange
         fundsBelowMinimumRequired = before  adas fundRange
-        adressAlreadySaturated = maximumAdaPerAddress  <= (sent + accumulatedFundsToSent)
-        adressSaturatedWithIncomingFund = maximumAdaPerAddress + minimumAdaPerFund < sent + accumulatedFundsToSent + adas
-        fundsOverSaturation = sent + accumulatedFundsToSent + adas - maximumAdaPerAddress 
+        adressAlreadySaturated = maximumAdaPerAddress < sent + accumulatedFundsToSent 
+        adressSaturatedWithIncomingFund -- if Refund or Adas Sent to Exchange < minimumAdaPerFund we send on exchange 
+            = maximumAdaPerAddress  < sent + accumulatedFundsToSent + adas 
+            && minimumAdaPerFund    < fundsOverSaturation 
+            && minimumAdaPerFund    < adas - fundsOverSaturation
+        fundsOverSaturation = sent + accumulatedFundsToSent + adas - maximumAdaPerAddress
         accumulatedFundsToSent = sumAdaFunds $ toAscList commands
         appendCommand command = State { commands = commands |> command    , .. }
         ignoreFunds  = State {  .. }
