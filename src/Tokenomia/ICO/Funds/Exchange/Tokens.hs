@@ -28,7 +28,7 @@ import Data.List.NonEmpty as NEL
 import           Control.Monad.Except
 
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import Tokenomia.Common.Value
 import Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Environment

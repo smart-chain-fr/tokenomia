@@ -16,9 +16,6 @@ import           Plutus.V1.Ledger.Ada
 import Test.QuickCheck
 import           System.Random
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-
-import Tokenomia.Common.Address
-
 import           Test.QuickCheck.Instances ()
 import           Tokenomia.Common.Hash
 import           Tokenomia.Wallet.UTxO
@@ -34,26 +31,45 @@ instance Arbitrary Command where
   arbitrary = do 
      minimumAdaRequiredPerUtxo <- choose (lovelaceOf 5 , lovelaceOf 10) -- prequesite funds are always above a given minimum of adas
      oneof 
-       [ genSendOnExchangeAddressWithPartialRefund minimumAdaRequiredPerUtxo
+       [ genSendOnExchangeAddressAndPartiallyRefund minimumAdaRequiredPerUtxo
+       , genSendOnExchangeAddressAndPartiallyMoveToNextRound minimumAdaRequiredPerUtxo
        , genSendOnExchangeAddress minimumAdaRequiredPerUtxo
-       , genRefund minimumAdaRequiredPerUtxo]
+       , genRefund minimumAdaRequiredPerUtxo
+       , genMoveToNextRound minimumAdaRequiredPerUtxo]
 
 genFees :: Gen Ada
 genFees = choose (lovelaceOf 1 , lovelaceOf 3)
 
-genSendOnExchangeAddressWithPartialRefund :: Ada -> Gen Command
-genSendOnExchangeAddressWithPartialRefund minimumAdaRequiredPerUtxo = do 
+genSendOnExchangeAddressAndPartiallyRefund :: Ada -> Gen Command
+genSendOnExchangeAddressAndPartiallyRefund minimumAdaRequiredPerUtxo = do 
   sourceAmount <- choose (minimumAdaRequiredPerUtxo * lovelaceOf 2 , lovelaceOf 30)
-  adasToBeRefundAmount <- choose (minimumAdaRequiredPerUtxo  , sourceAmount)
-  let adasToSendOnExchangeAmount = sourceAmount - adasToBeRefundAmount
+  adasToRefundAmount <- choose (minimumAdaRequiredPerUtxo  , sourceAmount)
+  let adasToSendOnExchangeAmount = sourceAmount - adasToRefundAmount
   
-  SendOnExchangeAddressWithPartialRefund
+  SendOnExchangeAddressAndPartiallyRefund
     <$> genSourceWithAda sourceAmount
+    <*> pure "fakeExchangeAddress"
+    <*> pure "fakeRefundAddress"
     <*> pure adasToSendOnExchangeAmount
     <*> pure "mydatumFilePath"
-    <*> constAddress
-    <*> pure adasToBeRefundAmount
+    <*> pure adasToRefundAmount
     <*> genSlot
+
+genSendOnExchangeAddressAndPartiallyMoveToNextRound :: Ada -> Gen Command
+genSendOnExchangeAddressAndPartiallyMoveToNextRound minimumAdaRequiredPerUtxo = do 
+  sourceAmount <- choose (minimumAdaRequiredPerUtxo * lovelaceOf 2 , lovelaceOf 30)
+  adasToRefundAmount <- choose (minimumAdaRequiredPerUtxo  , sourceAmount)
+  let adasToSendOnExchangeAmount = sourceAmount - adasToRefundAmount
+  
+  SendOnExchangeAddressAndPartiallyMoveToNextRound
+    <$> genSourceWithAda sourceAmount
+    <*> pure "fakeExchangeAddress"
+    <*> pure "fakeNextRoundExchangeAddress"
+    <*> pure adasToSendOnExchangeAmount
+    <*> pure "mydatumFilePath"
+    <*> pure adasToRefundAmount
+    <*> genSlot
+
 
 
 genSendOnExchangeAddress :: Ada -> Gen Command
@@ -62,6 +78,7 @@ genSendOnExchangeAddress minimumAdaRequiredPerUtxo = do
   
   SendOnExchangeAddress
     <$> genSourceWithAda sourceAmount
+    <*> pure "fakeExchangeAddress"
     <*> pure sourceAmount
     <*> pure "mydatumFilePath"
     <*> genSlot
@@ -69,13 +86,21 @@ genSendOnExchangeAddress minimumAdaRequiredPerUtxo = do
 genRefund :: Ada -> Gen Command
 genRefund minimumAdaRequiredPerUtxo = do 
   sourceAmount <- choose (minimumAdaRequiredPerUtxo , lovelaceOf 30)
-  
   Refund
     <$> genSourceWithAda sourceAmount
-    <*> constAddress
+    <*> pure "fakeAddressRefund"
     <*> pure sourceAmount
     <*> genSlot
 
+genMoveToNextRound :: Ada -> Gen Command
+genMoveToNextRound minimumAdaRequiredPerUtxo = do 
+  sourceAmount <- choose (minimumAdaRequiredPerUtxo , lovelaceOf 30)
+  MoveToNextRound
+    <$> genSourceWithAda sourceAmount
+    <*> pure "fakeNextRoundExchangeAddress"
+    <*> pure "mydatumFilePath"
+    <*> pure sourceAmount
+    <*> genSlot
 
 instance Arbitrary Ada where
   arbitrary = genFees
@@ -83,9 +108,6 @@ instance Arbitrary Ada where
 deriving instance Random Ada
 
 
-
-constAddress :: Gen Address
-constAddress =  pure $ Address "fakeAddress"
 
 genSourceWithAda :: Ada ->  Gen WalletUTxO
 genSourceWithAda adaAmount =

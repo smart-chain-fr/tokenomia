@@ -13,7 +13,7 @@ module Tokenomia.ICO.Funds.Exchange.Plan.Settings
 import           Prelude hiding (round,print)
 
 
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 
 import           Plutus.V1.Ledger.Value
 

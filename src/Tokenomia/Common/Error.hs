@@ -36,7 +36,7 @@ data TokenomiaError
     | NoUTxOsFound
     | ICOExchangeUtxoWithoutHash
     | ICOTokensDispatchedOnMultipleUTxOs
-    | ICONoValidTxs
+    | ICONoValidTxs String
     | InvalidTransaction String
     deriving Show
 

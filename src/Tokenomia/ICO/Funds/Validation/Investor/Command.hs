@@ -10,12 +10,12 @@
 module Tokenomia.ICO.Funds.Validation.Investor.Command
     ( RejectAdaFundsReason (..)
     , Command (..)
-    , isRefund
-    , isSendOnExchangeAddressWithPartialRefund
+    , isReject
+    , isSendOnExchangeAddressAndPartiallyReject
     , isSendOnExchangeAddress
     , getAdas
-    , getAdasToRefundBecauseAdresseSaturated
-    , getAdasToRefundBecauseOutOfRange
+    , getAdasToRejectBecauseAdresseSaturated
+    , getAdasToRejectBecauseOutOfRange
     , getAdasSendOnExchange
     ) where
 
@@ -36,25 +36,23 @@ data RejectAdaFundsReason
     deriving (Show,Eq)
 
 data Command
-    = Refund 
+    = Reject 
         { investorRef :: WhiteListedInvestorRef
         , txOutRef :: TxOutRef
-        , refundAmount :: Ada
+        , amountToReject :: Ada
         , receivedAt :: Slot
         , reason :: RejectAdaFundsReason }
-    | SendOnExchangeAddressWithPartialRefund 
+    | SendOnExchangeAddressWithPartialReject 
         { investorRef :: WhiteListedInvestorRef
         , txOutRef :: TxOutRef
         , adasToSendOnExchange :: Ada
         , receivedAt :: Slot
-        , refundAmount :: Ada }
+        , amountToReject :: Ada }
     | SendOnExchangeAddress 
         { investorRef :: WhiteListedInvestorRef
         , txOutRef :: TxOutRef
         , adasToSendOnExchange :: Ada
         , receivedAt :: Slot } deriving Eq
-
-
 
 
 instance Ord Command where 
@@ -64,19 +62,19 @@ instance Ord Command where
       GT -> GT
 
 instance Show Command where
-    show Refund { ..}
-        =  "\n Command : Refund "
+    show Reject { ..}
+        =  "\n Command : Reject "
         <> "\n   | received at : "  <> show (getSlot receivedAt)
-        <> "\n   | amount  : "      <> show refundAmount
+        <> "\n   | amount  : "      <> show amountToReject
         <> "\n   | reason  : "      <> show reason
         <> "\n   | txOutRef  : "    <> show txOutRef 
         <> "\n   | investorRef  : " <> showInvestorRef investorRef
 
-    show SendOnExchangeAddressWithPartialRefund { ..}
-        =  "\n Command : SendOnExchangeAddressWithPartialRefund "
+    show SendOnExchangeAddressWithPartialReject { ..}
+        =  "\n Command : SendOnExchangeAddressAndPartiallyReject "
         <> "\n   | received at : " <> show (getSlot receivedAt)
-        <> "\n   | refund  : "     <> show refundAmount
-        <> "\n   | to Sent on exchange adress   : " <> show adasToSendOnExchange
+        <> "\n   | reject  : "     <> show amountToReject
+        <> "\n   | sent on exchange adress   : " <> show adasToSendOnExchange
         <> "\n   | txOutRef  : "    <> show txOutRef 
         <> "\n   | investorRef  : " <> showInvestorRef investorRef 
         
@@ -96,34 +94,34 @@ showInvestorRef WhiteListedInvestorRef {indexedAddress = IndexedAddress {childAd
        <> "\n         | index   = " <> (show @Integer . coerce) index
        <> "\n       > exchange payback address = " <> show exchangePaybackAddress
 
-isRefund :: Command -> Bool
-isRefund Refund {} = True 
-isRefund _ = False
+isReject :: Command -> Bool
+isReject Reject {} = True 
+isReject _ = False
 
-isSendOnExchangeAddressWithPartialRefund :: Command -> Bool
-isSendOnExchangeAddressWithPartialRefund SendOnExchangeAddressWithPartialRefund {} = True 
-isSendOnExchangeAddressWithPartialRefund _ = False
+isSendOnExchangeAddressAndPartiallyReject :: Command -> Bool
+isSendOnExchangeAddressAndPartiallyReject SendOnExchangeAddressWithPartialReject {} = True 
+isSendOnExchangeAddressAndPartiallyReject _ = False
 
 isSendOnExchangeAddress :: Command -> Bool
 isSendOnExchangeAddress SendOnExchangeAddress {} = True 
 isSendOnExchangeAddress _ = False
 
-getAdasToRefundBecauseAdresseSaturated :: Command -> Ada
-getAdasToRefundBecauseAdresseSaturated Refund {reason = AddressSaturated,..} = refundAmount
-getAdasToRefundBecauseAdresseSaturated SendOnExchangeAddressWithPartialRefund {..} = refundAmount
-getAdasToRefundBecauseAdresseSaturated _  =  0
+getAdasToRejectBecauseAdresseSaturated :: Command -> Ada
+getAdasToRejectBecauseAdresseSaturated Reject {reason = AddressSaturated,..} = amountToReject
+getAdasToRejectBecauseAdresseSaturated SendOnExchangeAddressWithPartialReject {..} = amountToReject
+getAdasToRejectBecauseAdresseSaturated _  =  0
 
 
 getAdasSendOnExchange :: Command -> Ada
 getAdasSendOnExchange SendOnExchangeAddress {..} = adasToSendOnExchange
-getAdasSendOnExchange SendOnExchangeAddressWithPartialRefund {..} = adasToSendOnExchange
+getAdasSendOnExchange SendOnExchangeAddressWithPartialReject {..} = adasToSendOnExchange
 getAdasSendOnExchange _  =  0
 
-getAdasToRefundBecauseOutOfRange :: Command -> Ada
-getAdasToRefundBecauseOutOfRange Refund {reason = TransactionOutofRoundTimeRange,..} = refundAmount
-getAdasToRefundBecauseOutOfRange _  =  0
+getAdasToRejectBecauseOutOfRange :: Command -> Ada
+getAdasToRejectBecauseOutOfRange Reject {reason = TransactionOutofRoundTimeRange,..} = amountToReject
+getAdasToRejectBecauseOutOfRange _  =  0
 
 getAdas:: Command -> Ada    
-getAdas Refund {..} = refundAmount
-getAdas SendOnExchangeAddressWithPartialRefund {..} = adasToSendOnExchange + refundAmount
+getAdas Reject {..} = amountToReject
+getAdas SendOnExchangeAddressWithPartialReject {..} = adasToSendOnExchange + amountToReject
 getAdas SendOnExchangeAddress  {..} = adasToSendOnExchange

@@ -30,7 +30,7 @@ import Tokenomia.Wallet.UTxO
 import Ledger.Ada as Ada
 import Plutus.V2.Ledger.Api (TxOutRef)
 import Tokenomia.Common.Datum
-
+import Tokenomia.ICO.Round.Settings
 import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
 
 
@@ -38,10 +38,11 @@ convertInvestorPlans
     :: (  MonadIO m
         , MonadReader Environment m
         , MonadError TokenomiaError m)
-    => NonEmpty InvestorPlan
+    => RoundSettings 
+    -> NonEmpty InvestorPlan
     -> m [CardanoCLI.Command]
-convertInvestorPlans addressFundsPlans = do
-    res <- mapM convertInvestorPlan addressFundsPlans
+convertInvestorPlans settings addressFundsPlans = do
+    res <- mapM (convertInvestorPlan settings) addressFundsPlans
     (return . Set.toAscList . unbiased ) $ fold (toBiasR <$> res)
 
 
@@ -54,44 +55,70 @@ convertInvestorPlan
     :: (  MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-    => InvestorPlan  -> m (OSet CardanoCLI.Command)
-convertInvestorPlan
+    => RoundSettings -> InvestorPlan  -> m (OSet CardanoCLI.Command)
+convertInvestorPlan 
+    settings
     InvestorPlan {investorRef = WhiteListedInvestorRef {indexedAddress = IndexedAddress {..}}
          , ..}
     = do
     sources <- queryUTxO childAddressRef
-    Set.fromList  <$> mapM (convertCommand sources) (toAscList commands)
+    Set.fromList  <$> mapM (convertCommand settings sources) (toAscList commands)
 
 
 convertCommand
     :: (  MonadIO m
        ,  MonadReader Environment m
        ,  MonadError TokenomiaError m)
-    => [WalletUTxO]
+    => RoundSettings
+    -> [WalletUTxO]
     -> Plan.Command
     -> m CardanoCLI.Command
-convertCommand sources planCommand =
-    case planCommand of
-        c@Plan.Refund   {investorRef = WhiteListedInvestorRef {..},..} -> do
+convertCommand RoundSettings { addresses = RoundAddresses {..},..} sources planCommand =
+    case (planCommand,nextRoundMaybe) of
+        (c@Plan.Reject   {investorRef = WhiteListedInvestorRef {..},..},Nothing )-> do
             source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c)
             return 
                 CardanoCLI.Refund { source  = source
                        , refundAddress = exchangePaybackAddress
-                       , adasToBeRefund = refundAmount 
+                       , adasToRefund = amountToReject 
                        , receivedAt = receivedAt}
-        c@Plan.SendOnExchangeAddressWithPartialRefund {investorRef = w@WhiteListedInvestorRef {..},..} -> do
+        (c@Plan.Reject   {..}, Just NextRound {exchangeAddress = nextRoundExchangeAddress} ) -> do
+            source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c)
+            datumFile <- registerDatum 
+                            $ mkExchangeDatum receivedAt (getIndex investorRef) 
+            return 
+                CardanoCLI.MoveToNextRound { source  = source
+                       , adasToMove = amountToReject 
+                       , receivedAt = receivedAt
+                       , datum = datumFile
+                       , nextRoundExchangeAddress = nextRoundExchangeAddress}
+        (c@Plan.SendOnExchangeAddressWithPartialReject {investorRef = w@WhiteListedInvestorRef {..},..}, Nothing )-> do
             source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c) 
             datumFile <- registerDatum 
                             $ mkExchangeDatum receivedAt (getIndex w) 
             return 
-                CardanoCLI.SendOnExchangeAddressWithPartialRefund
+                CardanoCLI.SendOnExchangeAddressAndPartiallyRefund
                  { source  = source
                  , refundAddress = exchangePaybackAddress
                  , adasToSendOnExchange = adasToSendOnExchange
-                 , adasToBeRefund = refundAmount
+                 , adasToRefund = amountToReject
                  , receivedAt = receivedAt
-                 , datum = datumFile}
-        c@Plan.SendOnExchangeAddress {investorRef = w,..} -> do
+                 , datum = datumFile
+                 , exchangeAddress = address exchange}
+        (c@Plan.SendOnExchangeAddressWithPartialReject {investorRef = w,..}, Just NextRound {exchangeAddress = nextRoundExchangeAddress} ) -> do
+            source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c) 
+            datumFile <- registerDatum 
+                            $ mkExchangeDatum receivedAt (getIndex w) 
+            return 
+                CardanoCLI.SendOnExchangeAddressAndPartiallyMoveToNextRound 
+                 { source  = source
+                 , adasToSendOnExchange = adasToSendOnExchange
+                 , adasToMove = amountToReject
+                 , receivedAt = receivedAt
+                 , datum = datumFile
+                 , nextRoundExchangeAddress = nextRoundExchangeAddress
+                 , exchangeAddress = address exchange}
+        (c@Plan.SendOnExchangeAddress {investorRef = w,..}, _) -> do
             source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c)
             datumFile <- registerDatum 
                             $ mkExchangeDatum receivedAt (getIndex w) 
@@ -100,7 +127,8 @@ convertCommand sources planCommand =
                   { source  = source
                   , adasToSendOnExchange = adasToSendOnExchange
                   , receivedAt = receivedAt
-                  , datum = datumFile}
+                  , datum = datumFile
+                  , exchangeAddress = address exchange}
 
 
 findUTxOInCardanoCLI

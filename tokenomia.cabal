@@ -87,7 +87,8 @@ library
       Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
       Tokenomia.ICO.Funds.Validation.Simulation.Transfer
       Tokenomia.Common.PageNumber 
-      Tokenomia.ICO.RoundSettings
+      Tokenomia.ICO.Round.Settings
+      Tokenomia.ICO.LocalRepository
       Tokenomia.ICO.Funds.Exchange.Run
       Tokenomia.ICO.Funds.Exchange.ReceivedFunds
       Tokenomia.ICO.Funds.Exchange.Command

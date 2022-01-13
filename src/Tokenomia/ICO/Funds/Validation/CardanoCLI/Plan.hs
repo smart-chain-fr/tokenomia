@@ -19,7 +19,7 @@ import           Prelude hiding (round,print)
 
 
 import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 
 
 import qualified Data.Set.NonEmpty as NES
@@ -69,8 +69,10 @@ data State = State
 transition :: Command -> State -> State
 transition c State {.. } = 
     case c of 
-        SendOnExchangeAddressWithPartialRefund {..} ->  appendCommand SendOnExchangeAddressWithPartialRefund {adasToBeRefund = adasToBeRefund - feesPerCommand, ..}
-        Refund {..} -> appendCommand Refund {adasToBeRefund = adasToBeRefund - feesPerCommand,..}
+        SendOnExchangeAddressAndPartiallyRefund {..} ->  appendCommand SendOnExchangeAddressAndPartiallyRefund {adasToRefund = adasToRefund - feesPerCommand, ..}
+        SendOnExchangeAddressAndPartiallyMoveToNextRound {..} ->  appendCommand SendOnExchangeAddressAndPartiallyMoveToNextRound {adasToMove = adasToMove - feesPerCommand, ..}
+        Refund {..} -> appendCommand Refund {adasToRefund = adasToRefund - feesPerCommand,..}
+        MoveToNextRound {..} -> appendCommand MoveToNextRound {adasToMove = adasToMove - feesPerCommand,..}
         SendOnExchangeAddress {..} -> appendCommand SendOnExchangeAddress {adasToSendOnExchange= adasToSendOnExchange - feesPerCommand ,..}
   where 
     appendCommand command = State { commands = commands |> command    , .. }

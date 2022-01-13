@@ -9,6 +9,7 @@
 module Tokenomia.ICO.Funds.Validation.ChildAddress.State
     ( fetchActiveAddresses
     , fetchAllWhiteListedFunds
+    , fetchWhiteListedFunds
     , AddressVolumes (..)
     , WhiteListedInvestorState (..)
     , ReceivedFunds (..)
@@ -44,7 +45,7 @@ import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Common.PageNumber
 
 import           Data.Coerce
@@ -94,13 +95,27 @@ fetchAllWhiteListedFunds'
     :: NonEmpty WhiteListedInvestorRef
     -> B.BlockfrostClient (NonEmpty (WhiteListedInvestorRef,AddressVolumes,OSet ReceivedFunds))
 fetchAllWhiteListedFunds'  whiteListedInvestorRefs  = do
-    mapM fetchWhiteListedFunds whiteListedInvestorRefs
+    mapM fetchWhiteListedFunds' whiteListedInvestorRefs
 
 
 fetchWhiteListedFunds
+    :: ( MonadIO m
+       , MonadError  TokenomiaError m)
+    => WhiteListedInvestorRef
+    -> m WhiteListedInvestorState
+fetchWhiteListedFunds whiteListedInvestorRef = do
+    prj <- liftIO B.projectFromEnv
+    liftIO $ B.runBlockfrost prj $ do
+        fetchWhiteListedFunds' whiteListedInvestorRef
+    >>= (\case
+            Left e -> throwError $ BlockFrostError e
+            Right (a,b,c) -> return $ mkWhiteListedInvestorState a b c )
+
+
+fetchWhiteListedFunds'
     :: WhiteListedInvestorRef
     -> B.BlockfrostClient (WhiteListedInvestorRef,AddressVolumes,OSet ReceivedFunds)
-fetchWhiteListedFunds w@WhiteListedInvestorRef{indexedAddress = IndexedAddress {..} } = do
+fetchWhiteListedFunds' w@WhiteListedInvestorRef{indexedAddress = IndexedAddress {..} } = do
     volumes <- fetchAddressVolumes  address
     allReceivedFunds <- fetchAllReceivedFunds address
     pure (w,volumes,allReceivedFunds)

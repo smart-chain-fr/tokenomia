@@ -71,19 +71,19 @@ transition ReceivedFunds {funds = Left _} State {..}
     = ignoreFunds -- Funds With Native Tokens
     -- Here : only ADAs
     where
-        ignoreFunds  = State {  .. }
+        ignoreFunds  = State {..}
 transition
     ReceivedFunds {funds = Right adas, ..}
     State { settings = settings@Settings {..} , volumes = volumes@AddressVolumes {..} ,..}
     -- Here : only ADAs | transaction slot ∈ time range | minimum < funds 
     |  fundsBelowMinimumRequired       = ignoreFunds -- to low to be refund
-    |  notBelongToRoundTimeRange       = appendCommand $ Refund {reason = TransactionOutofRoundTimeRange,refundAmount = adas,..}
+    |  notBelongToRoundTimeRange       = appendCommand $ Reject {reason = TransactionOutofRoundTimeRange,amountToReject = adas,..}
     -- Here : only ADAs | transaction slot ∈ time range | minimum < funds
-    |  adressAlreadySaturated          = appendCommand $ Refund {reason = AddressSaturated,refundAmount = adas,..}
+    |  adressAlreadySaturated          = appendCommand $ Reject {reason = AddressSaturated,amountToReject = adas,..}
     -- Here : only ADAs | transaction slot ∈ time range | minimum < funds | in a non already saturated address
-    |  adressSaturatedWithIncomingFund = appendCommand $ SendOnExchangeAddressWithPartialRefund
-                                                        { refundAmount = fundsOverSaturation
-                                                        , adasToSendOnExchange = adas - fundsOverSaturation, ..}
+    |  adressSaturatedWithIncomingFund = appendCommand $ SendOnExchangeAddressWithPartialReject
+                                                        { amountToReject = fundsOverSaturation
+                                                        , adasToSendOnExchange = adas - fundsOverSaturation, ..}                                                   
     -- Here : only ADAs | transaction slot ∈ time range | minimum < funds | in a non saturated address with incoming fund
     |  otherwise                       = appendCommand $ SendOnExchangeAddress {adasToSendOnExchange = adas,..}
     where
@@ -99,8 +99,7 @@ transition
         accumulatedFundsToSent = sumAdaFunds $ toAscList commands
         appendCommand command = State { commands = commands |> command    , .. }
         ignoreFunds  = State {  .. }
-
-
+        
 
 sumAdaFunds :: [Command] -> Ada
 sumAdaFunds xs = sum (getAdas <$> xs)

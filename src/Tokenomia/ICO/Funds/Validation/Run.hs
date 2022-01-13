@@ -15,17 +15,14 @@ import Prelude hiding (round,print)
 import           Control.Monad.Reader
 import           Control.Monad.Except
 
-
 import           Tokenomia.Common.Shell.Console (printLn)
 
 import           Tokenomia.Common.Environment
 import           Tokenomia.ICO.Funds.Validation.ChildAddress.State
 import           Tokenomia.ICO.Funds.Validation.Investor.Plan as Plan
 import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.LocalRepository as Wallet
-import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
 import            Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert as CardanoCLICommand
 import qualified  Tokenomia.ICO.Funds.Validation.CardanoCLI.Command as CardanoCLI
@@ -48,22 +45,17 @@ dryRun
        , S.MonadAsync m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-       => m ()
-dryRun = do
-    wallet <- Wallet.fetchAll >>= whenNullThrow NoWalletWithCollateral
-        >>= \wallets -> do
-            printLn "\nSelect a wallet : "
-            askToChooseAmongGivenWallets wallets
-
-    round@RoundSettings {addresses = roundAddresses} <- getRoundSettings wallet
+       => RoundSettings 
+       -> m ()
+dryRun round@RoundSettings {addresses = roundAddresses} = do
     printLn $ show round
 
     S.drain
          $ streamCommandsToTransact round
          & S.map (CardanoCLI.mkPlan Nothing)
          & S.mapM (buildTx roundAddresses)
-         & S.mapM (\fees -> do 
-            printLn $ "Tx Fees : " <> show fees
+         & S.mapM (\BuiltTx{estimatedFees} -> do 
+            printLn $ "Tx Fees : " <> show estimatedFees
             printLn "--------------------------------------")
 
     printLn "------------------------------------------------"
@@ -75,14 +67,9 @@ run
        , S.MonadAsync m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-       => m ()
-run = do
-    wallet <- Wallet.fetchAll >>= whenNullThrow NoWalletWithCollateral
-        >>= \wallets -> do
-            printLn "\nSelect a wallet : "
-            askToChooseAmongGivenWallets wallets
-
-    round@RoundSettings {addresses = roundAddresses} <- getRoundSettings wallet
+       => RoundSettings 
+       -> m ()
+run round@RoundSettings {addresses = roundAddresses} = do
 
     printLn $ show round
 
@@ -106,19 +93,20 @@ streamCommandsToTransact
        , MonadError TokenomiaError m)
     => RoundSettings
     -> S.SerialT m (NES.NESet CardanoCLI.Command)
-streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,wallet = wallet@Wallet{name}} = do
+streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,investorsWallet = wallet@Wallet{name = investorsWallet}} = do
     let nbFundsPerTx = 10
     S.fromList (PageNumber <$> [1..])
          & S.mapM (\pageNumber -> fetchActiveAddresses roundAddresses pageNumber wallet)
          & S.takeWhile isJust & S.map fromJust
-         & S.mapM (fetchByAddresses name)
+         & S.mapM (fetchByAddresses investorsWallet)
          & S.mapM fetchAllWhiteListedInvestorRef
          & S.mapM fetchAllWhiteListedFunds
          & S.map  (fmap (mkPlan $ mkPlanSettings round))
          & S.mapM displayInvestorPlans
-         & S.mapM CardanoCLICommand.convertInvestorPlans
+         & S.mapM (CardanoCLICommand.convertInvestorPlans round)
          & S.concatMap S.fromList
          & S.chunksOf nbFundsPerTx SF.toList
          & S.mapM (\commands -> do
             printLn $ "> " <> (show . length)  commands <> " commands will be sent : \n"
+            mapM_ (printLn .show) commands 
             (return . NES.fromList . NEL.fromList) commands) -- TODO : could break ?...

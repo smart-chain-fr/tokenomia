@@ -22,8 +22,8 @@ import           Tokenomia.Common.Transacting
 
 import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.RoundSettings
-import           Tokenomia.Common.Address
+import           Tokenomia.ICO.Round.Settings
+
 import           Ledger.Ada as Ada
 import           Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan (Plan(..),getTxBalance)
 
@@ -42,7 +42,7 @@ buildTx roundAddresses plan = do
       (Just $ getCollateral roundAddresses)
       TxBuild
               { inputsFromWallet  = txInputs (commands plan)
-              , outputs = txOutputs (getExchangeAddress roundAddresses) (commands plan)
+              , outputs = txOutputs (commands plan)
               , validitySlotRangeMaybe = Nothing
               , tokenSupplyChangesMaybe = Nothing
               , inputsFromScript  = Nothing
@@ -62,25 +62,39 @@ txInputs :: NESet Command -> NonEmpty TxInFromWallet
 txInputs xs = FromWallet . source <$> toAscList xs
 
 
-txOutputs :: Address -> NESet Command -> NonEmpty TxOut
-txOutputs exchangeAddress xs = txCommandOutputs exchangeAddress =<< toAscList xs
+txOutputs ::  NESet Command -> NonEmpty TxOut
+txOutputs xs = txCommandOutputs =<< toAscList xs
 
-txCommandOutputs :: Address -> Command -> NonEmpty TxOut
-txCommandOutputs exchangeAddress = \case
-  SendOnExchangeAddressWithPartialRefund {..} -> 
+txCommandOutputs ::  Command -> NonEmpty TxOut
+txCommandOutputs  = \case
+  SendOnExchangeAddressAndPartiallyRefund {..} -> 
       ToWallet 
         { address = exchangeAddress
         , value = Ada.toValue adasToSendOnExchange
         , datumMaybe = Just datum } :| 
       [ToWallet 
         { address = refundAddress
-        , value = Ada.toValue adasToBeRefund
+        , value = Ada.toValue adasToRefund
+        , datumMaybe = Nothing }]
+  SendOnExchangeAddressAndPartiallyMoveToNextRound {..} -> 
+      ToWallet 
+        { address = exchangeAddress
+        , value = Ada.toValue adasToSendOnExchange
+        , datumMaybe = Just datum } :| 
+      [ToWallet 
+        { address = nextRoundExchangeAddress
+        , value = Ada.toValue adasToMove
         , datumMaybe = Nothing }]
   Refund {..} -> 
       ToWallet 
         { address = refundAddress
-        , value = Ada.toValue adasToBeRefund
+        , value = Ada.toValue adasToRefund
         , datumMaybe = Nothing } :| []
+  MoveToNextRound {..} -> 
+      ToWallet 
+        { address = nextRoundExchangeAddress
+        , value = Ada.toValue adasToMove
+        , datumMaybe = Just datum } :| []
   SendOnExchangeAddress {..} -> 
       ToWallet 
         { address = exchangeAddress
