@@ -1,48 +1,144 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 
 module Tokenomia.ICO.Funds.WhiteListing.Repository
     ( fetchAllWhiteListedInvestorRef
-    , fetchPaybackAddress) where
+    , fetchPaybackAddress
+    , update) where
 
 import Prelude hiding (round,print)
 import           Control.Monad.Reader
 import           Control.Monad.Except
 
-
-
+import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.ICO.Funds.Validation.ChildAddress.Types
-import           Tokenomia.Common.Address ( Address(..) )
 import qualified Data.List.NonEmpty as NEL
+import qualified Data.List as L
+import           Tokenomia.Common.Shell.Console
+import Data.Aeson
+import           Data.String
+
+import           Tokenomia.Common.Address
+
+import           Tokenomia.Wallet.Type
+import           Tokenomia.Wallet.LocalRepository.Folder
+import           Data.Coerce
+import           System.Directory
+
+import Shh
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+import Tokenomia.ICO.Funds.WhiteListing.Types as W
+import qualified Data.ByteString.Lazy.Char8 as C
 
 
--- N.H : TODO 
+load SearchPath ["curl","mkdir","echo","cat" ]
+
+
 fetchAllWhiteListedInvestorRef
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-    => NEL.NonEmpty IndexedAddress
+    => RoundSettings 
+    -> NEL.NonEmpty IndexedAddress
     -> m (NEL.NonEmpty WhiteListedInvestorRef)
-fetchAllWhiteListedInvestorRef activeAddresses =
-    return $ WhiteListedInvestorRef
-        (Address "addr_test1qpwaa235rqypsjyy886260gw83m8q0ls7cz5f5n9fwc5lyf2gdnrkx40pwc4jef679xte56jx3jz6mc73t6w7ac53q2qqqnxv8")
-            <$> activeAddresses
+fetchAllWhiteListedInvestorRef RoundSettings {kycIntegration = Simulation paybackAddress} activeAddresses =
+    return $ WhiteListedInvestorRef paybackAddress <$> activeAddresses
+fetchAllWhiteListedInvestorRef settings activeAddresses 
+    = mapM (\indexedAddress@IndexedAddress {childAddressRef = ChildAddressRef {..}} -> do 
+               paybackAddress  <- fetchPaybackAddress settings index
+               return $ WhiteListedInvestorRef paybackAddress indexedAddress) activeAddresses
 
 fetchPaybackAddress
     :: ( MonadIO m
        , MonadReader Environment m
-       , MonadError TokenomiaError m)
-    => ChildAddressRef
+       , MonadError  TokenomiaError m)
+    => RoundSettings 
+    -> ChildAddressIndex
     -> m Address
-fetchPaybackAddress _ =
-    return $ Address "addr_test1qpwaa235rqypsjyy886260gw83m8q0ls7cz5f5n9fwc5lyf2gdnrkx40pwc4jef679xte56jx3jz6mc73t6w7ac53q2qqqnxv8"
+fetchPaybackAddress RoundSettings {kycIntegration = Simulation paybackAddress} _ = return paybackAddress
+fetchPaybackAddress RoundSettings {investorsWallet = Wallet {name}} index = do
+    filePath <- getInvestorPaybackAddressFilePath name index
+    liftIO (doesFileExist filePath)
+        >>= \case
+             False -> throwError $ ICOPaybackAddressNotAvailable name (fromIntegral index)
+             True ->  Address . C.unpack <$> (liftIO $ cat filePath |> captureTrim)
+     
+
+update 
+     :: ( MonadIO m
+        , MonadReader Environment m
+        , MonadError TokenomiaError m)
+    => RoundSettings 
+    -> m ()  
+update settings@RoundSettings {kycIntegration = Integration {..},investorsWallet = Wallet {name}} = do
+   let fromIndex = ChildAddressIndex 0
+   rawPayload <- liftIO (curl  "-d" (params fromIndex) "-X" "POST" url |> captureTrim) 
+   case eitherDecode rawPayload of
+           Left e -> do 
+               printLn $ "Inconsistent Payload : " <> e
+               liftIO $ putStrLn $ show rawPayload
+           Right Payload {..} -> do
+               printLn $ "Found " <> show (length investors) <> " Investors with a valid KYC."
+               let sortedInvestors = L.sort investors
+                   lastInvestorIndex = W.index . L.last $ sortedInvestors 
+               lastDerivedAddress <- NEL.last <$> fetchDerivedChildAddressIndexes name
+               when (lastDerivedAddress < fromIntegral lastInvestorIndex) $ do
+                    printLn $ "Updating Derived Child Addresses [" <> show lastDerivedAddress <> "," <> show lastInvestorIndex <> "]"
+                    let range :: [ChildAddressRef] = ChildAddressRef name . ChildAddressIndex <$> [fromIntegral lastDerivedAddress..lastInvestorIndex]
+                    mapM_ (\childAddressRef@ChildAddressRef{index = i} -> do
+                                deriveChildAddress childAddressRef
+                                liftIO $ putStrLn $ " - Derived Child Address " <> (show @Integer . coerce $  i))
+                          range 
+                         
+                    mapM_ (saveKYCedInvestors settings) investors
+
+               printLn   "Whitelist updated." 
+    
+update RoundSettings {kycIntegration = Simulation _} 
+    = printLn "Simulation : no necessary update in that case."   
+    
+
+saveKYCedInvestors 
+     :: ( MonadIO m
+       , MonadReader Environment m)
+    => RoundSettings 
+    -> Investor 
+    -> m ()  
+saveKYCedInvestors RoundSettings {investorsWallet = Wallet {name}} Investor {index,paybackAddress} = do 
+    whitelistFolderPath <- getWhitelistPath name 
+    liftIO $ mkdir "-p" whitelistFolderPath
+    filePath <- getInvestorPaybackAddressFilePath name (fromIntegral index)
+    liftIO $ echo paybackAddress &> (Truncate . fromString) filePath
+
+getInvestorPaybackAddressFilePath 
+    :: ( MonadIO m
+       , MonadReader Environment m) 
+    => WalletName 
+    -> ChildAddressIndex  
+    -> m FilePath   
+getInvestorPaybackAddressFilePath name (ChildAddressIndex index) = do  
+    whitelistFolderPath <- getWhitelistPath name 
+    return (whitelistFolderPath <> show index <> ".payback.address")
+
+getWhitelistPath
+    :: (MonadIO m, MonadReader Environment m)
+    =>  WalletName
+    ->  m FilePath
+getWhitelistPath walletName
+    = (<> "whitelist/") <$> getWalletPath walletName
+

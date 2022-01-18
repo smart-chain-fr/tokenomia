@@ -1,11 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Tokenomia.Common.Environment
     ( getTestnetEnvironmment
     , getMainnetEnvironmment
     , Environment (..)
     , toPosixTime
+    , toSlot
     , getFirstShelleySlot
     , getFirstShelleySlotTime
     , convertToInternalPosix
@@ -98,6 +100,13 @@ toPosixTime slot = do
     shelleyDurationInS <- toShelleyDurationInS slot
     byronDurationInS <- getTotalByronDurationInS
     return $ systemStart environment + ExternalPosix.secondsToNominalDiffTime (fromIntegral (byronDurationInS + shelleyDurationInS))
+
+toSlot :: MonadReader Environment m  => ExternalPosix.UTCTime  -> m Slot 
+toSlot timeGiven = do
+    firstShelleyTime <- getFirstShelleySlotTime
+    let posixTime = ExternalPosix.utcTimeToPOSIXSeconds timeGiven 
+    let timeSpentInShelley  = truncate $ posixTime - firstShelleyTime
+    return $ Slot timeSpentInShelley
 
 toShelleyDurationInS :: MonadReader Environment m  => Slot -> m Integer
 toShelleyDurationInS slot = do

@@ -41,6 +41,7 @@ import qualified Tokenomia.Vesting.Retrieve as Vesting
 import qualified Tokenomia.Node.Status as Node
 import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
 import qualified Tokenomia.ICO.Funds.Validation.Simulation.Transfer as ICO.Simulation
+import qualified Tokenomia.ICO.Funds.WhiteListing.Repository as ICO.WhiteListing
 import qualified Tokenomia.ICO.Funds.Exchange.Run as ICO.Exchange
 import qualified Tokenomia.ICO.LocalRepository as ICO
 import qualified Tokenomia.ICO.Status as ICO
@@ -136,6 +137,9 @@ recursiveMenu = do
         ICOTokensDispatchedOnMultipleUTxOs 
                                -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
         ICONoValidTxs message  -> printLn $ "ICO - No Valid Txs Found : " <>  message
+        ICOPaybackAddressNotAvailable walletName index -> 
+                                  printLn $ "ICO - Payback Address not available for  : " <>  walletName <> " index #" <> show index
+         
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         ChildAddressNotIndexed w address 
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")
@@ -167,11 +171,14 @@ runAction = \case
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
+      NodeTranslateSlotToTime    -> Node.translateSlotToTime
+      NodeTranslateTimeToSlot    -> Node.translateTimeToSlot
       ICOStatus                  -> ICO.askRoundSettings >>= ICO.displayStatus  
       ICOFundsValidationDryRun   -> ICO.askRoundSettings >>= ICO.Validation.dryRun
       ICOFundsValidationRun      -> ICO.askRoundSettings >>= ICO.Validation.run
       ICOExchangeDryRun          -> ICO.askRoundSettings >>= ICO.Exchange.dryRun
       ICOExchangeRun             -> ICO.askRoundSettings >>= ICO.Exchange.run  
+      ICOUpdateWhiteListing      -> ICO.askRoundSettings >>= ICO.WhiteListing.update 
       ICOFundsDispatchSimulation -> ICO.Simulation.dispatchAdasOnChildAdresses
 
 
@@ -192,11 +199,14 @@ actions = NonEmpty.fromList [
     VestingVestFunds,
     VestingRetrieveFunds,
     NodeStatus,
+    NodeTranslateSlotToTime,
+    NodeTranslateTimeToSlot,
     ICOStatus,
     ICOFundsValidationDryRun,
     ICOFundsValidationRun,
     ICOExchangeDryRun,
     ICOExchangeRun,
+    ICOUpdateWhiteListing,
     ICOFundsDispatchSimulation
     ]
 
@@ -216,11 +226,14 @@ data Action
   | VestingVestFunds
   | VestingRetrieveFunds
   | NodeStatus 
+  | NodeTranslateSlotToTime
+  | NodeTranslateTimeToSlot
   | ICOStatus
   | ICOFundsValidationDryRun
   | ICOFundsValidationRun
   | ICOExchangeDryRun
   | ICOExchangeRun
+  | ICOUpdateWhiteListing
   | ICOFundsDispatchSimulation
 
 instance DisplayMenuItem Action where
@@ -242,11 +255,14 @@ instance DisplayMenuItem Action where
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     NodeStatus            ->  "[Node]    - Status"
+    NodeTranslateSlotToTime -> "[Node]    - Translate Slot To Time"
+    NodeTranslateTimeToSlot -> "[Node]    - Translate Time To Slot"
     ICOStatus                  ->  "[ICO]     - Status"
     ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
     ICOFundsValidationRun      ->  "[ICO]     - Funds Validation Run"
     ICOExchangeDryRun          ->  "[ICO]     - Funds Exchange Dry Run"
     ICOExchangeRun             ->  "[ICO]     - Funds Exchange Run"
+    ICOUpdateWhiteListing      ->  "[ICO]     - Update Whitelisting"
     ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch ADAs on child addresses )"
 
 

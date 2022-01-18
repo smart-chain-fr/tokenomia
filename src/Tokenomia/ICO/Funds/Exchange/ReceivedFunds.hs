@@ -50,7 +50,7 @@ import Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
 import Tokenomia.ICO.Funds.WhiteListing.Repository
 import Tokenomia.Common.TxOutRef
 import Data.Maybe ( catMaybes )
-
+import qualified Tokenomia.Common.Blockfrost as B
 
 data RawReceivedFundsByTx
     = RawReceivedFundsByTx
@@ -160,21 +160,22 @@ mkAuthentifiedFunds
     -> (Hash,Ada,WalletUTxO) 
     -> (Hash,Slot,ChildAddressIndex)
     -> m AuthentifiedFunds
-mkAuthentifiedFunds RoundSettings {investorsWallet = Wallet {name}} a@(hash1,adas,source) b@(hash2,receivedAt,index) = do
+mkAuthentifiedFunds settings a@(hash1,adas,source) b@(hash2,receivedAt,index) = do
     if hash1 /= hash2 
         then error $ "Internal inconsistencies : " <> show a <> " and " <> show b
         else do
-            paybackAddress <- fetchPaybackAddress $ ChildAddressRef name index
+            paybackAddress <- fetchPaybackAddress settings index
             return AuthentifiedFunds {..}
 
 
 fetchDatums 
     :: ( MonadIO m 
-       , MonadError  TokenomiaError m) 
+       , MonadError  TokenomiaError m
+       , MonadReader Environment m) 
     => NonEmpty Hash 
     -> m (NonEmpty (Hash,Slot,ChildAddressIndex))
 fetchDatums hashes = do
-    prj <- liftIO B.projectFromEnv
+    prj <- B.projectFromEnv''
     (liftIO $ B.runBlockfrost prj $ fetchDatums' hashes)
                             >>= (\case
                                     Left e -> throwError $ BlockFrostError e
@@ -202,7 +203,7 @@ fetchRawReceivedFundsByTx RoundSettings {addresses = RoundAddresses {exchange = 
             walletUtxosGroupedByTx =  (\(txs :: NonEmpty WalletUTxO) -> ((getTxOutRefId . NEL.head) txs,txs))
                                             <$> NEL.groupWith1 getTxOutRefId walletUtxos
 
-        prj <- liftIO B.projectFromEnv
+        prj <- B.projectFromEnv''
         utxosAdresses <- (liftIO $ B.runBlockfrost prj $ fetchUTxOsAddresses' $ fst <$> walletUtxosGroupedByTx)
                             >>= (\case
                                     Left e -> throwError $ BlockFrostError e

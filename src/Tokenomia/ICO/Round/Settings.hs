@@ -16,6 +16,7 @@ module Tokenomia.ICO.Round.Settings
     , RatePerLovelace (..)
     , PreviousRound (..)
     , NextRound (..)
+    , KYCIntegration (..)
     , getCollateral
     , getFees
     , getExchangeAddress
@@ -53,11 +54,18 @@ instance Show PreviousRound where
     show PreviousRound { wallet = Wallet {name}}
         =  " Wallet Used : "  <> name
 
-        
+data KYCIntegration 
+        = Integration { params :: ChildAddressIndex  -> String
+                      , url :: String}
+        | Simulation { fakePaybackAddress :: Address }  
+instance Show KYCIntegration where
+    show  Simulation {fakePaybackAddress = Address fakePaybackAddress} = "Simulation : " <> fakePaybackAddress
+    show  _ = "Integrated"      
 
 data RoundSettings
         = RoundSettings
           { timeRange :: Interval Slot
+          , kycIntegration :: KYCIntegration
           , maximumAdaPerAddress :: Ada
           , minimumAdaPerFund :: Ada
           , investorsWallet :: Wallet
@@ -83,6 +91,7 @@ instance Show RoundSettings where
         =  "\n|| Round Settings ||"
         <> "\n | Time range  = "  <> (show . pretty) timeRange
         <> "\n | Fund range  = "  <> (show . pretty) (interval minimumAdaPerFund maximumAdaPerAddress)
+        <> "\n | KYC Integration = "  <> show kycIntegration
         <> "\n | Exchange Token class = " <> show exchangeTokenId
         <> "\n | Exchange Rate (1 lovelace = x tokens) = " <> show tokenRatePerLovelace
         <> "\n | Investors Wallet   = "  <> investorsWallet
