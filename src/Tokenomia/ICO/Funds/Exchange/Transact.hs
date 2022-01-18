@@ -21,7 +21,7 @@ import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Transacting
 import           Tokenomia.ICO.Funds.Exchange.Command
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Common.Address
 import           Ledger.Ada as Ada
 import           Ledger.Value

@@ -38,26 +38,36 @@ createCollateral ::
     , MonadError TokenomiaError m )
     => m ()
 createCollateral = do
-    fetchAll         >>= whenNullThrow    NoWalletRegistered
-    >>= filterWalletsWithCollateral  >>= whenNothingThrow NoWalletWithoutCollateral 
-    >>= \wallets -> do
-            printLn "Select the wallet to receive the collateral"
-            askToChooseAmongGivenWallets wallets 
-    >>= createCollateral'. Wallet.name
+    target <- fetchAll         
+                >>= whenNullThrow    NoWalletRegistered
+                >>= filterWalletsWithCollateral  >>= whenNothingThrow NoWalletWithoutCollateral 
+                >>= \wallets -> do
+                    printLn "Select the wallet to receive the collateral"
+                    askToChooseAmongGivenWallets wallets 
+    
+    source <- fetchAll         
+                >>= whenNullThrow    NoWalletRegistered 
+                >>= \wallets -> do
+                        printLn "Select the source wallet containing ADAs "
+                        askToChooseAmongGivenWallets wallets
+
+    createCollateral' (Wallet.name source) (Wallet.name target) 
 
 createCollateral'
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-       => WalletName 
+       => WalletName
+       -> WalletName 
        -> m ()
-createCollateral' walletName = do
-    let firstAddress = ChildAddressRef walletName 0
-    assertCollateralNotAlreadyCreated firstAddress
-    ada <- selectBiggestStrictlyADAsNotCollateral firstAddress >>= whenNothingThrow NoADAsOnChildAddress
-    ChildAddress {address = senderAddr} <- fetchById firstAddress
+createCollateral' sourceWalletName targetWalletName = do
+    let firstAddressSource = ChildAddressRef sourceWalletName 0
+        firstAddressTarget = ChildAddressRef targetWalletName 0
+    assertCollateralNotAlreadyCreated firstAddressTarget
+    ada <- selectBiggestStrictlyADAsNotCollateral firstAddressSource >>= whenNothingThrow NoADAsOnChildAddress
+    ChildAddress {address = senderAddr} <- fetchById firstAddressTarget
     buildAndSubmit  
-      (Unbalanced (FeeAddressRef firstAddress ))
+      (Unbalanced (FeeAddressRef firstAddressSource ))
       Nothing
       TxBuild
         { inputsFromWallet =  FromWallet ada :| []

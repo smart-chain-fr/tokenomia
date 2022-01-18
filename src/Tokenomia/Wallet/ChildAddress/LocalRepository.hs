@@ -28,7 +28,7 @@ module Tokenomia.Wallet.ChildAddress.LocalRepository
     , fetchByAddresses
     , toIndexedAddress
     , fetchByWalletIndexedAddress
-    , retrieveAddressesNotFromWallet
+    , retrieveAddressesFromWallet
     ) where
 
 import           Data.String
@@ -147,18 +147,18 @@ fetchByAddressStrict walletName address =
     >>= whenNothingThrow (ChildAddressNotIndexed walletName address)
 
 
-retrieveAddressesNotFromWallet
+retrieveAddressesFromWallet
     :: ( MonadIO m
        , MonadReader Environment m)
     => WalletName
     -> NEL.NonEmpty Address
     -> m (Maybe (NEL.NonEmpty Address))
-retrieveAddressesNotFromWallet walletName addresses = do
+retrieveAddressesFromWallet walletName addresses = do
     maybeAddresses  <- mapM (\address ->  
         fetchByAddress walletName address
          >>= (\case
-                Nothing -> (return . Just) address
-                Just _ -> return Nothing) ) addresses
+                Just _ -> (return . Just) address
+                Nothing -> return Nothing) ) addresses
     (return . NEL.nonEmpty . catMaybes . NEL.toList) maybeAddresses
 
 fetchByAddress

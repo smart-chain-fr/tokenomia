@@ -10,17 +10,19 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
-module Tokenomia.ICO.RoundSettings
+module Tokenomia.ICO.Round.Settings
     ( RoundSettings (..)
     , RoundAddresses (..)
     , RatePerLovelace (..)
+    , PreviousRound (..)
+    , NextRound (..)
     , getCollateral
     , getFees
     , getExchangeAddress
     , getTokenAddress
     , getRoundAddresses
-    , getRoundSettings
-    , notElemFromRoundAddreses ) where
+    , notElemFromRoundAddreses
+    ) where
 
 import           Prelude hiding (round,print)
 
@@ -34,19 +36,35 @@ import           Tokenomia.Wallet.LocalRepository
 
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Common.Address
-import           Control.Monad.Reader
-import           Tokenomia.Common.Environment
-import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
 
+
+newtype NextRound 
+    = NextRound 
+        { exchangeAddress :: Address}
+
+instance Show NextRound where
+    show NextRound { exchangeAddress = Address exchangeAddress}
+        =  " Exchange Address = " <> exchangeAddress
+
+
+newtype PreviousRound = PreviousRound { wallet :: Wallet}
+
+instance Show PreviousRound where
+    show PreviousRound { wallet = Wallet {name}}
+        =  " Wallet Used : "  <> name
+
+        
 
 data RoundSettings
         = RoundSettings
           { timeRange :: Interval Slot
           , maximumAdaPerAddress :: Ada
           , minimumAdaPerFund :: Ada
-          , wallet :: Wallet
+          , investorsWallet :: Wallet
           , exchangeTokenId :: AssetClass
           , tokenRatePerLovelace :: RatePerLovelace
+          , previousRoundMaybe :: Maybe PreviousRound
+          , nextRoundMaybe :: Maybe NextRound
           , addresses :: RoundAddresses}
 
 newtype RatePerLovelace 
@@ -61,16 +79,20 @@ data RoundAddresses = RoundAddresses
         , adaSink :: Address}
 
 instance Show RoundSettings where
-    show RoundSettings { wallet = Wallet {name}, addresses = RoundAddresses {adaSink = Address adaSink,..},.. }
+    show RoundSettings { investorsWallet = Wallet {name = investorsWallet}, addresses = RoundAddresses {adaSink = Address adaSink,..},.. }
         =  "\n|| Round Settings ||"
-        <> "\n | Wallet Used : "  <> name
         <> "\n | Time range  = "  <> (show . pretty) timeRange
         <> "\n | Fund range  = "  <> (show . pretty) (interval minimumAdaPerFund maximumAdaPerAddress)
         <> "\n | Exchange Token class = " <> show exchangeTokenId
         <> "\n | Exchange Rate (1 lovelace = x tokens) = " <> show tokenRatePerLovelace
-        <> "\n | Token Address    = " <> show  tokens
-        <> "\n | Exchange Address = " <> show  exchange
-        <> "\n | Ada Sink Address = " <> adaSink
+        <> "\n | Investors Wallet   = "  <> investorsWallet
+        <> "\n | Token Address      = " <> show  tokens
+        <> "\n | Exchange Address   = " <> show  exchange
+        <> "\n | Collateral Address = " <> show  collateral
+        <> "\n | Fees Address       = " <> show  fees
+        <> "\n | Ada Sink Address   = " <> adaSink
+        <> "\n | Previous Round     = " <> show previousRoundMaybe
+        <> "\n | Next Round         = " <> show nextRoundMaybe
         
 
 getTokenAddress :: RoundAddresses -> Address 
@@ -79,32 +101,6 @@ getTokenAddress RoundAddresses {tokens = IndexedAddress {..}} = address
 notElemFromRoundAddreses :: RoundAddresses -> Address -> Bool
 notElemFromRoundAddreses r address = address `notElem` getRoundAddresses r
 
-getRoundSettings 
-    :: ( MonadIO m
-       , MonadReader Environment m)
-       => Wallet
-       -> m RoundSettings 
-getRoundSettings wallet@Wallet{name} = do 
-    collateral <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef name 0)
-    fees <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef name 3)
-    exchange <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef name 4)
-    tokens <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef name 5)
-
-    let roundAddresses = RoundAddresses
-                            { exchange = exchange
-                            , collateral = collateral
-                            , tokens = tokens
-                            , adaSink = "addr_test1qq2ngz976wwu9gyrk2psujg06v9jjwdmmp6gfu4d2t94ppgwga7r7zdwclwsxru6p989myzeemqrplzjz7l8sug9tykq636c39" 
-                            , fees }
-        round = RoundSettings
-                { maximumAdaPerAddress = adaOf 1000
-                , minimumAdaPerFund = adaOf 3
-                , timeRange = interval 40354960 44653861
-                , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
-                , wallet = wallet
-                , tokenRatePerLovelace = 2 / 1_000_000
-                , addresses = roundAddresses }
-    return round
 
 getExchangeAddress :: RoundAddresses -> Address
 getExchangeAddress RoundAddresses {exchange = IndexedAddress {address = exchangeAddress}} = exchangeAddress

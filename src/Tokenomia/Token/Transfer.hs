@@ -44,16 +44,20 @@ transfer ::
     , MonadError TokenomiaError m )
     => m ()
 transfer = do
-    Wallet {name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
+    Wallet {name = sourceTokenWalletName } <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
             printLn "Select the wallet containing the tokens: "
             askToChooseAmongGivenWallets wallets
-    utxoWithToken <- askUTxOFilterBy (containingOneToken . UTxO.value . utxo) (ChildAddressRef name 0) >>= whenNothingThrow NoUTxOWithOnlyOneToken
+    Wallet {name = feesWalletName } <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
+        >>= \wallets -> do
+            printLn "Select the wallet containing funds : "
+            askToChooseAmongGivenWallets wallets
+    utxoWithToken <- askUTxOFilterBy (containingOneToken . UTxO.value . utxo) (ChildAddressRef sourceTokenWalletName 0) >>= whenNothingThrow NoUTxOWithOnlyOneToken
     amount <- ask @Integer                  "- Amount of Token to transfer : "
     receiverAddr <- Address <$> askString   "- Receiver address : "
     labelMaybe <- askStringLeaveBlankOption "- Add label to your transaction (leave blank if no) : "
 
-    transfer' name receiverAddr utxoWithToken  amount labelMaybe
+    transfer' feesWalletName  sourceTokenWalletName receiverAddr utxoWithToken  amount labelMaybe
 
 type MetadataLabel = String
 
@@ -62,23 +66,25 @@ transfer' ::
     , MonadReader Environment m
     , MonadError TokenomiaError m )
     => WalletName
+    -> WalletName
     -> Address
     -> WalletUTxO
     -> Integer
     -> Maybe MetadataLabel
     -> m ()
-transfer' walletName receiverAddr utxoWithToken amount labelMaybe = do
-    let firstChildAddress = ChildAddressRef walletName 0
+transfer' feesWalletName sourceTokenWalletName receiverAddr utxoWithToken amount labelMaybe = do
+    let firstChildAddressSourceToken = ChildAddressRef sourceTokenWalletName 0
+        firstChildAddressFees = ChildAddressRef feesWalletName 0 
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
-    ChildAddress {address = senderWalletChildAddress} <- fetchById firstChildAddress
+    ChildAddress {address = senderWalletChildAddress} <- fetchById firstChildAddressSourceToken
     let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom . UTxO.value  . utxo $ utxoWithToken
         tokenId = singleton tokenPolicyHash tokenNameSelected
         valueToTransfer = tokenId amount + toValue getMinimumUTxOAdaRequired
         change = tokenId (totalAmount - amount) + toValue getMinimumUTxOAdaRequired
 
     buildAndSubmit
-      (Unbalanced (FeeAddressRef firstChildAddress))
-      (Just $ CollateralAddressRef firstChildAddress)
+      (Unbalanced (FeeAddressRef firstChildAddressFees))
+      (Just $ CollateralAddressRef firstChildAddressFees)
       TxBuild
         { inputsFromWallet =  FromWallet utxoWithToken :| []
         , inputsFromScript = Nothing

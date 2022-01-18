@@ -17,14 +17,12 @@ import Prelude hiding (round,print)
 import           Control.Monad.Reader
 import           Control.Monad.Except
 
-
+import           Data.List.NonEmpty as NEL
 import           Tokenomia.Common.Shell.Console (printLn)
 
 import           Tokenomia.Common.Environment
-import           Tokenomia.Wallet.LocalRepository as Wallet
-import           Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.ICO.Funds.Exchange.ReceivedFunds
 import           Tokenomia.ICO.Funds.Exchange.Tokens
 import           Tokenomia.Common.Token
@@ -33,15 +31,9 @@ displayStatus
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-    => m ()
-displayStatus = do
-    wallet <- Wallet.fetchAll >>= whenNullThrow NoWalletWithCollateral
-        >>= \wallets -> do
-            printLn "\nSelect a wallet : "
-            askToChooseAmongGivenWallets wallets
-
-    round <- getRoundSettings wallet
-    
+    => RoundSettings 
+    -> m ()
+displayStatus round = do
     printLn $ show round
 
     tokensMaybe <- fetchTokens round 
@@ -54,7 +46,8 @@ displayStatus = do
 
     fetchRawReceivedFundsByTx round 
         >>= authentifyTxsAsComingFromRoundWallet round
-        >>= printLn . show 
+        >>= discardRejectedTxs
+        >>= printLn . show . NEL.sort 
 
 showRemainingTokens :: RoundSettings -> Maybe ExchangeToken -> String 
 showRemainingTokens _ Nothing = "No tokens available for exchange"  

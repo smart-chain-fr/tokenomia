@@ -39,7 +39,7 @@ import Data.List.NonEmpty as NEL
 import           Control.Monad.Except
 import           Ledger.Ada
 import           Tokenomia.Common.Error
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import Tokenomia.Common.Value
 import Tokenomia.Wallet.CLI
 import           Tokenomia.Common.Environment
@@ -49,7 +49,7 @@ import Tokenomia.Common.Hash
 import Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
 import Tokenomia.ICO.Funds.WhiteListing.Repository
 import Tokenomia.Common.TxOutRef
-
+import Data.Maybe ( catMaybes )
 
 
 data RawReceivedFundsByTx
@@ -103,7 +103,7 @@ discardRejectedTxs
 discardRejectedTxs xs = 
      let  x :: [[AuthentifiedFunds]] = discard <$>  NEL.toList xs
      in case (nonEmpty . join) x of 
-       Nothing -> throwError ICONoValidTxs
+       Nothing -> throwError $ ICONoValidTxs (show xs)
        Just res -> return res
 
     where 
@@ -118,15 +118,28 @@ authentifyTx
     => RoundSettings
     -> RawReceivedFundsByTx
     -> m (Either RejectedTx (NonEmpty AuthentifiedFunds))
-authentifyTx round@RoundSettings {wallet = Wallet {name}} tx@RawReceivedFundsByTx {..} =
- retrieveAddressesNotFromWallet name inputAdresses
+authentifyTx round@RoundSettings {investorsWallet = Wallet {name = investorsWalletName}, previousRoundMaybe = Nothing} tx@RawReceivedFundsByTx {..} =
+ retrieveAddressesFromWallet investorsWalletName inputAdresses
   >>= \case
-        Nothing                 -> do
+        Just _ -> do
             hashesAndUxtos <- getDatumHashesAndAdaStrict sources
             hashesAnddatums <- fetchDatums ((\(a,_,_) -> a) <$> hashesAndUxtos)
             Right <$> mkAuthentifiedTxFunds round hashesAndUxtos hashesAnddatums 
-        Just externalAddresses  -> return . Left  $ TxMadeFromOutsideTheICORoundWallet {..}
+        Nothing  -> return . Left  $ TxMadeFromOutsideTheICORoundWallet {externalAddresses = inputAdresses,..}
 
+authentifyTx round@RoundSettings { investorsWallet = Wallet {name = currentRoundWallet}
+                                 , previousRoundMaybe 
+                                    = Just PreviousRound {wallet = Wallet {name = previousInvestorRoundWallet}}} 
+             tx@RawReceivedFundsByTx {..} = do 
+ txFromCurrentRoundMaybe <- retrieveAddressesFromWallet currentRoundWallet inputAdresses
+ txFromPreviousRoundMaybe <- retrieveAddressesFromWallet previousInvestorRoundWallet inputAdresses
+ case catMaybes [txFromCurrentRoundMaybe,txFromPreviousRoundMaybe] of
+    [] -> return . Left  $ TxMadeFromOutsideTheICORoundWallet {externalAddresses = inputAdresses,..}
+    _  -> do  
+        hashesAndUxtos <- getDatumHashesAndAdaStrict sources
+        hashesAnddatums <- fetchDatums ((\(a,_,_) -> a) <$> hashesAndUxtos)
+        Right <$> mkAuthentifiedTxFunds round hashesAndUxtos hashesAnddatums 
+                             
 
 mkAuthentifiedTxFunds
     :: ( MonadIO m
@@ -147,7 +160,7 @@ mkAuthentifiedFunds
     -> (Hash,Ada,WalletUTxO) 
     -> (Hash,Slot,ChildAddressIndex)
     -> m AuthentifiedFunds
-mkAuthentifiedFunds RoundSettings {wallet = Wallet {name}} a@(hash1,adas,source) b@(hash2,receivedAt,index) = do
+mkAuthentifiedFunds RoundSettings {investorsWallet = Wallet {name}} a@(hash1,adas,source) b@(hash2,receivedAt,index) = do
     if hash1 /= hash2 
         then error $ "Internal inconsistencies : " <> show a <> " and " <> show b
         else do

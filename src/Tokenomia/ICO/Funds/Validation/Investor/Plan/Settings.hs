@@ -13,18 +13,18 @@ module Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
 import           Prelude hiding (round,print)
 
 
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import           Plutus.V1.Ledger.Ada
 import           Ledger ( Slot(..) )
 import           Plutus.V1.Ledger.Interval
 
 
 mkPlanSettings :: RoundSettings  -> PlanSettings
-mkPlanSettings RoundSettings {..} = Settings {..}
+mkPlanSettings RoundSettings { ..} = Settings {..}
 
 
 data PlanSettings 
     = Settings 
        { timeRange :: Interval Slot
        , minimumAdaPerFund :: Ada
-       , maximumAdaPerAddress :: Ada } deriving (Show,Eq)
+       , maximumAdaPerAddress :: Ada} deriving (Show,Eq)

@@ -44,22 +44,22 @@ tests = testGroup "ICO" [properties]
 
 properties :: TestTree
 properties = testGroup "Planning Investor Funds Validation"
-    [ QC.testProperty "Funds out of time range will be refund" $
+    [ QC.testProperty "Funds out of time range will be rejected" $
         \settings investorAddressState ->
             let (state,plan@InvestorPlan{..}) = mkPlan' settings investorAddressState
             in traceIfFalse (showDetails (S.allReceivedFunds investorAddressState) state plan )
-                (coerce $ foldMap All (refundWhenNotBelongToRoundTimeRange settings <$> toAscList commands) ),
+                (coerce $ foldMap All (rejectWhenNotBelongToRoundTimeRange settings <$> toAscList commands) ),
     QC.testProperty "Funds below minimum funds given and funds with tokens are ignored" $
         \settings investorAddressState ->
             let (state,plan@InvestorPlan{..}) = mkPlan' settings investorAddressState
             in traceIfFalse (showDetails (S.allReceivedFunds investorAddressState) state plan )
                 (fundsWithNativeTokenAndBelowMinimumAreIgnored settings (S.allReceivedFunds investorAddressState) commands),
-    QC.testProperty "Refunds and Amount sent on Exchange Address are above the minimum funds given" $
+    QC.testProperty "Rejects and Amounts sent on Exchange Address are above the minimum funds required" $
         \settings investorAddressState ->
             let (state,plan@InvestorPlan{..}) = mkPlan' settings investorAddressState
             in traceIfFalse (showDetails (S.allReceivedFunds investorAddressState) state plan )
                 (coerce $ foldMap All (adasAbove (minimumAdaPerFund settings) <$> toAscList commands)),
-    QC.testProperty "Funds will be refund when address is saturated" $
+    QC.testProperty "Funds will be rejected when address is saturated" $
         \settings investorAddressState ->
             let (state,plan@InvestorPlan{..}) = mkPlan' settings investorAddressState
             in traceIfFalse (showDetails (S.allReceivedFunds investorAddressState) state plan )
@@ -74,8 +74,8 @@ properties = testGroup "Planning Investor Funds Validation"
 planIsBalanced :: OSet ReceivedFunds -> OSet Command -> Bool
 planIsBalanced allReceivedFunds commands = 
     foldMap S.getAdas allReceivedFunds 
-        == foldMap getAdasToRefundBecauseOutOfRange commands
-         + foldMap getAdasToRefundBecauseAdresseSaturated commands
+        == foldMap getAdasToRejectBecauseOutOfRange commands
+         + foldMap getAdasToRejectBecauseAdresseSaturated commands
          + foldMap getAdasSendOnExchange commands
          + foldMap S.getAdas (getIgnoredFunds allReceivedFunds commands)
 
@@ -88,8 +88,8 @@ fundsWithNativeTokenAndBelowMinimumAreIgnored Settings {..} allReceivedFunds com
 
 
 adasAbove:: Ada -> Command -> Bool    
-adasAbove adas Refund {..} = refundAmount >= adas
-adasAbove adas SendOnExchangeAddressWithPartialRefund {..} = adasToSendOnExchange >= adas && refundAmount >= adas
+adasAbove adas Reject {..} = amountToReject >= adas
+adasAbove adas SendOnExchangeAddressWithPartialReject {..} = adasToSendOnExchange >= adas && amountToReject >= adas
 adasAbove adas SendOnExchangeAddress  {..} = adasToSendOnExchange >= adas
 
 refundWhenAddressSaturated :: PlanSettings -> OSet ReceivedFunds -> AddressVolumes -> OSet Command  -> Bool
@@ -97,17 +97,17 @@ refundWhenAddressSaturated Settings {..} allReceivedFunds AddressVolumes {..} co
     | received > maximumAdaPerAddress  =
         received
             - sent
-            - foldMap getAdasToRefundBecauseOutOfRange commands
+            - foldMap getAdasToRejectBecauseOutOfRange commands
             - foldMap getAdasSendOnExchange commands
             - foldMap S.getAdas (getIgnoredFunds allReceivedFunds commands)
-        == foldMap getAdasToRefundBecauseAdresseSaturated commands
-    | otherwise = 0 == foldMap getAdasToRefundBecauseAdresseSaturated commands
+        == foldMap getAdasToRejectBecauseAdresseSaturated commands
+    | otherwise = 0 == foldMap getAdasToRejectBecauseAdresseSaturated commands
 
 
-refundWhenNotBelongToRoundTimeRange :: PlanSettings -> Command -> Bool
-refundWhenNotBelongToRoundTimeRange Settings {..} Refund {reason = TransactionOutofRoundTimeRange,..}
+rejectWhenNotBelongToRoundTimeRange :: PlanSettings -> Command -> Bool
+rejectWhenNotBelongToRoundTimeRange Settings {..} Reject {reason = TransactionOutofRoundTimeRange,..}
     = not $ I.member receivedAt timeRange
-refundWhenNotBelongToRoundTimeRange Settings {..} c
+rejectWhenNotBelongToRoundTimeRange Settings {..} c
     = I.member (C.receivedAt c) timeRange
 
 
@@ -118,8 +118,8 @@ showDetails allReceivedFunds state plan@InvestorPlan {..}
     <> "\n|  " <> show state
     <> "\n|  funds amount = " <> show (foldMap S.getAdas allReceivedFunds)
     <> "\n|  amount to send for exchange = " <> show (foldMap getAdasSendOnExchange commands)
-    <> "\n|  saturated funds amount = " <> show (foldMap getAdasToRefundBecauseAdresseSaturated commands)
-    <> "\n|  time out of range funds amount = " <> show (foldMap getAdasToRefundBecauseOutOfRange commands)
+    <> "\n|  saturated funds amount = " <> show (foldMap getAdasToRejectBecauseAdresseSaturated commands)
+    <> "\n|  time out of range funds amount = " <> show (foldMap getAdasToRejectBecauseOutOfRange commands)
     <> "\n|  funds ignored amount = " <> show (foldMap S.getAdas (getIgnoredFunds allReceivedFunds commands))
     <> "\n|  funds ignored = " <> show (getIgnoredFunds allReceivedFunds commands)
 

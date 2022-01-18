@@ -25,7 +25,7 @@ import           Tokenomia.Common.Hash
 import           Tokenomia.Common.Token hiding (assetClass)
 import           Tokenomia.Wallet.UTxO
 import Tokenomia.ICO.Funds.Exchange.Plan.Settings
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import Tokenomia.ICO.Funds.Exchange.ReceivedFunds
 import Tokenomia.Common.Address
 import  Data.Set.NonEmpty as NES

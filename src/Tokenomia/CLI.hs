@@ -42,9 +42,9 @@ import qualified Tokenomia.Node.Status as Node
 import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
 import qualified Tokenomia.ICO.Funds.Validation.Simulation.Transfer as ICO.Simulation
 import qualified Tokenomia.ICO.Funds.Exchange.Run as ICO.Exchange
+import qualified Tokenomia.ICO.LocalRepository as ICO
 import qualified Tokenomia.ICO.Status as ICO
 import qualified Streamly.Prelude as S
-
 
 load SearchPath ["cardano-cli"]
 
@@ -135,7 +135,7 @@ recursiveMenu = do
                                -> printLn "ICO - Echange UTxOs without Hashes"
         ICOTokensDispatchedOnMultipleUTxOs 
                                -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
-        ICONoValidTxs -> printLn "ICO - No Valid Txs Found" 
+        ICONoValidTxs message  -> printLn $ "ICO - No Valid Txs Found : " <>  message
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         ChildAddressNotIndexed w address 
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")
@@ -167,11 +167,11 @@ runAction = \case
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
       NodeStatus           -> Node.displayStatus
-      ICOStatus          -> ICO.displayStatus  
-      ICOFundsValidationDryRun   -> ICO.Validation.dryRun
-      ICOFundsValidationRun      -> ICO.Validation.run
-      ICOExchangeDryRun          -> ICO.Exchange.dryRun
-      ICOExchangeRun             -> ICO.Exchange.run  
+      ICOStatus                  -> ICO.askRoundSettings >>= ICO.displayStatus  
+      ICOFundsValidationDryRun   -> ICO.askRoundSettings >>= ICO.Validation.dryRun
+      ICOFundsValidationRun      -> ICO.askRoundSettings >>= ICO.Validation.run
+      ICOExchangeDryRun          -> ICO.askRoundSettings >>= ICO.Exchange.dryRun
+      ICOExchangeRun             -> ICO.askRoundSettings >>= ICO.Exchange.run  
       ICOFundsDispatchSimulation -> ICO.Simulation.dispatchAdasOnChildAdresses
 
 

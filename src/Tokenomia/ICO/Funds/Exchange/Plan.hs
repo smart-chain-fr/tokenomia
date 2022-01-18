@@ -32,7 +32,7 @@ import qualified Data.Set.Ordered as SO
 import qualified Data.Set.NonEmpty as NES
 
 import Tokenomia.ICO.Funds.Exchange.Plan.Settings
-import           Tokenomia.ICO.RoundSettings
+import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Common.Transacting
 import Data.Set.NonEmpty (NESet)
 
