@@ -21,6 +21,7 @@ import Data.List (intersperse)
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Control.Monad.Except
 import Data.Foldable
+import           Tokenomia.Common.Environment
 import           Tokenomia.ICO.Funds.Validation.ChildAddress.State 
 
 import           Tokenomia.ICO.Funds.Validation.Investor.Plan (InvestorPlan (..),mkPlan)
@@ -91,6 +92,7 @@ displayState
 
 displayInvestorPlans
     :: ( MonadIO m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => NEL.NonEmpty InvestorPlan
     ->  m (NEL.NonEmpty InvestorPlan)

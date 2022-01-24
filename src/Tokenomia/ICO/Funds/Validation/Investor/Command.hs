@@ -92,7 +92,7 @@ showInvestorRef WhiteListedInvestorRef {indexedAddress = IndexedAddress {childAd
        =  "\n       > reception location"
        <> "\n         | address = " <> show address
        <> "\n         | index   = " <> (show @Integer . coerce) index
-       <> "\n       > exchange payback address = " <> show exchangePaybackAddress
+       <> "\n       > exchange payback address = " <> show paybackAddress
 
 isReject :: Command -> Bool
 isReject Reject {} = True 

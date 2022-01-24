@@ -58,7 +58,7 @@ instance Show AddressVolumes where
 
 data WhiteListedInvestorRef 
         = WhiteListedInvestorRef 
-          { exchangePaybackAddress :: Address
+          { paybackAddress :: Address
           , indexedAddress         :: IndexedAddress} deriving (Eq)
 
 getIndex :: WhiteListedInvestorRef -> ChildAddressIndex
@@ -66,10 +66,10 @@ getIndex = index . childAddressRef . indexedAddress
 
 instance Show WhiteListedInvestorRef where
     show WhiteListedInvestorRef {indexedAddress = IndexedAddress {childAddressRef = ChildAddressRef {..},..}, ..}
-        =    "\n> reception location"
+        =    "\n> Reception location"
         <>   "\n   | address = " <> coerce address
         <>   "\n   | index   = " <> (show @Integer . coerce) index
-        <>   "\n> exchange payback address = " <> coerce exchangePaybackAddress
+        <>   "\n> Payback address = " <> coerce paybackAddress
 
 
 data WhiteListedInvestorState 

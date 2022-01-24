@@ -79,7 +79,7 @@ convertCommand RoundSettings { addresses = RoundAddresses {..},..} sources planC
             source <- findUTxOInCardanoCLI sources txOutRef (Plan.getAdas c)
             return 
                 CardanoCLI.Refund { source  = source
-                       , refundAddress = exchangePaybackAddress
+                       , refundAddress = paybackAddress
                        , adasToRefund = amountToReject 
                        , receivedAt = receivedAt}
         (c@Plan.Reject   {..}, Just NextRound {exchangeAddress = nextRoundExchangeAddress} ) -> do
@@ -99,7 +99,7 @@ convertCommand RoundSettings { addresses = RoundAddresses {..},..} sources planC
             return 
                 CardanoCLI.SendOnExchangeAddressAndPartiallyRefund
                  { source  = source
-                 , refundAddress = exchangePaybackAddress
+                 , refundAddress = paybackAddress
                  , adasToSendOnExchange = adasToSendOnExchange
                  , adasToRefund = amountToReject
                  , receivedAt = receivedAt

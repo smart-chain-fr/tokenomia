@@ -76,7 +76,7 @@ register name = do
     generateWalletFile' RootPrivateKeyTxt
     generateWalletFile' StakePublicKeyTxt
     generateWalletFile' StakeAddressTxt
-    deriveChildAddressesTill name 20
+    deriveChildAddressesWithingRange name 0 10
     fetchById name
 
 
@@ -96,7 +96,7 @@ restoreByMnemonics name mnemonics = do
     generateWalletFile' RootPrivateKeyTxt
     generateWalletFile' StakePublicKeyTxt
     generateWalletFile' StakeAddressTxt
-    deriveChildAddressesTill name 20
+    deriveChildAddressesWithingRange name 0 10
     fetchById name
 
 

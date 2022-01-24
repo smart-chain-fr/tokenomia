@@ -67,6 +67,7 @@ library
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.Common.Blockfrost
       Tokenomia.Common.Value
       Tokenomia.Common.Serialise
       Tokenomia.Common.Node
@@ -78,29 +79,30 @@ library
       Tokenomia.Common.Datum
       Tokenomia.Common.Address
       Tokenomia.Common.Hash
+      Tokenomia.Common.Token 
+      Tokenomia.Common.PageNumber 
+      Tokenomia.ICO.Status
+      Tokenomia.ICO.Round.Settings
+      Tokenomia.ICO.LocalRepository
+      Tokenomia.ICO.Balanceable
+      Tokenomia.ICO.Funds.Validation.Run
       Tokenomia.ICO.Funds.Validation.Investor.Command
       Tokenomia.ICO.Funds.Validation.Investor.Plan
-      Tokenomia.ICO.Funds.Validation.Run
       Tokenomia.ICO.Funds.Validation.ChildAddress.State
       Tokenomia.ICO.Funds.Validation.ChildAddress.Types
       Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
+      Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
       Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
       Tokenomia.ICO.Funds.Validation.Simulation.Transfer
-      Tokenomia.Common.PageNumber 
-      Tokenomia.ICO.Round.Settings
-      Tokenomia.ICO.LocalRepository
       Tokenomia.ICO.Funds.Exchange.Run
       Tokenomia.ICO.Funds.Exchange.ReceivedFunds
       Tokenomia.ICO.Funds.Exchange.Command
       Tokenomia.ICO.Funds.Exchange.Plan
-      Tokenomia.ICO.Status
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
       Tokenomia.ICO.Funds.WhiteListing.Repository
-      Tokenomia.Common.Token 
+      Tokenomia.ICO.Funds.WhiteListing.Types
       Tokenomia.ICO.Funds.Exchange.Tokens
       Tokenomia.ICO.Funds.Exchange.Transact
       Tokenomia.ICO.Funds.Exchange.Plan.Settings
-      Tokenomia.ICO.Balanceable
       Tokenomia.ICO.Funds.Validation.Status
       Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
       Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
@@ -108,6 +110,7 @@ library
       base >= 4.9 && < 5,
       lens,
       aeson,
+      async,
       text,
       time,
       mtl,

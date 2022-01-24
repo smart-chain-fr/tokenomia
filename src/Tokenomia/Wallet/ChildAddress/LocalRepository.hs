@@ -18,7 +18,8 @@ module Tokenomia.Wallet.ChildAddress.LocalRepository
     ( fetchById
     , fetchByWallet
     , fetchByWalletWithinIndexRange
-    , deriveChildAddressesTill
+    , fetchDerivedChildAddressIndexes
+    , deriveChildAddressesWithingRange
     , deriveChildAddress
     , getChildAddressPath
     , getChildAddressesPath
@@ -244,14 +245,15 @@ fetchById childAddressRef = do
     return ChildAddress {..}
 
 
-deriveChildAddressesTill ::
+deriveChildAddressesWithingRange ::
     ( MonadIO m
     , MonadReader Environment m )
     => WalletName
     -> ChildAddressIndex
+    -> ChildAddressIndex
     -> m ()
-deriveChildAddressesTill walletName index = do
-    mapM_ deriveChildAddress $ ChildAddressRef walletName  <$> [0..index-1]
+deriveChildAddressesWithingRange walletName from to = do
+    mapM_ deriveChildAddress $ ChildAddressRef walletName  <$> [from..to]
 
 
 deriveChildAddress

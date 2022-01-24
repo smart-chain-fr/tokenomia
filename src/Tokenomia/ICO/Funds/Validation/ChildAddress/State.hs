@@ -47,12 +47,14 @@ import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Common.PageNumber
-
+import qualified Tokenomia.Common.Blockfrost as B
+import           Tokenomia.Common.Environment
 import           Data.Coerce
 
 fetchActiveAddresses
     :: ( MonadIO m
-       , MonadError  TokenomiaError m)
+       , MonadError  TokenomiaError m
+       , MonadReader Environment m)
     => RoundAddresses
     -> PageNumber
     -> Wallet
@@ -60,7 +62,7 @@ fetchActiveAddresses
 fetchActiveAddresses roundAddresses pageNumber Wallet {stakeAddress = Address stakeAddress} 
     = do
         let paged = B.Paged {countPerPage = 100, pageNumber = coerce pageNumber } 
-        prj <- liftIO B.projectFromEnv
+        prj <- B.projectFromEnv''
         liftIO $ B.runBlockfrost prj $ do
             addresses :: [Address] <- (fmap . fmap) (Address . T.unpack . coerce)  
                                         (B.getAccountAssociatedAddresses' (fromString stakeAddress) paged B.asc )
@@ -72,11 +74,12 @@ fetchActiveAddresses roundAddresses pageNumber Wallet {stakeAddress = Address st
 
 fetchAllWhiteListedFunds
     :: ( MonadIO m
-       , MonadError  TokenomiaError m)
+       , MonadError  TokenomiaError m
+       , MonadReader Environment m)
     => NonEmpty WhiteListedInvestorRef
     -> m (NonEmpty WhiteListedInvestorState)
 fetchAllWhiteListedFunds whiteListedInvestorRefs = do
-    prj <- liftIO B.projectFromEnv
+    prj <- B.projectFromEnv''
     liftIO $ B.runBlockfrost prj $ do
         fetchAllWhiteListedFunds' whiteListedInvestorRefs
     >>= (\case
@@ -100,11 +103,12 @@ fetchAllWhiteListedFunds'  whiteListedInvestorRefs  = do
 
 fetchWhiteListedFunds
     :: ( MonadIO m
-       , MonadError  TokenomiaError m)
+       , MonadError  TokenomiaError m
+       , MonadReader Environment m)
     => WhiteListedInvestorRef
     -> m WhiteListedInvestorState
 fetchWhiteListedFunds whiteListedInvestorRef = do
-    prj <- liftIO B.projectFromEnv
+    prj <- B.projectFromEnv''
     liftIO $ B.runBlockfrost prj $ do
         fetchWhiteListedFunds' whiteListedInvestorRef
     >>= (\case

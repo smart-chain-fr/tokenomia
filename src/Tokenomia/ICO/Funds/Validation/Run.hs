@@ -99,7 +99,7 @@ streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,investo
          & S.mapM (\pageNumber -> fetchActiveAddresses roundAddresses pageNumber wallet)
          & S.takeWhile isJust & S.map fromJust
          & S.mapM (fetchByAddresses investorsWallet)
-         & S.mapM fetchAllWhiteListedInvestorRef
+         & S.mapM (fetchAllWhiteListedInvestorRef round)
          & S.mapM fetchAllWhiteListedFunds
          & S.map  (fmap (mkPlan $ mkPlanSettings round))
          & S.mapM displayInvestorPlans

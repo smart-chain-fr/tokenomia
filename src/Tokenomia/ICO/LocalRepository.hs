@@ -26,7 +26,8 @@ import           Tokenomia.Common.Environment
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
 import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Wallet.LocalRepository as Wallet
-import           Tokenomia.Common.Shell.InteractiveMenu 
+import Tokenomia.Common.Shell.InteractiveMenu
+    ( askMenu, DisplayMenuItem(..) )
 import           Tokenomia.Common.Shell.Console (printLn)
 
 data ICO
@@ -43,13 +44,13 @@ instance DisplayMenuItem Round where
     displayMenuItem Round {..} = title
 
 
-askRoundSettings 
+askRoundSettings
     :: ( MonadIO m
        , MonadReader Environment m)
-    => m RoundSettings 
-askRoundSettings  = do 
-    printLn "Select Your ICO :"  
-    ICO {..} <- getICOs >>= askMenu 
+    => m RoundSettings
+askRoundSettings  = do
+    printLn "Select Your ICO :"
+    ICO {..} <- getICOs >>= askMenu
     printLn "Select Your Round :"
     settings <$> askMenu rounds
 
@@ -58,12 +59,118 @@ getICOs
     :: ( MonadIO m
        , MonadReader Environment m)
     => m (NonEmpty ICO)
-getICOs = do 
-    flashSale  <- getFlashSaleSettings
-    publicSale <- getPublicSaleSettings
-    return $ ICO
-            { projectName = "CardaShift"
-            , rounds = flashSale :| [publicSale]} :| []
+getICOs = do
+    flashSale      <- getFlashSaleSettings
+    publicSale     <- getPublicSaleSettings
+    ask >>= \case 
+        Testnet {} -> do
+            return $ ICO
+                        { projectName = "CardaShift (Testnet)"
+                        , rounds = flashSale :| [publicSale]} :| []
+        Mainnet {} ->  do   
+            testFlashSale  <- getTestFlashSaleSettings
+            testPublicSale <- getTestPublicSaleSettings
+            return $ ICO
+                    { projectName = "Test CardaShift (Mainnet with CLAP Test)"
+                    , rounds = testFlashSale :| [testPublicSale]} 
+                    :| []
+
+
+
+getTestFlashSaleSettings
+    :: ( MonadIO m
+       , MonadReader Environment m)
+       => m Round
+getTestFlashSaleSettings  = do
+    Wallet{name= collateralWalletName} <- Wallet.fetchById "Global.Collateral"
+    collateral <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef collateralWalletName 0)
+
+    Wallet{name= feesWalletName} <- Wallet.fetchById "Cardashift.Fees"
+    fees <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef feesWalletName 0)
+
+
+    investorsWallet <- Wallet.fetchById "Test.Cardashift.Flash.Sale.Investors"
+
+    Wallet{name= tokenWalletName} <- Wallet.fetchById "Test.Cardashift.Flash.Sale.Tokens"
+    tokens <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef tokenWalletName 0)
+
+    Wallet{name= exchangeWalletName} <- Wallet.fetchById "Test.Cardashift.Flash.Sale.Exchange"
+    exchange <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef exchangeWalletName 0)
+
+    Wallet{name= nextExchangeWalletName} <- Wallet.fetchById "Test.Cardashift.Public.Sale.Exchange"
+    nextExchangeAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef nextExchangeWalletName 0)
+
+    Wallet{name= sinkWalletName} <- Wallet.fetchById "Test.Cardashift.Flash.Sale.Sink"
+    sinkAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef sinkWalletName 0)
+
+    Wallet{name= lambdaInvestorWalletName} <- Wallet.fetchById "Test.Cardashift.Lambda.Investor"
+    lambdaInvestorAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef lambdaInvestorWalletName 0)
+
+
+    return $ Round
+              { title = "Test Flash Sale"
+              , settings = RoundSettings
+                            { maximumAdaPerAddress = adaOf 1_000
+                            , minimumAdaPerFund = adaOf 3
+                            , timeRange = interval 40_354_960 43_987_900 -- 44_653_861 
+                            , kycIntegration = Simulation lambdaInvestorAddress
+                            , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
+                            , investorsWallet = investorsWallet
+                            , previousRoundMaybe = Nothing
+                            , nextRoundMaybe = Just $ NextRound nextExchangeAddress
+                            , tokenRatePerLovelace = 30 / 1_000_000
+                            , addresses = RoundAddresses
+                                            { exchange = exchange
+                                            , collateral = collateral
+                                            , tokens = tokens
+                                            , adaSink = sinkAddress
+                                            , fees } }}
+
+getTestPublicSaleSettings
+    :: ( MonadIO m
+       , MonadReader Environment m)
+       => m Round
+getTestPublicSaleSettings  = do
+    Wallet{name= collateralWalletName} <- Wallet.fetchById "Global.Collateral"
+    collateral <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef collateralWalletName 0)
+
+    Wallet{name= feesWalletName} <- Wallet.fetchById "Cardashift.Fees"
+    fees <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef feesWalletName 0)
+
+    previousRound <- PreviousRound <$> Wallet.fetchById "Test.Cardashift.Flash.Sale.Investors"
+
+    investorsWallet <- Wallet.fetchById "Test.Cardashift.Public.Sale.Investors"
+
+    Wallet{name= tokenWalletName} <- Wallet.fetchById "Test.Cardashift.Public.Sale.Tokens"
+    tokens <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef tokenWalletName 0)
+
+    Wallet{name= exchangeWalletName} <- Wallet.fetchById "Test.Cardashift.Public.Sale.Exchange"
+    exchange <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef exchangeWalletName 0)
+
+    Wallet{name= sinkWalletName} <- Wallet.fetchById "Test.Cardashift.Public.Sale.Sink"
+    sinkAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef sinkWalletName 0)
+
+    Wallet{name= lambdaInvestorWalletName} <- Wallet.fetchById "Test.Cardashift.Public.Lambda.Investor"
+    lambdaInvestorAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef lambdaInvestorWalletName 0)
+
+    return $ Round
+              { title = "Test Public Sale (Mainnet)"
+              , settings = RoundSettings
+                            { maximumAdaPerAddress = adaOf 10
+                            , minimumAdaPerFund = adaOf 3
+                            , timeRange = interval 40354960 44653861
+                            , kycIntegration = Simulation lambdaInvestorAddress
+                            , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
+                            , investorsWallet = investorsWallet
+                            , previousRoundMaybe = Just previousRound
+                            , nextRoundMaybe = Nothing
+                            , tokenRatePerLovelace = 36 / 1_000_000
+                            , addresses = RoundAddresses
+                                            { exchange = exchange
+                                            , collateral = collateral
+                                            , tokens = tokens
+                                            , adaSink = sinkAddress
+                                            , fees } }}
 
 
 getFlashSaleSettings
@@ -76,10 +183,10 @@ getFlashSaleSettings  = do
 
     Wallet{name= feesWalletName} <- Wallet.fetchById "Cardashift.Fees"
     fees <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef feesWalletName 0)
-    
-    
+
+
     investorsWallet <- Wallet.fetchById "Cardashift.Flash.Sale.Investors"
-    
+
     Wallet{name= tokenWalletName} <- Wallet.fetchById "Cardashift.Flash.Sale.Tokens"
     tokens <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef tokenWalletName 0)
 
@@ -92,24 +199,28 @@ getFlashSaleSettings  = do
     Wallet{name= sinkWalletName} <- Wallet.fetchById "Cardashift.Flash.Sale.Sink"
     sinkAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef sinkWalletName 0)
 
-    return $ Round 
-              { title = "Flash Sale" 
-              , settings = RoundSettings
-                            { maximumAdaPerAddress = adaOf 1_000
-                            , minimumAdaPerFund = adaOf 3
-                            , timeRange = interval 40_354_960 43_987_900 -- 44_653_861 
-                                                              
-                            , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
-                            , investorsWallet = investorsWallet
-                            , previousRoundMaybe = Nothing
-                            , nextRoundMaybe = Just $ NextRound nextExchangeAddress
-                            , tokenRatePerLovelace = 2 / 1_000_000
-                            , addresses = RoundAddresses
-                                            { exchange = exchange
-                                            , collateral = collateral
-                                            , tokens = tokens
-                                            , adaSink = sinkAddress
-                                            , fees } }}
+    ask >>= (\case
+       Testnet {} -> 
+        return $ Round
+                { title = "Flash Sale (TestNet)"
+                , settings = RoundSettings
+                                { maximumAdaPerAddress = adaOf 1_000
+                                , minimumAdaPerFund = adaOf 3
+                                , timeRange = interval 40_354_960 43_987_900 -- 44_653_861 
+                                , kycIntegration = Simulation "addr_test1qpwaa235rqypsjyy886260gw83m8q0ls7cz5f5n9fwc5lyf2gdnrkx40pwc4jef679xte56jx3jz6mc73t6w7ac53q2qqqnxv8"
+                                , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
+                                , investorsWallet = investorsWallet
+                                , previousRoundMaybe = Nothing
+                                , nextRoundMaybe = Just $ NextRound nextExchangeAddress
+                                , tokenRatePerLovelace = 30 / 1_000_000
+                                , addresses = RoundAddresses
+                                                { exchange = exchange
+                                                , collateral = collateral
+                                                , tokens = tokens
+                                                , adaSink = sinkAddress
+                                                , fees } }}
+       Mainnet {} -> error "Flash Sale Mainnet TODO") 
+         
 
 getPublicSaleSettings
     :: ( MonadIO m
@@ -121,7 +232,7 @@ getPublicSaleSettings  = do
 
     Wallet{name= feesWalletName} <- Wallet.fetchById "Cardashift.Fees"
     fees <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef feesWalletName 0)
-    
+
     previousRound <- PreviousRound <$> Wallet.fetchById "Cardashift.Flash.Sale.Investors"
 
     investorsWallet <- Wallet.fetchById "Cardashift.Public.Sale.Investors"
@@ -135,21 +246,27 @@ getPublicSaleSettings  = do
     Wallet{name= sinkWalletName} <- Wallet.fetchById "Cardashift.Public.Sale.Sink"
     sinkAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef sinkWalletName 0)
 
-    return $ Round 
-              { title = "Public Sale" 
-              , settings = RoundSettings
-                            { maximumAdaPerAddress = adaOf 1000
-                            , minimumAdaPerFund = adaOf 3
-                            , timeRange = interval 40354960 44653861
-                            , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
-                            , investorsWallet = investorsWallet
-                            , previousRoundMaybe = Just previousRound
-                            , nextRoundMaybe = Nothing
-                            , tokenRatePerLovelace = 6 / 1_000_000
-                            , addresses = RoundAddresses
-                                            { exchange = exchange
-                                            , collateral = collateral
-                                            , tokens = tokens
-                                            , adaSink = sinkAddress
-                                            , fees } }}    
+    ask >>= (\case
+       Testnet {} -> do
+            let simulatedPaybackAddress = "addr_test1qpwaa235rqypsjyy886260gw83m8q0ls7cz5f5n9fwc5lyf2gdnrkx40pwc4jef679xte56jx3jz6mc73t6w7ac53q2qqqnxv8"
+
+            return $ Round
+                    { title = "Public Sale (Testnet)"
+                    , settings = RoundSettings
+                                    { maximumAdaPerAddress = adaOf 1000
+                                    , minimumAdaPerFund = adaOf 3
+                                    , timeRange = interval 40354960 44653861
+                                    , kycIntegration = Simulation simulatedPaybackAddress
+                                    , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
+                                    , investorsWallet = investorsWallet
+                                    , previousRoundMaybe = Just previousRound
+                                    , nextRoundMaybe = Nothing
+                                    , tokenRatePerLovelace = 6 / 1_000_000
+                                    , addresses = RoundAddresses
+                                                    { exchange = exchange
+                                                    , collateral = collateral
+                                                    , tokens = tokens
+                                                    , adaSink = sinkAddress
+                                                    , fees } }}
+       Mainnet {} -> error "Public Sale Mainnet TODO") 
 
