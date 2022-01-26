@@ -60,10 +60,10 @@ getICOs
        , MonadReader Environment m)
     => m (NonEmpty ICO)
 getICOs = do
-    flashSale      <- getFlashSaleSettings
-    publicSale     <- getPublicSaleSettings
     ask >>= \case 
         Testnet {} -> do
+            flashSale      <- getFlashSaleSettings
+            publicSale     <- getPublicSaleSettings
             return $ ICO
                         { projectName = "CardaShift (Testnet)"
                         , rounds = flashSale :| [publicSale]} :| []
@@ -103,16 +103,17 @@ getTestFlashSaleSettings  = do
     Wallet{name= sinkWalletName} <- Wallet.fetchById "Test.Cardashift.Flash.Sale.Sink"
     sinkAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef sinkWalletName 0)
 
-    Wallet{name= lambdaInvestorWalletName} <- Wallet.fetchById "Test.Cardashift.Lambda.Investor"
+    Wallet{name= lambdaInvestorWalletName} <- Wallet.fetchById "Test.Cardashift.Flash.Lambda.Investor"
     lambdaInvestorAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef lambdaInvestorWalletName 0)
 
 
     return $ Round
               { title = "Test Flash Sale"
               , settings = RoundSettings
-                            { maximumAdaPerAddress = adaOf 1_000
+                            { syncSlot = Nothing
+                            , maximumAdaPerAddress = adaOf 9
                             , minimumAdaPerFund = adaOf 3
-                            , timeRange = interval 40_354_960 43_987_900 -- 44_653_861 
+                            , timeRange = interval 40_354_960 51_663_079 --43_987_900 -- 44_653_861 
                             , kycIntegration = Simulation lambdaInvestorAddress
                             , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
                             , investorsWallet = investorsWallet
@@ -156,9 +157,10 @@ getTestPublicSaleSettings  = do
     return $ Round
               { title = "Test Public Sale (Mainnet)"
               , settings = RoundSettings
-                            { maximumAdaPerAddress = adaOf 10
+                            { syncSlot = Nothing
+                            , maximumAdaPerAddress = adaOf 10
                             , minimumAdaPerFund = adaOf 3
-                            , timeRange = interval 40354960 44653861
+                            , timeRange = interval 40354960 51_663_079-- 44653861
                             , kycIntegration = Simulation lambdaInvestorAddress
                             , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
                             , investorsWallet = investorsWallet
@@ -200,19 +202,22 @@ getFlashSaleSettings  = do
     sinkAddress <- ChildAddress.address <$> ChildAddress.fetchById (ChildAddressRef sinkWalletName 0)
 
     ask >>= (\case
-       Testnet {} -> 
+       Testnet {} -> do 
+        let simulatedPaybackAddress = "addr_test1qpk305c9t7prcay2evscg8gxd0nfwh3m8568m647z6ecleav4wcz4fhkctpgjcjc4u3mftp25480vdagueptuxmcu4vsgndfqm"
+   
         return $ Round
                 { title = "Flash Sale (TestNet)"
                 , settings = RoundSettings
-                                { maximumAdaPerAddress = adaOf 1_000
+                                { syncSlot = Just 44_653_861
+                                , maximumAdaPerAddress = adaOf 1_000
                                 , minimumAdaPerFund = adaOf 3
-                                , timeRange = interval 40_354_960 43_987_900 -- 44_653_861 
-                                , kycIntegration = Simulation "addr_test1qpwaa235rqypsjyy886260gw83m8q0ls7cz5f5n9fwc5lyf2gdnrkx40pwc4jef679xte56jx3jz6mc73t6w7ac53q2qqqnxv8"
+                                , timeRange = interval 40_354_960 51_663_079 -- 43_987_900 -- 44_653_861 
+                                , kycIntegration = Simulation simulatedPaybackAddress
                                 , exchangeTokenId = assetClass "a0b03e9b2bf7228f54e0f51e6bd34f6e949eedb8ecae84f984452fc4" "506f736569646f6e6973"
                                 , investorsWallet = investorsWallet
                                 , previousRoundMaybe = Nothing
                                 , nextRoundMaybe = Just $ NextRound nextExchangeAddress
-                                , tokenRatePerLovelace = 30 / 1_000_000
+                                , tokenRatePerLovelace = 333298 / 1_000_000
                                 , addresses = RoundAddresses
                                                 { exchange = exchange
                                                 , collateral = collateral
@@ -248,12 +253,13 @@ getPublicSaleSettings  = do
 
     ask >>= (\case
        Testnet {} -> do
-            let simulatedPaybackAddress = "addr_test1qpwaa235rqypsjyy886260gw83m8q0ls7cz5f5n9fwc5lyf2gdnrkx40pwc4jef679xte56jx3jz6mc73t6w7ac53q2qqqnxv8"
+            let simulatedPaybackAddress = "addr_test1qpk305c9t7prcay2evscg8gxd0nfwh3m8568m647z6ecleav4wcz4fhkctpgjcjc4u3mftp25480vdagueptuxmcu4vsgndfqm"
 
             return $ Round
                     { title = "Public Sale (Testnet)"
                     , settings = RoundSettings
-                                    { maximumAdaPerAddress = adaOf 1000
+                                    { syncSlot = Just 0
+                                    , maximumAdaPerAddress = adaOf 1000
                                     , minimumAdaPerFund = adaOf 3
                                     , timeRange = interval 40354960 44653861
                                     , kycIntegration = Simulation simulatedPaybackAddress

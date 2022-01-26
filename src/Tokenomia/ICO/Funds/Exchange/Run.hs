@@ -24,11 +24,12 @@ import qualified Streamly.Prelude as S
 import           Tokenomia.ICO.Funds.Exchange.ReceivedFunds
 import           Tokenomia.ICO.Funds.Exchange.Tokens
 import           Tokenomia.ICO.Funds.Exchange.Plan
-import           Tokenomia.ICO.Funds.Exchange.Transact
+import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Set.NonEmpty as NES
 import           Tokenomia.Common.Transacting
 import           Tokenomia.Common.Token
+import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
 
 run
     :: ( MonadIO m
@@ -49,8 +50,10 @@ run round@RoundSettings {addresses = roundAddresses} = do
                tokensMaybe <- fetchTokens round   
                fees <- planAndEstimate round tokensMaybe funds
                printLn $ "Plan estimated : tokens " <> show tokensMaybe 
-               let planWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
-               transact roundAddresses planWithFees
+               let roundAgnosticPlanWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
+               roundSpecificPlanWithFees <- convertToRoundSpecificPlan round roundAgnosticPlanWithFees
+               printLn $ show roundSpecificPlanWithFees
+               transact roundAddresses roundSpecificPlanWithFees
         >> printLn "Exchange Done"
 
 dryRun
@@ -72,8 +75,11 @@ dryRun round@RoundSettings {addresses = roundAddresses} = do
                tokensMaybe <- fetchTokens round   
                fees <- planAndEstimate round tokensMaybe funds
                printLn $ "Plan estimated : tokens " <> show tokensMaybe 
-               let planWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
-               buildTx roundAddresses planWithFees
+               let roundAgnosticPlanWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
+               roundSpecificPlanWithFees <- convertToRoundSpecificPlan round roundAgnosticPlanWithFees
+               printLn $ "Fees > " <> show fees
+               printLn $ show roundSpecificPlanWithFees
+               buildTx roundAddresses roundSpecificPlanWithFees
         >> printLn "Exchange Done"
 
 
@@ -86,6 +92,6 @@ planAndEstimate
     -> NEL.NonEmpty AuthentifiedFunds
     -> m Fees
 planAndEstimate round@RoundSettings{..} tokensMaybe funds = do
-    let plan  = mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired Nothing tokensMaybe (NES.fromList funds)
-    printLn $ show plan
-    estimatedFees <$> buildTx addresses plan  
+    let roundAgnosticPlanWithoutFees  = mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired Nothing tokensMaybe (NES.fromList funds)
+    roundSpecificPlanWithoutFees <- convertToRoundSpecificPlan round roundAgnosticPlanWithoutFees
+    estimatedFees <$> buildTx addresses roundSpecificPlanWithoutFees  

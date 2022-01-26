@@ -8,7 +8,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Tokenomia.ICO.Funds.Exchange.Transact
+module Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
     ( transact
     , buildTx) where
 
@@ -19,7 +19,7 @@ import           Data.Set.NonEmpty
 import           Data.List.NonEmpty
 import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Transacting
-import           Tokenomia.ICO.Funds.Exchange.Command
+import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
 import           Tokenomia.Common.Error
 import           Tokenomia.ICO.Round.Settings
 import           Tokenomia.Common.Address
@@ -40,21 +40,23 @@ buildTx
     => RoundAddresses
     -> Plan Command
     -> m BuiltTx
-buildTx roundAddresses plan =
+buildTx roundAddresses plan = do 
+    let tx = TxBuild
+              { inputsFromWallet  = appendList 
+                                      (txInputs  (commands plan))  
+                                      (txInputFromTokenAddress (ioOnTokenAddress plan)) 
+              , outputs = appendList
+                            (txOutputs (adaSink roundAddresses) (commands plan))
+                            (txOutputToTokenAddress (getTokenAddress roundAddresses) (ioOnTokenAddress plan))
+              , validitySlotRangeMaybe = Nothing
+              , tokenSupplyChangesMaybe = Nothing
+              , inputsFromScript  = Nothing
+              , metadataMaybe = Nothing}
+    printLn $ "Tx > " <> show tx
     build
       (getTxBalance roundAddresses plan)
       (Just $ getCollateral roundAddresses)
-      TxBuild
-        { inputsFromWallet  = appendList 
-                                (txInputs  (commands plan))  
-                                (txInputFromTokenAddress (ioOnTokenAddress plan)) 
-        , outputs = appendList
-                      (txOutputs (adaSink roundAddresses) (commands plan))
-                      (txOutputToTokenAddress (getTokenAddress roundAddresses) (ioOnTokenAddress plan))
-        , validitySlotRangeMaybe = Nothing
-        , tokenSupplyChangesMaybe = Nothing
-        , inputsFromScript  = Nothing
-        , metadataMaybe = Nothing}
+      tx
 
 
 transact
@@ -98,6 +100,11 @@ txCommandOutputs adaSink = \case
         { address = paybackAddress
         , value = Ada.toValue refundAmount
         , datumMaybe = Nothing } :| []
+  MoveToNextRoundBecauseTokensSoldOut {..} ->
+      ToWallet --Move Next Round
+        { address = nextRoundExchangeAddress
+        , value = Ada.toValue moveAmount
+        , datumMaybe = Just datumFile } :| []
   ExchangeAndPartiallyRefund {tokens = Token {assetClass = tokenAssetClass,..},..} ->
       ToWallet -- Exchange
         { address = paybackAddress
@@ -110,7 +117,20 @@ txCommandOutputs adaSink = \case
        ToWallet -- Ada Collection
         { address = adaSink
         , value =  Ada.toValue collectedAmount
-        , datumMaybe = Nothing}]          
+        , datumMaybe = Nothing}]    
+  ExchangeAndPartiallyMoveToNextRound {tokens = Token {assetClass = tokenAssetClass,..},..} ->
+      ToWallet -- Exchange
+        { address = paybackAddress
+        , value = assetClassValue tokenAssetClass amount + Ada.toValue minimumAdaRequired
+        , datumMaybe = Nothing} :|
+      [ToWallet --Move Next Round
+        { address = nextRoundExchangeAddress
+        , value = Ada.toValue moveAmount
+        , datumMaybe = Just datumFile } ,
+       ToWallet -- Ada Collection
+        { address = adaSink
+        , value =  Ada.toValue collectedAmount
+        , datumMaybe = Nothing}]       
   Exchange {tokens = Token {assetClass = tokenAssetClass,..},..} ->
       ToWallet -- Exchange
         { address = paybackAddress

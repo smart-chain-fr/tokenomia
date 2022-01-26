@@ -139,7 +139,8 @@ recursiveMenu = do
         ICONoValidTxs message  -> printLn $ "ICO - No Valid Txs Found : " <>  message
         ICOPaybackAddressNotAvailable walletName index -> 
                                   printLn $ "ICO - Payback Address not available for  : " <>  walletName <> " index #" <> show index
-         
+        ICOWhitelistingNotValid index indexRetrieved -> 
+                                  printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved  
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         ChildAddressNotIndexed w address 
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")

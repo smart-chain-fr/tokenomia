@@ -100,9 +100,9 @@ streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,investo
          & S.takeWhile isJust & S.map fromJust
          & S.mapM (fetchByAddresses investorsWallet)
          & S.mapM (fetchAllWhiteListedInvestorRef round)
-         & S.mapM fetchAllWhiteListedFunds
+         & S.mapM (fetchAllWhiteListedFunds round)
          & S.map  (fmap (mkPlan $ mkPlanSettings round))
-         & S.mapM displayInvestorPlans
+         & S.mapM (displayInvestorPlans round)
          & S.mapM (CardanoCLICommand.convertInvestorPlans round)
          & S.concatMap S.fromList
          & S.chunksOf nbFundsPerTx SF.toList

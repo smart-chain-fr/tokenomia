@@ -37,6 +37,7 @@ data TokenomiaError
     | ICOExchangeUtxoWithoutHash
     | ICOTokensDispatchedOnMultipleUTxOs
     | ICOPaybackAddressNotAvailable String Integer
+    | ICOWhitelistingNotValid Integer Integer
     | ICONoValidTxs String
     | InvalidTransaction String
     deriving Show

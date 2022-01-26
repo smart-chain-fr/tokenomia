@@ -164,7 +164,7 @@ mkAuthentifiedFunds settings a@(hash1,adas,source) b@(hash2,receivedAt,index) = 
     if hash1 /= hash2 
         then error $ "Internal inconsistencies : " <> show a <> " and " <> show b
         else do
-            paybackAddress <- fetchPaybackAddress settings index
+            paybackAddress <- fetchPaybackAddressStrict settings index
             return AuthentifiedFunds {..}
 
 

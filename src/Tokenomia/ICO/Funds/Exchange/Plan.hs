@@ -92,8 +92,8 @@ data State = State
 
 transition :: AuthentifiedFunds -> State -> State
 transition AuthentifiedFunds {..} State {exchangeTokenMaybe = exchangeTokenMaybe@Nothing,..}
-    = appendCommand $ RefundBecauseTokensSoldOut 
-                                            {refundAmount = adas - feesPerCommand
+    = appendCommand $ RejectBecauseTokensSoldOut 
+                                            {rejectAmount = adas - feesPerCommand
                                             ,..}
     where
         appendCommand command = State { commands = commands |> command    , .. }
@@ -104,28 +104,28 @@ transition AuthentifiedFunds {..} State {exchangeTokenMaybe = exchangeTokenMaybe
 transition AuthentifiedFunds {..} State { exchangeTokenMaybe = exchangeTokenMaybe@(Just ExchangeToken{token = Token{ amount = exchangeTokenAmount, minimumAdaRequired = adasOnExchangeToken}})
                                         , settings = settings@Settings {..},..}
     | tokenSoldOutWithPreviousFunds
-        = appendCommand $ RefundBecauseTokensSoldOut {refundAmount = adas - feesPerCommand,..}
+        = appendCommand $ RejectBecauseTokensSoldOut {rejectAmount = adas - feesPerCommand,..}
     | tokenSoldOutWithIncomingFund && refundIsUnderMinimum
         = appendCommand
-              ExchangeAndPartiallyRefund
+              ExchangeAndPartiallyReject
                 { collectedAmount = collectedAmmountWhenSoldoutWithIncomingFund - minimumAdaRequiredOnUtxoWithToken
-                , refundAmount = refundAmountWhenSoldOutWithIncomingFund + minimumAdaRequiredOnUtxoWithToken
+                , rejectAmount = rejectAmountWhenSoldOutWithIncomingFund + minimumAdaRequiredOnUtxoWithToken
                 , tokens = Token { assetClass = exchangeTokenId
                                  , amount = availableTokenAmount
                                  , minimumAdaRequired = minimumAdaRequiredOnUtxoWithToken}, ..}
     | tokenSoldOutWithIncomingFund && collectIsUnderMinimum
         = appendCommand
-              ExchangeAndPartiallyRefund
+              ExchangeAndPartiallyReject
                 { collectedAmount = collectedAmmountWhenSoldoutWithIncomingFund + minimumAdaRequiredOnUtxoWithToken
-                , refundAmount = refundAmountWhenSoldOutWithIncomingFund - minimumAdaRequiredOnUtxoWithToken
+                , rejectAmount = rejectAmountWhenSoldOutWithIncomingFund - minimumAdaRequiredOnUtxoWithToken
                 , tokens = Token { assetClass = exchangeTokenId
                                  , amount = availableTokenAmount
                                  , minimumAdaRequired = minimumAdaRequiredOnUtxoWithToken}, ..}
     | tokenSoldOutWithIncomingFund
         = appendCommand
-              ExchangeAndPartiallyRefund
+              ExchangeAndPartiallyReject
                 { collectedAmount = collectedAmmountWhenSoldoutWithIncomingFund
-                , refundAmount = refundAmountWhenSoldOutWithIncomingFund
+                , rejectAmount = rejectAmountWhenSoldOutWithIncomingFund
                 , tokens = Token { assetClass = exchangeTokenId
                                  , amount = availableTokenAmount
                                  , minimumAdaRequired = minimumAdaRequiredOnUtxoWithToken}, ..}
@@ -141,11 +141,11 @@ transition AuthentifiedFunds {..} State { exchangeTokenMaybe = exchangeTokenMayb
         tokenSoldOutWithPreviousFunds = getTokensSum commands >= exchangeTokenAmount
         tokenSoldOutWithIncomingFund = getTokensSum commands + tokenAmountCurrentFund >= exchangeTokenAmount
         availableTokenAmount = exchangeTokenAmount - getTokensSum commands
-        refundAmountWhenSoldOutWithIncomingFund = adas - feesPerCommand - ceiling (fromIntegral availableTokenAmount / tokenRatePerLovelace)
+        rejectAmountWhenSoldOutWithIncomingFund = adas - feesPerCommand - ceiling (fromIntegral availableTokenAmount / tokenRatePerLovelace)
         feesPerCommand = quotientFeesPerFund + addRemainderFeesPerFundIfLastCommand
         addRemainderFeesPerFundIfLastCommand = if totalCommands == size commands +1 then remainderFeesPerFund else 0 
-        collectedAmmountWhenSoldoutWithIncomingFund =  adas + adasOnExchangeToken - refundAmountWhenSoldOutWithIncomingFund - minimumAdaRequiredOnUtxoWithToken - feesPerCommand
-        refundIsUnderMinimum = refundAmountWhenSoldOutWithIncomingFund < minimumAdaRequiredOnUtxoWithToken
+        collectedAmmountWhenSoldoutWithIncomingFund =  adas + adasOnExchangeToken - rejectAmountWhenSoldOutWithIncomingFund - minimumAdaRequiredOnUtxoWithToken - feesPerCommand
+        refundIsUnderMinimum = rejectAmountWhenSoldOutWithIncomingFund < minimumAdaRequiredOnUtxoWithToken
         collectIsUnderMinimum = collectedAmmountWhenSoldoutWithIncomingFund < minimumAdaRequiredOnUtxoWithToken
             
 

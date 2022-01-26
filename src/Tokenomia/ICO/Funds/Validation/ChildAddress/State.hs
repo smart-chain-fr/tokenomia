@@ -19,7 +19,7 @@ module Tokenomia.ICO.Funds.Validation.ChildAddress.State
 
 import           Prelude hiding (round,print)
 
-import Data.Set.Ordered ( fromList, OSet )
+import Data.Set.Ordered as OS ( fromList, OSet, filter )
 import Plutus.V1.Ledger.Ada ( Ada(..) )
 
 
@@ -59,14 +59,14 @@ fetchActiveAddresses
     -> PageNumber
     -> Wallet
     -> m (Maybe (NonEmpty Address))
-fetchActiveAddresses roundAddresses pageNumber Wallet {stakeAddress = Address stakeAddress} 
+fetchActiveAddresses _ pageNumber Wallet {stakeAddress = Address stakeAddress} 
     = do
         let paged = B.Paged {countPerPage = 100, pageNumber = coerce pageNumber } 
         prj <- B.projectFromEnv''
         liftIO $ B.runBlockfrost prj $ do
             addresses :: [Address] <- (fmap . fmap) (Address . T.unpack . coerce)  
                                         (B.getAccountAssociatedAddresses' (fromString stakeAddress) paged B.asc )
-            (return . nonEmpty . Prelude.filter (notElemFromRoundAddreses roundAddresses )) addresses
+            (return . nonEmpty . Prelude.filter notInvalidAddress) addresses
         >>= (\case
                 Left e -> throwError $ BlockFrostError e
                 Right res -> return res)
@@ -76,23 +76,27 @@ fetchAllWhiteListedFunds
     :: ( MonadIO m
        , MonadError  TokenomiaError m
        , MonadReader Environment m)
-    => NonEmpty WhiteListedInvestorRef
+    => RoundSettings
+    -> NonEmpty WhiteListedInvestorRef
     -> m (NonEmpty WhiteListedInvestorState)
-fetchAllWhiteListedFunds whiteListedInvestorRefs = do
+fetchAllWhiteListedFunds settings whiteListedInvestorRefs = do
     prj <- B.projectFromEnv''
     liftIO $ B.runBlockfrost prj $ do
         fetchAllWhiteListedFunds' whiteListedInvestorRefs
     >>= (\case
             Left e -> throwError $ BlockFrostError e
-            Right  xs -> return $ (\(a,b,c) -> mkWhiteListedInvestorState a b c ) <$>xs)
+            Right  xs -> return $ (\(a,b,c) -> mkWhiteListedInvestorState settings a b c ) <$>xs)
 
 mkWhiteListedInvestorState
-    :: WhiteListedInvestorRef
+    :: RoundSettings 
+    -> WhiteListedInvestorRef
     -> AddressVolumes
     -> OSet ReceivedFunds
     -> WhiteListedInvestorState
-mkWhiteListedInvestorState investorRef volumes allReceivedFunds
-    = WhiteListedInvestorState {..}
+mkWhiteListedInvestorState RoundSettings {syncSlot = Just syncSlot} investorRef volumes allReceivedFunds
+    = WhiteListedInvestorState {allReceivedFunds = OS.filter (\ReceivedFunds {..} -> receivedAt < syncSlot) allReceivedFunds, ..}
+mkWhiteListedInvestorState RoundSettings {syncSlot = Nothing} investorRef volumes allReceivedFunds
+    = WhiteListedInvestorState {..}    
 
 fetchAllWhiteListedFunds'
     :: NonEmpty WhiteListedInvestorRef
@@ -105,15 +109,16 @@ fetchWhiteListedFunds
     :: ( MonadIO m
        , MonadError  TokenomiaError m
        , MonadReader Environment m)
-    => WhiteListedInvestorRef
+    => RoundSettings 
+    -> WhiteListedInvestorRef
     -> m WhiteListedInvestorState
-fetchWhiteListedFunds whiteListedInvestorRef = do
+fetchWhiteListedFunds settings whiteListedInvestorRef = do
     prj <- B.projectFromEnv''
     liftIO $ B.runBlockfrost prj $ do
         fetchWhiteListedFunds' whiteListedInvestorRef
     >>= (\case
             Left e -> throwError $ BlockFrostError e
-            Right (a,b,c) -> return $ mkWhiteListedInvestorState a b c )
+            Right (a,b,c) -> return $ mkWhiteListedInvestorState settings a b c )
 
 
 fetchWhiteListedFunds'
