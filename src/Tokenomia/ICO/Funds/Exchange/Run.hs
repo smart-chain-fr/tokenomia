@@ -30,6 +30,9 @@ import qualified Data.Set.NonEmpty as NES
 import           Tokenomia.Common.Transacting
 import           Tokenomia.Common.Token
 import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
+import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
+import qualified Streamly.Internal.Data.Fold as SF
+import Data.Function ( (&) )
 
 run
     :: ( MonadIO m
@@ -41,20 +44,21 @@ run
 run round@RoundSettings {addresses = roundAddresses} = do
 
     printLn $ show round
+    printLn "------------------------------------------------"
+    printLn "- Funds Exchange (run)  "
+    printLn "------------------------------------------------"   
     
-    printLn "Exchange "
-    fetchRawReceivedFundsByTx round 
+    allFunds <- fetchRawReceivedFundsByTx round 
         >>= authentifyTxsAsComingFromRoundWallet round
         >>= discardRejectedTxs
-        >>= \funds -> do
-               tokensMaybe <- fetchTokens round   
-               fees <- planAndEstimate round tokensMaybe funds
-               printLn $ "Plan estimated : tokens " <> show tokensMaybe 
-               let roundAgnosticPlanWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
-               roundSpecificPlanWithFees <- convertToRoundSpecificPlan round roundAgnosticPlanWithFees
-               printLn $ show roundSpecificPlanWithFees
-               transact roundAddresses roundSpecificPlanWithFees
-        >> printLn "Exchange Done"
+    -- funds > csv 
+    roundSpecificPlanWithFees <- fetchNextPlan round allFunds
+    _ <- transact roundAddresses roundSpecificPlanWithFees   
+    printLn "------------------------------------------------"
+    printLn "- Funds Exchange Ended "
+    printLn "------------------------------------------------" 
+    
+
 
 dryRun
     :: ( MonadIO m
@@ -67,21 +71,42 @@ dryRun round@RoundSettings {addresses = roundAddresses} = do
 
     printLn $ show round
 
-    printLn "Exchange "
-    fetchRawReceivedFundsByTx round 
+    printLn "------------------------------------------------"
+    printLn "- Funds Exchange (dry run)  "
+    printLn "------------------------------------------------"   
+    
+    allFunds <- fetchRawReceivedFundsByTx round 
         >>= authentifyTxsAsComingFromRoundWallet round
         >>= discardRejectedTxs
-        >>= \funds -> do
-               tokensMaybe <- fetchTokens round   
-               fees <- planAndEstimate round tokensMaybe funds
-               printLn $ "Plan estimated : tokens " <> show tokensMaybe 
-               let roundAgnosticPlanWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
-               roundSpecificPlanWithFees <- convertToRoundSpecificPlan round roundAgnosticPlanWithFees
-               printLn $ "Fees > " <> show fees
-               printLn $ show roundSpecificPlanWithFees
-               buildTx roundAddresses roundSpecificPlanWithFees
-        >> printLn "Exchange Done"
+     
+    roundSpecificPlanWithFees <- fetchNextPlan round allFunds
+    _ <- buildTx roundAddresses roundSpecificPlanWithFees   
+    
+    printLn "------------------------------------------------"
+    printLn "- Funds Exchange Ended (dry run)  "
+    printLn "------------------------------------------------"     
+ 
 
+fetchNextPlan
+    :: ( MonadIO m
+       , S.MonadAsync m
+       , MonadReader Environment m
+       , MonadError TokenomiaError m)
+    => RoundSettings
+    -> NEL.NonEmpty AuthentifiedFunds
+    -> m (Plan Command)
+fetchNextPlan round@RoundSettings {} allFunds = do
+    let nbFundsPerTx = 10
+    let nextFunds = NEL.fromList . NEL.take nbFundsPerTx . NEL.sort $ allFunds 
+    tokensMaybe <- fetchTokens round   
+    fees <- planAndEstimate round tokensMaybe nextFunds
+    printLn $ "Remaining Tokens > " <> show tokensMaybe 
+    printLn $ "Estimated Fees   > " <> show fees
+    let roundAgnosticPlanWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
+    roundSpecificPlanWithFees <- convertToRoundSpecificPlan round roundAgnosticPlanWithFees
+    printLn $ show roundSpecificPlanWithFees
+    return roundSpecificPlanWithFees   
+    
 
 planAndEstimate 
     :: ( MonadIO m

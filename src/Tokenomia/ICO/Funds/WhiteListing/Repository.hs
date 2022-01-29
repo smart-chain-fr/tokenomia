@@ -126,7 +126,8 @@ saveKYCedInvestors
     => RoundSettings 
     -> Investor 
     -> m ()  
-saveKYCedInvestors RoundSettings {investorsWallet = Wallet {name}} Investor {index,paybackAddress,childAddress} = do 
+saveKYCedInvestors RoundSettings {investorsWallet = Wallet {name}} i@Investor {index,paybackAddress,childAddress} = do 
+    printLn $ "Investor > " <> show i
     whitelistFolderPath <- getWhitelistPath name 
     IndexedAddress {childAddressRef = ChildAddressRef {index = indexRetrieved} } <- fetchByAddressStrict name (Address childAddress) 
     when (indexRetrieved /= fromIntegral index ) $ do 
