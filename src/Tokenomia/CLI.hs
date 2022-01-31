@@ -204,7 +204,7 @@ actions = NonEmpty.fromList [
     NodeTranslateTimeToSlot,
     ICOStatus,
     ICOFundsValidationDryRun,
-    -- ICOFundsValidationRun,
+    ICOFundsValidationRun,
     ICOExchangeDryRun,
     -- ICOExchangeRun,
     ICOUpdateWhiteListing,

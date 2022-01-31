@@ -18,7 +18,7 @@ import           Tokenomia.Common.Address
 import           Tokenomia.ICO.Balanceable
 import           Tokenomia.Common.Token
 import           Prelude hiding (round,print)
-
+import qualified Tokenomia.Wallet.ChildAddress.ChildAddressRef as C
 
 
 
@@ -71,6 +71,7 @@ instance Show Command where
         <> "\n   | source  : " <> show (getAdas source)
         <> "\n   | refund  : " <> show refundAmount
         <> "\n   | paybackAddress  : " <> show paybackAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
     show MoveToNextRoundBecauseTokensSoldOut { ..}
         =  "\n Command : MoveToNextRoundBecauseTokensSoldOut "
         <> "\n   | received at : " <> show (getSlot receivedAt)
@@ -78,6 +79,7 @@ instance Show Command where
         <> "\n   | move        : " <> show moveAmount
         <> "\n   | datum       : " <> show datumFile
         <> "\n   | nextRoundExchangeAddress  : " <> show nextRoundExchangeAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
     show ExchangeAndPartiallyRefund { ..}
         =  "\n Command : ExchangeAndPartiallyRefund "
         <> "\n   | received at : " <> show (getSlot receivedAt)
@@ -86,6 +88,7 @@ instance Show Command where
         <> "\n   | collected   : " <> show collectedAmount
         <> "\n   | token       : " <> show tokens
         <> "\n   | paybackAddress  : " <> show paybackAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
     show ExchangeAndPartiallyMoveToNextRound { ..}
         =  "\n Command : ExchangeAndPartiallyMoveToNextRound "
         <> "\n   | received at : " <> show (getSlot receivedAt)
@@ -95,6 +98,8 @@ instance Show Command where
         <> "\n   | token       : " <> show tokens
         <> "\n   | paybackAddress  : " <> show paybackAddress
         <> "\n   | nextRoundExchangeAddress  : " <> show nextRoundExchangeAddress
+        <> "\n   | datum       : " <> show datumFile
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
     show Exchange {..}
         =  "\n Command : Exchange "
         <> "\n   | received at : " <> show (getSlot receivedAt)
@@ -102,6 +107,7 @@ instance Show Command where
         <> "\n   | collected   : " <> show collectedAmount
         <> "\n   | token       : " <> show tokens
         <> "\n   | paybackAddress  : " <> show paybackAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
 
 instance AdaBalanceable Command where 
     adaBalance RefundBecauseTokensSoldOut {..} = getAdas source - refundAmount

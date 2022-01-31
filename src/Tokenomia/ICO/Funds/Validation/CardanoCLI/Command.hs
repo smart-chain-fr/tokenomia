@@ -18,7 +18,7 @@ import           Tokenomia.Wallet.UTxO
 
 import           Tokenomia.Common.Address
 import           Tokenomia.ICO.Balanceable
-
+import qualified Tokenomia.Wallet.ChildAddress.ChildAddressRef as C
 data Command
     = SendOnExchangeAddressAndPartiallyRefund  
         { source :: WalletUTxO  
@@ -79,6 +79,7 @@ instance Show Command where
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source  : " <> show (getAdas source)
         <> "\n   | amount  : " <> show adasToRefund
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
         <> "\n   | refundAddress : " <> show refundAddress
     show MoveToNextRound { ..}
         =  "\n Command : MoveToNextRound "
@@ -86,6 +87,7 @@ instance Show Command where
         <> "\n   | source  : " <> show (getAdas source)
         <> "\n   | amount  : " <> show adasToMove
         <> "\n   | nextRoundExchangeAddress : " <> show nextRoundExchangeAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
         <> "\n   | datum       : " <> show datum
     show SendOnExchangeAddressAndPartiallyRefund { ..}
         =  "\n Command : SendOnExchangeAddressAndPartiallyRefund "
@@ -94,6 +96,8 @@ instance Show Command where
         <> "\n   | adasToRefund  : "     <> show adasToRefund
         <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
         <> "\n   | exchangeAddress       : " <> show exchangeAddress
+        <> "\n   | refundAddress : " <> show refundAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
         <> "\n   | datum       : " <> show datum
     show SendOnExchangeAddressAndPartiallyMoveToNextRound { ..}
         =  "\n Command : SendOnExchangeAddressAndPartiallyRefund "
@@ -103,6 +107,7 @@ instance Show Command where
         <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
         <> "\n   | exchangeAddress       : " <> show exchangeAddress
         <> "\n   | nextRoundExchangeAddress : " <> show nextRoundExchangeAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
         <> "\n   | datum       : " <> show datum
     show SendOnExchangeAddress {..}
         =  "\n Command : SendOnExchangeAddress "
@@ -110,5 +115,6 @@ instance Show Command where
         <> "\n   | source      : " <> show (getAdas source)
         <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
         <> "\n   | exchangeAddress       : " <> show exchangeAddress
+        <> "\n   | index  : " <> show (C.index . childAddressRef $ source)
         <> "\n   | datum       : " <> show datum
         

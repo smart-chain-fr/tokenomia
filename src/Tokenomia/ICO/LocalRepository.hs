@@ -99,13 +99,13 @@ getFlashSaleSettings  = do
            return $ Round
                 { title = "Flash Sale (Mainnet !!!!!)"
                 , settings = RoundSettings
-                                { syncSlot = Just 51_80_76_55
+                                { syncSlot = Nothing
                                 , maximumAdaPerAddress = adaOf 50_000
-                                , minimumAdaPerFund = adaOf 200
-                                , timeRange = interval 51_73_71_99 51_80_66_55 
+                                , minimumAdaPerFund = adaOf 3
+                                , timeRange = interval 51_73_71_99 52_80_66_55 
                                 , kycIntegration = Integration { params = \(ChildAddressIndex index) -> "admin=xR0CE2Vk80fOoD57slc4&from_user=" <> show index <>  "&round=1"
                                                             , url = "https://api.cardashift.com/api/admin/participants"}
-                                , exchangeTokenId = assetClass "3657151839007cfd06deeb174987957dc9c21cfd3863d384c0d0293a" "434c41505554"-- "db30c7905f598ed0154de14f970de0f61f0cb3943ed82c891968480a" "434c4150"
+                                , exchangeTokenId = assetClass "db30c7905f598ed0154de14f970de0f61f0cb3943ed82c891968480a" "434c4150" -- "3657151839007cfd06deeb174987957dc9c21cfd3863d384c0d0293a" "434c41505554"
                                 , investorsWallet = investorsWallet
                                 , previousRoundMaybe = Nothing
                                 , nextRoundMaybe = Just $ NextRound nextExchangeAddress
@@ -150,8 +150,8 @@ getPublicSaleSettings  = do
                 , settings = RoundSettings
                                 { syncSlot = Nothing
                                 , maximumAdaPerAddress = adaOf 25_000
-                                , minimumAdaPerFund = adaOf 100
-                                , timeRange = interval 51_73_71_99 51_80_66_55 
+                                , minimumAdaPerFund = adaOf 3
+                                , timeRange = interval 51_73_71_99 52_05_69_09 -- 51_80_66_55 
                                 , kycIntegration = Integration { params = \(ChildAddressIndex index) -> "admin=xR0CE2Vk80fOoD57slc4&from_user=" <> show index <>  "&round=2"
                                                             , url = "https://api.cardashift.com/api/admin/participants"}
                                 , exchangeTokenId = assetClass "db30c7905f598ed0154de14f970de0f61f0cb3943ed82c891968480a" "434c4150"

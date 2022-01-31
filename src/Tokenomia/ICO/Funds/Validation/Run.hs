@@ -52,7 +52,7 @@ dryRun round@RoundSettings {addresses = roundAddresses} = do
 
     S.drain
          $ streamCommandsToTransact round
-         & S.take 1 -- TODO : to be removed
+        --  & S.take 1 -- TODO : to be removed
          & S.mapM (buildTx roundAddresses)
          & S.mapM (\BuiltTx{estimatedFees} -> do
             printLn $ "Tx Fees : " <> show estimatedFees
