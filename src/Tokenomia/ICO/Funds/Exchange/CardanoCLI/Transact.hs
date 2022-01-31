@@ -52,7 +52,7 @@ buildTx roundAddresses plan = do
               , tokenSupplyChangesMaybe = Nothing
               , inputsFromScript  = Nothing
               , metadataMaybe = Nothing}
-    printLn $ "Tx > " <> show tx
+    -- printLn $ "Tx > " <> show tx
     build
       (getTxBalance roundAddresses plan)
       (Just $ getCollateral roundAddresses)

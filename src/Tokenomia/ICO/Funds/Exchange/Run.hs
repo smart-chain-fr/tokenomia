@@ -9,7 +9,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Tokenomia.ICO.Funds.Exchange.Run
-    (dryRun,run) where
+    (dryRun
+    ,run) where
 
 import Prelude hiding (round,print)
 import           Control.Monad.Reader
@@ -23,16 +24,14 @@ import           Tokenomia.ICO.Round.Settings
 import qualified Streamly.Prelude as S
 import           Tokenomia.ICO.Funds.Exchange.ReceivedFunds
 import           Tokenomia.ICO.Funds.Exchange.Tokens
-import           Tokenomia.ICO.Funds.Exchange.Plan
+import           Tokenomia.ICO.Funds.Exchange.Plan as P
 import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Set.NonEmpty as NES
 import           Tokenomia.Common.Transacting
 import           Tokenomia.Common.Token
 import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
-import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
-import qualified Streamly.Internal.Data.Fold as SF
-import Data.Function ( (&) )
+import           Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command as C
 
 run
     :: ( MonadIO m
@@ -96,15 +95,16 @@ fetchNextPlan
     -> NEL.NonEmpty AuthentifiedFunds
     -> m (Plan Command)
 fetchNextPlan round@RoundSettings {} allFunds = do
-    let nbFundsPerTx = 10
+    let nbFundsPerTx = 2502
     let nextFunds = NEL.fromList . NEL.take nbFundsPerTx . NEL.sort $ allFunds 
     tokensMaybe <- fetchTokens round   
     fees <- planAndEstimate round tokensMaybe nextFunds
     printLn $ "Remaining Tokens > " <> show tokensMaybe 
     printLn $ "Estimated Fees   > " <> show fees
-    let roundAgnosticPlanWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList funds) 
-    roundSpecificPlanWithFees <- convertToRoundSpecificPlan round roundAgnosticPlanWithFees
+    let roundAgnosticPlanWithFees =  mkPlan (mkPlanSettings round) getMinimumUTxOAdaRequired (Just fees) tokensMaybe (NES.fromList nextFunds) 
+    roundSpecificPlanWithFees@Plan {commands = cs} <- convertToRoundSpecificPlan round roundAgnosticPlanWithFees
     printLn $ show roundSpecificPlanWithFees
+    mapM_ (printLn . show) cs
     return roundSpecificPlanWithFees   
     
 

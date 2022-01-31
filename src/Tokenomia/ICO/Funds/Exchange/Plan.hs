@@ -131,7 +131,7 @@ transition AuthentifiedFunds {..} State { exchangeTokenMaybe = exchangeTokenMayb
                                  , minimumAdaRequired = minimumAdaRequiredOnUtxoWithToken}, ..}
     | otherwise
         = appendCommand $ Exchange
-                    { collectedAmount = adas - feesPerCommand - minimumAdaRequiredOnUtxoWithToken
+                    { collectedAmount = adas - feesPerCommand - minimumAdaRequiredOnUtxoWithToken -- (899957104-1379280)/8562147
                     , tokens = Token { assetClass = exchangeTokenId
                                      , amount = tokenAmountCurrentFund
                                      , minimumAdaRequired = minimumAdaRequiredOnUtxoWithToken }, ..}
@@ -176,7 +176,7 @@ instance (Show command) =>  Show (Plan command) where
            "\n|| PLAN || " 
         <> "\n| Fees = " <> show feesMaybe
         <> "\n| IO On tokenAddress = " <> show ioOnTokenAddress 
-        <> "\n| Commands = " <> show commands 
+        
 
 
 instance AdaBalanceable (Plan Command) where 

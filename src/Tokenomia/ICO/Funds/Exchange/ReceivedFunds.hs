@@ -79,7 +79,7 @@ instance Show AuthentifiedFunds where
         <> "\n   | index : " <> (show @Integer . fromIntegral) index
         <> "\n   | received at : "      <> show (getSlot receivedAt)
         <> "\n   | amount  : "          <> (show . getLovelace) adas <> " Lovelaces"
-        -- <> "\n   | payback Address  : " <> show paybackAddress
+        <> "\n   | payback Address  : " <> show paybackAddress
 
 instance Ord  AuthentifiedFunds where 
     compare x y = case compare (receivedAt x) (receivedAt y) of

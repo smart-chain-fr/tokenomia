@@ -70,11 +70,14 @@ instance Show Command where
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source  : " <> show (getAdas source)
         <> "\n   | refund  : " <> show refundAmount
+        <> "\n   | paybackAddress  : " <> show paybackAddress
     show MoveToNextRoundBecauseTokensSoldOut { ..}
         =  "\n Command : MoveToNextRoundBecauseTokensSoldOut "
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source      : " <> show (getAdas source)
         <> "\n   | move        : " <> show moveAmount
+        <> "\n   | datum       : " <> show datumFile
+        <> "\n   | nextRoundExchangeAddress  : " <> show nextRoundExchangeAddress
     show ExchangeAndPartiallyRefund { ..}
         =  "\n Command : ExchangeAndPartiallyRefund "
         <> "\n   | received at : " <> show (getSlot receivedAt)
@@ -82,6 +85,7 @@ instance Show Command where
         <> "\n   | refund      : " <> show refundAmount
         <> "\n   | collected   : " <> show collectedAmount
         <> "\n   | token       : " <> show tokens
+        <> "\n   | paybackAddress  : " <> show paybackAddress
     show ExchangeAndPartiallyMoveToNextRound { ..}
         =  "\n Command : ExchangeAndPartiallyMoveToNextRound "
         <> "\n   | received at : " <> show (getSlot receivedAt)
@@ -89,12 +93,15 @@ instance Show Command where
         <> "\n   | move        : " <> show moveAmount
         <> "\n   | collected   : " <> show collectedAmount
         <> "\n   | token       : " <> show tokens
+        <> "\n   | paybackAddress  : " <> show paybackAddress
+        <> "\n   | nextRoundExchangeAddress  : " <> show nextRoundExchangeAddress
     show Exchange {..}
         =  "\n Command : Exchange "
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source      : " <> show (getAdas source)
         <> "\n   | collected   : " <> show collectedAmount
         <> "\n   | token       : " <> show tokens
+        <> "\n   | paybackAddress  : " <> show paybackAddress
 
 instance AdaBalanceable Command where 
     adaBalance RefundBecauseTokensSoldOut {..} = getAdas source - refundAmount

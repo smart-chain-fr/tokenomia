@@ -79,26 +79,36 @@ instance Show Command where
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source  : " <> show (getAdas source)
         <> "\n   | amount  : " <> show adasToRefund
+        <> "\n   | refundAddress : " <> show refundAddress
     show MoveToNextRound { ..}
         =  "\n Command : MoveToNextRound "
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source  : " <> show (getAdas source)
         <> "\n   | amount  : " <> show adasToMove
+        <> "\n   | nextRoundExchangeAddress : " <> show nextRoundExchangeAddress
+        <> "\n   | datum       : " <> show datum
     show SendOnExchangeAddressAndPartiallyRefund { ..}
         =  "\n Command : SendOnExchangeAddressAndPartiallyRefund "
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source  : "     <> show (getAdas source)
         <> "\n   | adasToRefund  : "     <> show adasToRefund
         <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
+        <> "\n   | exchangeAddress       : " <> show exchangeAddress
+        <> "\n   | datum       : " <> show datum
     show SendOnExchangeAddressAndPartiallyMoveToNextRound { ..}
         =  "\n Command : SendOnExchangeAddressAndPartiallyRefund "
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source  : "     <> show (getAdas source)
         <> "\n   | adasToMove  : "     <> show adasToMove
         <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
+        <> "\n   | exchangeAddress       : " <> show exchangeAddress
+        <> "\n   | nextRoundExchangeAddress : " <> show nextRoundExchangeAddress
+        <> "\n   | datum       : " <> show datum
     show SendOnExchangeAddress {..}
         =  "\n Command : SendOnExchangeAddress "
         <> "\n   | received at : " <> show (getSlot receivedAt)
         <> "\n   | source      : " <> show (getAdas source)
         <> "\n   | adasToSendOnExchange   : " <> show adasToSendOnExchange
+        <> "\n   | exchangeAddress       : " <> show exchangeAddress
+        <> "\n   | datum       : " <> show datum
         
