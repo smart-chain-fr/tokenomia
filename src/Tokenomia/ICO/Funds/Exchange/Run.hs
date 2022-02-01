@@ -56,7 +56,7 @@ run round@RoundSettings {addresses = roundAddresses} = do
     printLn "------------------------------------------------"
     printLn "- Funds Exchange Ended "
     printLn "------------------------------------------------" 
-    
+    run round
 
 
 dryRun
@@ -84,7 +84,7 @@ dryRun round@RoundSettings {addresses = roundAddresses} = do
     printLn "------------------------------------------------"
     printLn "- Funds Exchange Ended (dry run)  "
     printLn "------------------------------------------------"     
- 
+    
 
 fetchNextPlan
     :: ( MonadIO m
@@ -95,7 +95,7 @@ fetchNextPlan
     -> NEL.NonEmpty AuthentifiedFunds
     -> m (Plan Command)
 fetchNextPlan round@RoundSettings {} allFunds = do
-    let nbFundsPerTx = 2502
+    let nbFundsPerTx = 70 --2550
     let nextFunds = NEL.fromList . NEL.take nbFundsPerTx . NEL.sort $ allFunds 
     tokensMaybe <- fetchTokens round   
     fees <- planAndEstimate round tokensMaybe nextFunds

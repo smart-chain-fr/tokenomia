@@ -85,7 +85,7 @@ getFlashSaleSettings  = do
 
     investorsWallet <- Wallet.fetchById "Cardashift.Flash.Sale.Investors"
 
-    Wallet{name= tokenWalletName} <- Wallet.fetchById "CLAPUT.Wallet" -- "Cardashift.Flash.Sale.Tokens"
+    Wallet{name= tokenWalletName} <- Wallet.fetchById "Cardashift.Flash.Sale.Tokens"
     tokens <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef tokenWalletName 0)
 
     Wallet{name= nextExchangeWalletName} <- Wallet.fetchById "Cardashift.Public.Sale.Exchange"
