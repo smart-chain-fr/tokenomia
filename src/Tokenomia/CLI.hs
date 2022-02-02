@@ -136,7 +136,7 @@ recursiveMenu = do
                                -> printLn "ICO - Echange UTxOs without Hashes"
         ICOTokensDispatchedOnMultipleUTxOs 
                                -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
-        ICONoValidTxs message  -> printLn $ "ICO - No Valid Txs Found : " <>  message
+        ICONoValidTxs message  -> liftIO $ putStrLn $ "ICO - No Valid Txs Found : " <>  message
         ICOPaybackAddressNotAvailable walletName index -> 
                                   printLn $ "ICO - Payback Address not available for  : " <>  walletName <> " index #" <> show index
         ICOWhitelistingNotValid index indexRetrieved -> 

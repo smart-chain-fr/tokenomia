@@ -73,11 +73,15 @@ dryRun round@RoundSettings {addresses = roundAddresses} = do
     printLn "------------------------------------------------"
     printLn "- Funds Exchange (dry run)  "
     printLn "------------------------------------------------"   
-    
+    printLn "1"
     allFunds <- fetchRawReceivedFundsByTx round 
-        >>= authentifyTxsAsComingFromRoundWallet round
-        >>= discardRejectedTxs
-     
+        >>= \a -> do 
+                printLn "a"
+                authentifyTxsAsComingFromRoundWallet round a
+        >>= \b -> do 
+                printLn "b"
+                discardRejectedTxs b
+    printLn "2" 
     roundSpecificPlanWithFees <- fetchNextPlan round allFunds
     _ <- buildTx roundAddresses roundSpecificPlanWithFees   
     
@@ -95,7 +99,7 @@ fetchNextPlan
     -> NEL.NonEmpty AuthentifiedFunds
     -> m (Plan Command)
 fetchNextPlan round@RoundSettings {} allFunds = do
-    let nbFundsPerTx = 70 --2550
+    let nbFundsPerTx = 68 --2550
     let nextFunds = NEL.fromList . NEL.take nbFundsPerTx . NEL.sort $ allFunds 
     tokensMaybe <- fetchTokens round   
     fees <- planAndEstimate round tokensMaybe nextFunds

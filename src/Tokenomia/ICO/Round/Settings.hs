@@ -48,11 +48,11 @@ instance Show NextRound where
         =  " Exchange Address = " <> exchangeAddress
 
 
-newtype PreviousRound = PreviousRound { wallet :: Wallet}
+data PreviousRound = PreviousRound { investorsWallet :: Wallet, exchangeWallet :: Wallet}
 
 instance Show PreviousRound where
-    show PreviousRound { wallet = Wallet {name}}
-        =  " Wallet Used : "  <> name
+    show PreviousRound { investorsWallet = Wallet {name = investors}, exchangeWallet = Wallet {name = exchange}}
+        =  " Wallet Investors : "  <> investors <> " |  Wallet Exchange : " <> exchange 
 
 data KYCIntegration 
         = Integration { params :: ChildAddressIndex  -> String

@@ -129,11 +129,12 @@ authentifyTx round@RoundSettings {investorsWallet = Wallet {name = investorsWall
 
 authentifyTx round@RoundSettings { investorsWallet = Wallet {name = currentRoundWallet}
                                  , previousRoundMaybe 
-                                    = Just PreviousRound {wallet = Wallet {name = previousInvestorRoundWallet}}} 
+                                    = Just PreviousRound {investorsWallet = Wallet {name = previousInvestorsWallet}, exchangeWallet = Wallet {name = previousExchangeWallet}}} 
              tx@RawReceivedFundsByTx {..} = do 
- txFromCurrentRoundMaybe <- retrieveAddressesFromWallet currentRoundWallet inputAdresses
- txFromPreviousRoundMaybe <- retrieveAddressesFromWallet previousInvestorRoundWallet inputAdresses
- case catMaybes [txFromCurrentRoundMaybe,txFromPreviousRoundMaybe] of
+ txFromCurrentRoundMaybe  <- retrieveAddressesFromWallet currentRoundWallet inputAdresses
+ txFromPreviousInvestorsWalletMaybe <- retrieveAddressesFromWallet previousInvestorsWallet inputAdresses
+ txFromPreviousExchangeRoundMaybe <- retrieveAddressesFromWallet previousExchangeWallet inputAdresses
+ case catMaybes [txFromCurrentRoundMaybe,txFromPreviousInvestorsWalletMaybe,txFromPreviousExchangeRoundMaybe] of
     [] -> return . Left  $ TxMadeFromOutsideTheICORoundWallet {externalAddresses = inputAdresses,..}
     _  -> do  
         hashesAndUxtos <- getDatumHashesAndAdaStrict sources

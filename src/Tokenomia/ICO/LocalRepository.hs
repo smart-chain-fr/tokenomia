@@ -131,7 +131,8 @@ getPublicSaleSettings  = do
     Wallet{name= feesWalletName} <- Wallet.fetchById "Cardashift.Fees"
     fees <- toIndexedAddress <$> ChildAddress.fetchById (ChildAddressRef feesWalletName 0)
 
-    previousRound <- PreviousRound <$> Wallet.fetchById "Cardashift.Flash.Sale.Investors"
+    previousInvestorWalletRound <-  Wallet.fetchById "Cardashift.Flash.Sale.Investors"
+    previousExchangeWalletRound <-  Wallet.fetchById "Cardashift.Flash.Sale.Exchange"
 
     investorsWallet <- Wallet.fetchById "Cardashift.Public.Sale.Investors"
 
@@ -156,7 +157,7 @@ getPublicSaleSettings  = do
                                                             , url = "https://api.cardashift.com/api/admin/participants"}
                                 , exchangeTokenId = assetClass "db30c7905f598ed0154de14f970de0f61f0cb3943ed82c891968480a" "434c4150"
                                 , investorsWallet = investorsWallet
-                                , previousRoundMaybe = Just previousRound
+                                , previousRoundMaybe = Just PreviousRound {investorsWallet = previousInvestorWalletRound , exchangeWallet = previousExchangeWalletRound}
                                 , nextRoundMaybe = Nothing
                                 , tokenRatePerLovelace = 30_000 / 1_000_000
                                 , addresses = RoundAddresses
