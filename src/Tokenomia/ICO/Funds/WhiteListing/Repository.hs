@@ -15,7 +15,7 @@
 
 module Tokenomia.ICO.Funds.WhiteListing.Repository
     ( fetchAllWhiteListedInvestorRef
-    , fetchPaybackAddress
+    , fetchPaybackAddressStrict
     , update) where
 
 import Prelude hiding (round,print)
@@ -60,22 +60,27 @@ fetchAllWhiteListedInvestorRef RoundSettings {kycIntegration = Simulation paybac
     return $ WhiteListedInvestorRef paybackAddress <$> activeAddresses
 fetchAllWhiteListedInvestorRef settings activeAddresses 
     = mapM (\indexedAddress@IndexedAddress {childAddressRef = ChildAddressRef {..}} -> do 
-               paybackAddress  <- fetchPaybackAddress settings index
+               paybackAddress  <- fetchPaybackAddressStrict settings index
                return $ WhiteListedInvestorRef paybackAddress indexedAddress) activeAddresses
 
-fetchPaybackAddress
+
+fetchPaybackAddressStrict
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => RoundSettings 
     -> ChildAddressIndex
     -> m Address
-fetchPaybackAddress RoundSettings {kycIntegration = Simulation paybackAddress} _ = return paybackAddress
-fetchPaybackAddress RoundSettings {investorsWallet = Wallet {name}} index = do
+fetchPaybackAddressStrict RoundSettings {kycIntegration = Simulation paybackAddress} _ = return paybackAddress
+fetchPaybackAddressStrict RoundSettings {investorsWallet = Wallet {name}} index = do
     filePath <- getInvestorPaybackAddressFilePath name index
     liftIO (doesFileExist filePath)
         >>= \case
-             False -> throwError $ ICOPaybackAddressNotAvailable name (fromIntegral index)
+             False -> do
+                 printLn "<<<<<<<<WARNING>>>>>>"
+                 printLn "Adress with funds wihtout a valid KYC (need to be ignored)" 
+                 printLn "<<<<<<<<WARNING>>>>>>"
+                 throwError $ ICOPaybackAddressNotAvailable name (fromIntegral index)
              True ->  Address . C.unpack <$> (liftIO $ cat filePath |> captureTrim)
      
 
@@ -92,7 +97,7 @@ update settings@RoundSettings {kycIntegration = Integration {..},investorsWallet
            Left e -> do 
                printLn $ "Inconsistent Payload : " <> e
                liftIO $ putStrLn $ show rawPayload
-           Right Payload {..} -> do
+           Right Payload {investors} -> do
                printLn $ "Found " <> show (length investors) <> " Investors with a valid KYC."
                let sortedInvestors = L.sort investors
                    lastInvestorIndex = W.index . L.last $ sortedInvestors 
@@ -104,8 +109,9 @@ update settings@RoundSettings {kycIntegration = Integration {..},investorsWallet
                                 deriveChildAddress childAddressRef
                                 liftIO $ putStrLn $ " - Derived Child Address " <> (show @Integer . coerce $  i))
                           range 
+                          
                          
-                    mapM_ (saveKYCedInvestors settings) investors
+               mapM_ (saveKYCedInvestors settings) investors
 
                printLn   "Whitelist updated." 
     
@@ -115,12 +121,17 @@ update RoundSettings {kycIntegration = Simulation _}
 
 saveKYCedInvestors 
      :: ( MonadIO m
-       , MonadReader Environment m)
+       , MonadReader Environment m
+       , MonadError TokenomiaError m)
     => RoundSettings 
     -> Investor 
     -> m ()  
-saveKYCedInvestors RoundSettings {investorsWallet = Wallet {name}} Investor {index,paybackAddress} = do 
+saveKYCedInvestors RoundSettings {investorsWallet = Wallet {name}} i@Investor {index,paybackAddress,childAddress} = do 
+    printLn $ "Investor > " <> show i
     whitelistFolderPath <- getWhitelistPath name 
+    IndexedAddress {childAddressRef = ChildAddressRef {index = indexRetrieved} } <- fetchByAddressStrict name (Address childAddress) 
+    when (indexRetrieved /= fromIntegral index ) $ do 
+        throwError $ ICOWhitelistingNotValid index (fromIntegral indexRetrieved)
     liftIO $ mkdir "-p" whitelistFolderPath
     filePath <- getInvestorPaybackAddressFilePath name (fromIntegral index)
     liftIO $ echo paybackAddress &> (Truncate . fromString) filePath

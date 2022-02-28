@@ -98,10 +98,12 @@ library
       Tokenomia.ICO.Funds.Exchange.ReceivedFunds
       Tokenomia.ICO.Funds.Exchange.Command
       Tokenomia.ICO.Funds.Exchange.Plan
+      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
+      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
+      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
       Tokenomia.ICO.Funds.WhiteListing.Repository
       Tokenomia.ICO.Funds.WhiteListing.Types
       Tokenomia.ICO.Funds.Exchange.Tokens
-      Tokenomia.ICO.Funds.Exchange.Transact
       Tokenomia.ICO.Funds.Exchange.Plan.Settings
       Tokenomia.ICO.Funds.Validation.Status
       Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan

@@ -24,18 +24,21 @@ import           Tokenomia.Wallet.UTxO
 import           Tokenomia.Common.Token
 import           Data.Set.Ordered
 import Tokenomia.ICO.Balanceable
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef 
 
 data Command
-    = RefundBecauseTokensSoldOut
-        { paybackAddress :: Address
+    = RejectBecauseTokensSoldOut
+        { index :: ChildAddressIndex
+        , paybackAddress :: Address
         , source :: WalletUTxO
-        , refundAmount :: Ada
+        , rejectAmount :: Ada
         , receivedAt :: Slot}
-    | ExchangeAndPartiallyRefund
-        { paybackAddress :: Address
+    | ExchangeAndPartiallyReject
+        { index :: ChildAddressIndex
+        , paybackAddress :: Address
         , source :: WalletUTxO
         , collectedAmount :: Ada
-        , refundAmount :: Ada
+        , rejectAmount :: Ada
         , tokens :: Token
         , receivedAt :: Slot}
     | Exchange
@@ -52,16 +55,16 @@ instance Ord Command where
       GT -> GT
 
 instance Show Command where
-    show RefundBecauseTokensSoldOut { ..}
-        =  "\n Command : RefundBecauseTokensSoldOut "
+    show RejectBecauseTokensSoldOut { ..}
+        =  "\n Command : RejectBecauseTokensSoldOut "
         <> "\n   | received at : " <> show (getSlot receivedAt)
-        <> "\n   | source  : " <> show (getAdas source)
-        <> "\n   | refund  : " <> show refundAmount
-    show ExchangeAndPartiallyRefund { ..}
-        =  "\n Command : ExchangeAndPartiallyRefund "
+        <> "\n   | source      : " <> show (getAdas source)
+        <> "\n   | reject      : " <> show rejectAmount
+    show ExchangeAndPartiallyReject { ..}
+        =  "\n Command : ExchangeAndPartiallyReject "
         <> "\n   | received at : " <> show (getSlot receivedAt)
-        <> "\n   | source  : "     <> show (getAdas source)
-        <> "\n   | refund  : "     <> show refundAmount
+        <> "\n   | source      : " <> show (getAdas source)
+        <> "\n   | reject      : " <> show rejectAmount
         <> "\n   | collected   : " <> show collectedAmount
         <> "\n   | token       : " <> show tokens
 
@@ -73,9 +76,9 @@ instance Show Command where
         <> "\n   | token       : " <> show tokens
 
 instance AdaBalanceable Command where 
-    adaBalance RefundBecauseTokensSoldOut {..} = getAdas source - refundAmount
+    adaBalance RejectBecauseTokensSoldOut {..} = getAdas source - rejectAmount
     adaBalance Exchange {tokens = Token {minimumAdaRequired},..}                    = getAdas source - collectedAmount - minimumAdaRequired
-    adaBalance ExchangeAndPartiallyRefund {tokens = Token {minimumAdaRequired},..}  = getAdas source - collectedAmount - minimumAdaRequired - refundAmount
+    adaBalance ExchangeAndPartiallyReject {tokens = Token {minimumAdaRequired},..}  = getAdas source - collectedAmount - minimumAdaRequired - rejectAmount
 
 instance TokenBalanceable Command where 
     tokenBalance = getTokenAmount
@@ -85,6 +88,6 @@ getTokensSum ::  OSet Command -> Integer
 getTokensSum xs = sum (getTokenAmount <$> toAscList xs)
 
 getTokenAmount :: Command -> Integer    
-getTokenAmount RefundBecauseTokensSoldOut {} = 0
+getTokenAmount RejectBecauseTokensSoldOut {} = 0
 getTokenAmount Exchange  {tokens = Token {..}} = amount
-getTokenAmount ExchangeAndPartiallyRefund  {tokens = Token {..}} = amount
+getTokenAmount ExchangeAndPartiallyReject  {tokens = Token {..}} = amount

@@ -94,9 +94,10 @@ displayInvestorPlans
     :: ( MonadIO m 
        , MonadReader Environment m
        , MonadError  TokenomiaError m)
-    => NEL.NonEmpty InvestorPlan
+    => RoundSettings
+    -> NEL.NonEmpty InvestorPlan
     ->  m (NEL.NonEmpty InvestorPlan)
-displayInvestorPlans investorplans = do
+displayInvestorPlans settings investorplans = do
     let funds = toAscList . unbiased $ fold (toBiasR . commands  <$> investorplans)
         nbfunds = length funds
         nbIgnored = nbfunds - nbReject - nbSendOnExchangeAddressAndPartiallyReject - nbSendOnExchangeAddess
@@ -117,7 +118,7 @@ displayInvestorPlans investorplans = do
         mapM_
         (\command -> do 
             printLn $ show command
-            state <- fetchWhiteListedFunds (Plan.investorRef command)
+            state <- fetchWhiteListedFunds settings (Plan.investorRef command)
             displayState state)
         (Prelude.filter isSendOnExchangeAddressAndPartiallyReject funds)
         
@@ -125,7 +126,7 @@ displayInvestorPlans investorplans = do
         mapM_
         (\command -> do 
             printLn $ show command
-            state <- fetchWhiteListedFunds (Plan.investorRef command)
+            state <- fetchWhiteListedFunds settings (Plan.investorRef command)
             displayState state)
         (Prelude.filter isReject funds)
 

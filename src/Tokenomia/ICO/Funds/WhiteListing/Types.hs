@@ -42,6 +42,6 @@ instance Ord Investor where
 instance FromJSON Investor where
     parseJSON = withObject "Investor" $ \v -> Investor
         <$> v .: "id"
-        <*> v .: "participation_address"
         <*> v .: "reception_address"
+        <*> v .: "participation_address"
         

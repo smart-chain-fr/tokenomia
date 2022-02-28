@@ -79,7 +79,7 @@ instance Show AuthentifiedFunds where
         <> "\n   | index : " <> (show @Integer . fromIntegral) index
         <> "\n   | received at : "      <> show (getSlot receivedAt)
         <> "\n   | amount  : "          <> (show . getLovelace) adas <> " Lovelaces"
-        -- <> "\n   | payback Address  : " <> show paybackAddress
+        <> "\n   | payback Address  : " <> show paybackAddress
 
 instance Ord  AuthentifiedFunds where 
     compare x y = case compare (receivedAt x) (receivedAt y) of
@@ -129,11 +129,12 @@ authentifyTx round@RoundSettings {investorsWallet = Wallet {name = investorsWall
 
 authentifyTx round@RoundSettings { investorsWallet = Wallet {name = currentRoundWallet}
                                  , previousRoundMaybe 
-                                    = Just PreviousRound {wallet = Wallet {name = previousInvestorRoundWallet}}} 
+                                    = Just PreviousRound {investorsWallet = Wallet {name = previousInvestorsWallet}, exchangeWallet = Wallet {name = previousExchangeWallet}}} 
              tx@RawReceivedFundsByTx {..} = do 
- txFromCurrentRoundMaybe <- retrieveAddressesFromWallet currentRoundWallet inputAdresses
- txFromPreviousRoundMaybe <- retrieveAddressesFromWallet previousInvestorRoundWallet inputAdresses
- case catMaybes [txFromCurrentRoundMaybe,txFromPreviousRoundMaybe] of
+ txFromCurrentRoundMaybe  <- retrieveAddressesFromWallet currentRoundWallet inputAdresses
+ txFromPreviousInvestorsWalletMaybe <- retrieveAddressesFromWallet previousInvestorsWallet inputAdresses
+ txFromPreviousExchangeRoundMaybe <- retrieveAddressesFromWallet previousExchangeWallet inputAdresses
+ case catMaybes [txFromCurrentRoundMaybe,txFromPreviousInvestorsWalletMaybe,txFromPreviousExchangeRoundMaybe] of
     [] -> return . Left  $ TxMadeFromOutsideTheICORoundWallet {externalAddresses = inputAdresses,..}
     _  -> do  
         hashesAndUxtos <- getDatumHashesAndAdaStrict sources
@@ -164,7 +165,7 @@ mkAuthentifiedFunds settings a@(hash1,adas,source) b@(hash2,receivedAt,index) = 
     if hash1 /= hash2 
         then error $ "Internal inconsistencies : " <> show a <> " and " <> show b
         else do
-            paybackAddress <- fetchPaybackAddress settings index
+            paybackAddress <- fetchPaybackAddressStrict settings index
             return AuthentifiedFunds {..}
 
 

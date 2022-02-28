@@ -22,7 +22,7 @@ module Tokenomia.ICO.Round.Settings
     , getExchangeAddress
     , getTokenAddress
     , getRoundAddresses
-    , notElemFromRoundAddreses
+    , notInvalidAddress
     ) where
 
 import           Prelude hiding (round,print)
@@ -48,11 +48,11 @@ instance Show NextRound where
         =  " Exchange Address = " <> exchangeAddress
 
 
-newtype PreviousRound = PreviousRound { wallet :: Wallet}
+data PreviousRound = PreviousRound { investorsWallet :: Wallet, exchangeWallet :: Wallet}
 
 instance Show PreviousRound where
-    show PreviousRound { wallet = Wallet {name}}
-        =  " Wallet Used : "  <> name
+    show PreviousRound { investorsWallet = Wallet {name = investors}, exchangeWallet = Wallet {name = exchange}}
+        =  " Wallet Investors : "  <> investors <> " |  Wallet Exchange : " <> exchange 
 
 data KYCIntegration 
         = Integration { params :: ChildAddressIndex  -> String
@@ -64,7 +64,8 @@ instance Show KYCIntegration where
 
 data RoundSettings
         = RoundSettings
-          { timeRange :: Interval Slot
+          { syncSlot :: Maybe Slot
+          , timeRange :: Interval Slot
           , kycIntegration :: KYCIntegration
           , maximumAdaPerAddress :: Ada
           , minimumAdaPerFund :: Ada
@@ -107,8 +108,9 @@ instance Show RoundSettings where
 getTokenAddress :: RoundAddresses -> Address 
 getTokenAddress RoundAddresses {tokens = IndexedAddress {..}} = address 
 
-notElemFromRoundAddreses :: RoundAddresses -> Address -> Bool
-notElemFromRoundAddreses r address = address `notElem` getRoundAddresses r
+notInvalidAddress :: Address -> Bool
+notInvalidAddress  address = address `notElem` 
+    []
 
 
 getExchangeAddress :: RoundAddresses -> Address

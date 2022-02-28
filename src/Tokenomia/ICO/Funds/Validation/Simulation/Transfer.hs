@@ -35,33 +35,55 @@ dispatchAdasOnChildAdresses ::
     , MonadError TokenomiaError m)
     => m ()
 dispatchAdasOnChildAdresses = do
-    Wallet {name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
+    Wallet {name = sourceAdaWalletName} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
-            printLn "Select the wallet containing funds and used for the round: "
+            printLn "Select the wallet containing funds: "
             askToChooseAmongGivenWallets wallets
-    source@WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAsOnChildAddress
+    source@WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef sourceAdaWalletName 0) >>= whenNothingThrow NoADAsOnChildAddress
 
+    Wallet {name = collateralWalletName} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+        >>= \wallets -> do
+            printLn "Select the wallet containing collaterals : "
+            askToChooseAmongGivenWallets wallets
+    Wallet {name = investorWalletName} <- fetchAll >>= whenNullThrow NoWalletRegistered 
+        >>= \wallets -> do
+            printLn "Select the investor wallet : "
+            askToChooseAmongGivenWallets wallets
+    
     printLn $ "- We'll dispatch this amount " <> showValue value 
     chunkSize <- Ada.adaOf . fromIntegral <$> ask @Integer "- Chunk size : "
     from <-  ask @Int "- From which index : "
     to   <-  ask @Int "- To which index : "
-    dispatchAdasOnChildAdresses' name source from to chunkSize
+    dispatchAdasOnChildAdresses' 
+        collateralWalletName
+        sourceAdaWalletName 
+        investorWalletName
+        source 
+        from 
+        to 
+        chunkSize
 
 dispatchAdasOnChildAdresses' ::
     ( MonadIO m
     , MonadReader Environment m
     , MonadError TokenomiaError m)
     => WalletName
+    -> WalletName
+    -> WalletName
     -> WalletUTxO
     -> Int
     -> Int
     -> Ada
     -> m ()
-dispatchAdasOnChildAdresses' walletName source@WalletUTxO {utxo = UTxO {value}} from to chunkSize  = do
+dispatchAdasOnChildAdresses' 
+    collateralWalletName
+    sourceAdaWalletName 
+    investorWalletName 
+    source@WalletUTxO {utxo = UTxO {value}} from to chunkSize  = do
 
-    indexes <-  Prelude.take (to - from) . NEL.drop from  <$> fetchByWalletIndexedAddress walletName
-    let collateral     = CollateralAddressRef $ ChildAddressRef walletName 0
-        fees           = FeeAddressRef $ ChildAddressRef walletName 1
+    indexes <-  Prelude.take (to - from) . NEL.drop from  <$> fetchByWalletIndexedAddress investorWalletName
+    let collateral     = CollateralAddressRef $ ChildAddressRef collateralWalletName 0
+        fees           = FeeAddressRef $ ChildAddressRef sourceAdaWalletName 0
         adaUtxosNumber = fromIntegral $ Ada.fromValue value `div` chunkSize
         utxoPerIndex   = adaUtxosNumber `div` Prelude.length indexes
 

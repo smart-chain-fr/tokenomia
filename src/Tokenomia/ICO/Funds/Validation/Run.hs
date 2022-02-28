@@ -45,16 +45,16 @@ dryRun
        , S.MonadAsync m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-       => RoundSettings 
+       => RoundSettings
        -> m ()
 dryRun round@RoundSettings {addresses = roundAddresses} = do
     printLn $ show round
 
     S.drain
          $ streamCommandsToTransact round
-         & S.map (CardanoCLI.mkPlan Nothing)
+        --  & S.take 1 -- TODO : to be removed
          & S.mapM (buildTx roundAddresses)
-         & S.mapM (\BuiltTx{estimatedFees} -> do 
+         & S.mapM (\BuiltTx{estimatedFees} -> do
             printLn $ "Tx Fees : " <> show estimatedFees
             printLn "--------------------------------------")
 
@@ -62,29 +62,28 @@ dryRun round@RoundSettings {addresses = roundAddresses} = do
     printLn "- Investor's Funds Validation Ended (dry run)  "
     printLn "------------------------------------------------"
 
+
 run
     :: ( MonadIO m
        , S.MonadAsync m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
-       => RoundSettings 
+       => RoundSettings
        -> m ()
 run round@RoundSettings {addresses = roundAddresses} = do
-
+    let nbTxSentInParrallel = 500
     printLn $ show round
-
     S.drain
          $ streamCommandsToTransact round
-         & S.take 1 -- TODO : to be removed
-         & S.map (CardanoCLI.mkPlan Nothing)
-         & S.mapM (\planWithoutFees@CardanoCLI.Plan{commands} -> do 
-             fees <- estimatedFees <$> buildTx roundAddresses planWithoutFees
-             return $ CardanoCLI.mkPlan (Just fees) commands )
-         & S.mapM (transact roundAddresses)
-
+        --  & S.take 1 -- TODO : to be removed
+         & S.mapM (transactWithoutConfirmation roundAddresses)
+         & S.chunksOf nbTxSentInParrallel SF.toList
+         & S.mapM (return . NEL.fromList)
+         & S.mapM (waitConfirmation . NEL.last )
     printLn "--------------------------------------"
     printLn "- Investor's Funds Validation Ended   "
     printLn "--------------------------------------"
+
 
 streamCommandsToTransact
     :: ( MonadIO m
@@ -92,21 +91,26 @@ streamCommandsToTransact
        , MonadReader Environment m
        , MonadError TokenomiaError m)
     => RoundSettings
-    -> S.SerialT m (NES.NESet CardanoCLI.Command)
+    -> S.SerialT m (CardanoCLI.Plan CardanoCLI.Command)
 streamCommandsToTransact round@RoundSettings {addresses = roundAddresses,investorsWallet = wallet@Wallet{name = investorsWallet}} = do
-    let nbFundsPerTx = 10
+    let nbFundsPerTx = 7 
     S.fromList (PageNumber <$> [1..])
          & S.mapM (\pageNumber -> fetchActiveAddresses roundAddresses pageNumber wallet)
          & S.takeWhile isJust & S.map fromJust
          & S.mapM (fetchByAddresses investorsWallet)
          & S.mapM (fetchAllWhiteListedInvestorRef round)
-         & S.mapM fetchAllWhiteListedFunds
+         & S.mapM (fetchAllWhiteListedFunds round)
          & S.map  (fmap (mkPlan $ mkPlanSettings round))
-         & S.mapM displayInvestorPlans
+         & S.mapM (displayInvestorPlans round)
          & S.mapM (CardanoCLICommand.convertInvestorPlans round)
          & S.concatMap S.fromList
          & S.chunksOf nbFundsPerTx SF.toList
-         & S.mapM (\commands -> do
-            printLn $ "> " <> (show . length)  commands <> " commands will be sent : \n"
-            mapM_ (printLn .show) commands 
-            (return . NES.fromList . NEL.fromList) commands) -- TODO : could break ?...
+         & S.mapM (return . NES.fromList . NEL.fromList) -- TODO : could break ?...
+         & S.map (CardanoCLI.mkPlan Nothing)
+         & S.mapM (\planWithoutFees@CardanoCLI.Plan{commands} -> do
+             fees <- estimatedFees <$> buildTx roundAddresses planWithoutFees
+             printLn $ "Tx Fees : " <> show fees
+             printLn $ "> " <> (show . length)  commands <> " commands will be sent : \n"
+             let planWithFees @CardanoCLI.Plan {commands = commandsWithDeductedFees} =  CardanoCLI.mkPlan (Just fees) commands 
+             mapM_ (printLn .show) commandsWithDeductedFees
+             return planWithFees )

@@ -27,6 +27,8 @@ module Tokenomia.Common.Transacting
     , build
     , buildAndSubmit
     , submitAndWait
+    , waitConfirmation
+    , submitWithoutWaitingConfimation
     , BuiltTx (..)
     , Fees
     ) where
@@ -197,6 +199,30 @@ build' buildMode extendedPrivateKeyJSONPaths buildTxBody = do
           translate Unbalanced {} ["Estimated" , "transaction","fee:","Lovelace",feesAsString] = (Right . fromIntegral . read @Integer) feesAsString
           translate Balanced {txFees} [] = Right txFees 
           translate _ issue = (Left . unwords) issue
+
+submitWithoutWaitingConfimation
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => BuiltTx
+    ->  m BuiltTx
+submitWithoutWaitingConfimation tx@BuiltTx {..} = do
+    magicN <- asks magicNumber
+    liftIO $ cardano_cli "transaction" "submit"
+         "--testnet-magic" magicN
+         "--tx-file" txSignedPath
+    printLn "Tx Submitted..."
+    return tx
+
+waitConfirmation
+    :: ( MonadIO m
+       , MonadReader Environment m )
+    => BuiltTx
+    ->  m ()
+waitConfirmation BuiltTx {..} = do
+    printLn "Waiting for confirmation..."
+    awaitTxCommitted oneTxInput 0
+    printLn "\nTx committed into ledger"
+
 
 submitAndWait
     :: ( MonadIO m

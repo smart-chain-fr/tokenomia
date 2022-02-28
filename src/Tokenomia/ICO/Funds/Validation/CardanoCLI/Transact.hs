@@ -10,6 +10,7 @@
 
 module Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
     ( transact
+    , transactWithoutConfirmation
     , buildTx) where
 
 import           Prelude hiding (round,print)
@@ -48,6 +49,16 @@ buildTx roundAddresses plan = do
               , inputsFromScript  = Nothing
               , metadataMaybe = Nothing}
      
+
+transactWithoutConfirmation
+    :: (  MonadIO m
+        , MonadReader Environment m
+        , MonadError TokenomiaError m)
+    => RoundAddresses 
+    -> Plan Command  
+    -> m BuiltTx 
+transactWithoutConfirmation a b =  buildTx a b >>= submitWithoutWaitingConfimation   
+
 
 transact
     :: (  MonadIO m

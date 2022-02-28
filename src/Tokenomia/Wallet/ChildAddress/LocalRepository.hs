@@ -30,6 +30,7 @@ module Tokenomia.Wallet.ChildAddress.LocalRepository
     , toIndexedAddress
     , fetchByWalletIndexedAddress
     , retrieveAddressesFromWallet
+    , fetchByAddressStrict
     ) where
 
 import           Data.String
