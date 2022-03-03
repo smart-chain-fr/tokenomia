@@ -16,6 +16,8 @@ import           PlutusTx.Prelude  (AdditiveSemigroup((+)) )
 
 import           Control.Monad.Reader hiding (ask)
 
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as E
 import           Data.List.NonEmpty
 import qualified Data.ByteString.UTF8 as BSU 
 
@@ -43,7 +45,7 @@ import           Tokenomia.Common.Shell.InteractiveMenu (ask,askString)
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.LocalRepository
-
+import            Data.Text.Encoding as TSE
 
 mint :: 
     ( MonadIO m
@@ -55,10 +57,14 @@ mint = do
         >>= \wallets -> do
             printLn "Select the minter wallet : "
             askToChooseAmongGivenWallets wallets 
-    tokenNameToMint  <- L.tokenName . BSU.fromString <$> askString "> Token Name : "
+    tokenNameToMint  <- fromText . Text.pack <$> askString "> Token Name : "
     amountToMint     <- ask @Integer "> Total Supply to Mint : "
     _ <- mint' name tokenNameToMint amountToMint  
     return ()
+  where 
+        fromText :: Text.Text -> TokenName
+        fromText = L.tokenName . E.encodeUtf8
+
 
 mint' :: 
     ( MonadIO m

@@ -10,7 +10,7 @@ module Tokenomia.Common.Value
   , containingOnlyGivenAssetClass
   , containingStrictlyADAs
   , containsCollateral
-  , showValue) where
+  , showValueUtf8) where
 
 import Tokenomia.Common.Serialise 
 
@@ -23,6 +23,9 @@ import Plutus.V1.Ledger.Value
 import Ledger.Ada
 import Data.String
 import Data.Foldable
+import qualified Data.Text                        as Text
+import qualified Data.Text.Encoding as TSE
+import Text.Hex (decodeHex)
 
 getTokenFrom :: Value -> (CurrencySymbol,TokenName,Integer)
 getTokenFrom  = head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
@@ -54,15 +57,30 @@ containingStrictlyADAs value
     = symbols value == [adaSymbol] 
 
 instance ToCLI Value where
-  toCLI = T.pack . showValue
+  toCLI = 
+    T.pack
+    . fold
+    . intersperse " + "
+    . map (\case
+            ("","",c) -> show c <> " lovelace"
+            (a, b ,c) -> show c <> " " <> show a <> "." <> toString b <> " "  )
+    . reverse
+    . lovelacesFirst
+    . flattenValue
 
-showValue :: Value -> String
-showValue =
+decodeToUtf8' :: TokenName -> String 
+decodeToUtf8' name 
+  = case decodeHex (Text.pack $ toString name) of
+      Nothing -> error "unexpected tokenName format " <> toString name <> " should be hex."
+      Just hex -> (Text.unpack . TSE.decodeUtf8) hex
+
+showValueUtf8 :: Value -> String
+showValueUtf8 =
   fold
   . intersperse " + "
   . map (\case
            ("","",c) -> show c <> " lovelace"
-           (a, b ,c) -> show c <> " " <> show a <> "." <> toString b <> " "  )
+           (a, b ,c) -> show c <> " " <> show a <> "." <> decodeToUtf8' b <> " "  )
   . reverse
   . lovelacesFirst
   . flattenValue

@@ -21,6 +21,7 @@ import Tokenomia.Common.Shell.InteractiveMenu
 import           Prelude as P
 import qualified Data.Text as T
 import           Data.Text (Text)
+import           Data.Maybe
 import           Data.List as L ( filter, (!!), drop, head )
 import           Ledger.Ada          
 import           Ledger ( TxOutRef (..) )
@@ -35,7 +36,6 @@ import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Common.Hash    
 import           Tokenomia.Common.Value    
 import qualified Data.List.NonEmpty as NEL
-import           Data.Maybe
 
 data WalletUTxO = WalletUTxO
               { childAddressRef :: ChildAddressRef 
@@ -74,12 +74,12 @@ instance Ord UTxO where
 
 
 instance Show WalletUTxO where
-  show WalletUTxO {utxo = UTxO {maybeDatumHash = Nothing , ..}} = showTxOutRef txOutRef <> " : " <> showValue value
-  show WalletUTxO {utxo = UTxO {maybeDatumHash = Just datumHash , ..}} = showTxOutRef txOutRef <> " : " <> showValue value <>  " | " <> show datumHash
+  show WalletUTxO {utxo = UTxO {maybeDatumHash = Nothing , ..}} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value
+  show WalletUTxO {utxo = UTxO {maybeDatumHash = Just datumHash , ..}} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value <>  " | " <> show datumHash
 
 
 instance DisplayMenuItem WalletUTxO where
-  displayMenuItem WalletUTxO {utxo = UTxO {..}} = showTxOutRef txOutRef <> " : " <> showValue value
+  displayMenuItem WalletUTxO {utxo = UTxO {..}} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value
 
 
 

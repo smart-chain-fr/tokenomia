@@ -31,13 +31,15 @@ data ScriptUTxO = ScriptUTxO
 
 
 instance Show ScriptUTxO where
-  show ScriptUTxO {..} = showTxOutRef txOutRef <> " : " <> showValue value
+  show ScriptUTxO {..} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value
 
 
 instance DisplayMenuItem ScriptUTxO where
-  displayMenuItem ScriptUTxO {..} = showTxOutRef txOutRef <> " : " <> showValue value
+  displayMenuItem ScriptUTxO {..} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value
 
 
+instance ToCLI ScriptUTxO where
+  toCLI ScriptUTxO {..} = T.pack (showTxOutRef txOutRef <> " : ") <> toCLI value
 
 instance FromCLI [ScriptUTxO] where
   fromCLI = parse . tokenize
