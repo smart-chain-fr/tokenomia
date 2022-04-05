@@ -81,6 +81,9 @@ library
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
+      Tokenomia.TokenDistribution.Parser.AssetClass
+      Tokenomia.TokenDistribution.CommandLine
+      Tokenomia.TokenDistribution.Config
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings
       Tokenomia.ICO.LocalRepository
@@ -113,6 +116,7 @@ library
       lens,
       aeson,
       async,
+      attoparsec,
       text,
       time,
       mtl,
@@ -148,6 +152,7 @@ library
       blockfrost-pretty,
       prettyprinter,
       safe-money,
+      optparse-applicative,
       ordered-containers,
       nonempty-containers,
       streamly,
@@ -208,4 +213,12 @@ executable tokenomia-cli
     base >= 4.9 && < 5,
     tokenomia
 
-
+executable token-distribution
+  import: lang
+  main-is: Main.hs
+  hs-source-dirs: app/TokenDistribution
+  ghc-options:
+    -threaded
+  build-depends:
+    base >= 4.9 && < 5,
+    tokenomia
