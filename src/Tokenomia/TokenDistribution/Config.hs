@@ -6,14 +6,14 @@ import Tokenomia.Wallet.Type    ( WalletName )
 
 data  Config
     = Config
-      { networkId :: NetworkId
-      , distributionFile :: FilePath
-      , recipientPerTx :: Int
-      , assetClass :: AssetClass
-      , tokenWallet :: WalletName
-      , adaWallet :: WalletName
-      , collateralWallet :: WalletName
-      , minAdaPerUtxo :: Integer
-      , dryRun :: !Bool
-      , verbose :: !Bool
-      } deriving (Show)
+    { configNetworkId :: NetworkId
+    , configDistributionFile :: FilePath
+    , configRecipientPerTx :: Int
+    , configAssetClass :: AssetClass
+    , configTokenWallet :: WalletName
+    , configAdaWallet :: WalletName
+    , configCollateralWallet :: WalletName
+    , configMinAdaPerUtxo :: Integer
+    , configDryRun :: !Bool
+    , configVerbose :: !Bool
+    } deriving (Show)
