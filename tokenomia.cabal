@@ -81,9 +81,11 @@ library
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
+      Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Parser.AssetClass
       Tokenomia.TokenDistribution.CommandLine
       Tokenomia.TokenDistribution.Config
+      Tokenomia.TokenDistribution.Distribution
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings
       Tokenomia.ICO.LocalRepository
@@ -117,6 +119,7 @@ library
       aeson,
       async,
       attoparsec,
+      either,
       text,
       time,
       mtl,
@@ -141,6 +144,7 @@ library
       serialise,
       freer-extras,
       playground-common,
+      plutus-chain-index,
       plutus-contract,
       plutus-tx-plugin,
       plutus-tx,
