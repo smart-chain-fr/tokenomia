@@ -8,7 +8,7 @@ module Tokenomia.TokenDistribution.CLI.Parser
     , tokenWallet
     , adaWallet
     , collateralWallet
-    , minAda
+    , minLovelaces
     , dryRun
     , verbose
     ) where
@@ -107,10 +107,10 @@ collateralWallet = strOption $
     <> help "Wallet name for collateral"
     <> metavar "NAME"
 
-minAda :: Parser Integer
-minAda = option auto $
+minLovelaces :: Parser Integer
+minLovelaces = option auto $
        short 'e'
-    <> long "min-ada-per-utxo"
+    <> long "min-lovelaces-per-utxo"
     <> help "Minimum lovelace amount per UTxO"
     <> showDefault
     <> value 1379280

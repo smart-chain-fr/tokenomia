@@ -35,6 +35,6 @@ runCommand = execParser $
         <*> Parser.tokenWallet
         <*> Parser.adaWallet
         <*> Parser.collateralWallet
-        <*> Parser.minAda
+        <*> Parser.minLovelaces
         <*> Parser.dryRun
         <*> Parser.verbose

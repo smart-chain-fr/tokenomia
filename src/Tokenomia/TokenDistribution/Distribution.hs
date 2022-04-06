@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings            #-}
+{-# LANGUAGE RecordWildCards              #-}
 
 module Tokenomia.TokenDistribution.Distribution ( readDistributionFile ) where
-
-import Ledger.Address           ( Address(..) )
-import Ledger.Value             ( AssetClass )
 
 import Data.Char                ( isSpace )
 import Data.Text                ( Text, lines )
@@ -22,13 +20,7 @@ import Data.Attoparsec.Text
 import Tokenomia.TokenDistribution.CLI.Parameters
 import Tokenomia.TokenDistribution.Parser.Address
 import Tokenomia.TokenDistribution.Parser.AssetClass
-
-data  Recipient
-    = Recipient
-    { recipientAddress :: Address
-    , recipientAmount :: Integer
-    , recipientAssetClass :: AssetClass
-    } deriving (Show)
+import Tokenomia.TokenDistribution.Distribution.Recipient
 
 recipientParser :: Parser Recipient
 recipientParser = do
@@ -36,7 +28,7 @@ recipientParser = do
     amount     <- skipSpace *> decimal
     assetClass <- skipSpace *> assetClassParser 
 
-    return $ Recipient address amount assetClass
+    return $ Recipient {..}
 
 parseRecipient :: Text -> Either String Recipient
 parseRecipient recipient =

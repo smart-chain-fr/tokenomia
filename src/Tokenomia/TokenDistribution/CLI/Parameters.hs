@@ -11,7 +11,7 @@ data  Parameters
     , tokenWallet :: WalletName
     , adaWallet :: WalletName
     , collateralWallet :: WalletName
-    , minAdaPerUtxo :: Integer
+    , minLovelacesPerUtxo :: Integer
     , dryRun :: Bool
     , verbose :: Bool
     } deriving (Show)
