@@ -81,10 +81,11 @@ library
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
+      Tokenomia.TokenDistribution.CLI
+      Tokenomia.TokenDistribution.CLI.Parameters
+      Tokenomia.TokenDistribution.CLI.Parser
       Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Parser.AssetClass
-      Tokenomia.TokenDistribution.CommandLine
-      Tokenomia.TokenDistribution.Config
       Tokenomia.TokenDistribution.Distribution
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings

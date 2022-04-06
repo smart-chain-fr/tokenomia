@@ -2,13 +2,13 @@
 
 module Main ( main ) where
 
-import Tokenomia.TokenDistribution.CommandLine qualified
-import Tokenomia.TokenDistribution.Distribution qualified
+import Tokenomia.TokenDistribution.CLI qualified as CLI
+import Tokenomia.TokenDistribution.Distribution
 
 main :: IO ()
 main = do
-    config <- Tokenomia.TokenDistribution.CommandLine.execCommand
-    content <- Tokenomia.TokenDistribution.Distribution.readDistributionFile config
+    parameters <- CLI.runCommand
+    content <- readDistributionFile parameters
 
-    putStrLn $ show config
+    putStrLn $ show parameters
     putStrLn $ show content

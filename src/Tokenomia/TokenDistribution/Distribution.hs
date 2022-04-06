@@ -19,15 +19,15 @@ import Data.Attoparsec.Text
     , takeTill
     )
 
-import Tokenomia.TokenDistribution.Config
+import Tokenomia.TokenDistribution.CLI.Parameters
 import Tokenomia.TokenDistribution.Parser.Address
 import Tokenomia.TokenDistribution.Parser.AssetClass
 
 data  Recipient
     = Recipient
-    { recipientAddress :: !Address
-    , recipientAmount :: !Integer
-    , recipientAssetClass :: !AssetClass
+    { recipientAddress :: Address
+    , recipientAmount :: Integer
+    , recipientAssetClass :: AssetClass
     } deriving (Show)
 
 recipientParser :: Parser Recipient
@@ -46,8 +46,8 @@ parseDistributionFile :: Text -> Either String [Recipient]
 parseDistributionFile content =
     traverse parseRecipient (lines content)
 
-readDistributionFile :: Config -> IO (Either String [Recipient])
+readDistributionFile :: Parameters -> IO (Either String [Recipient])
 readDistributionFile config = 
     readFile filePath >>= return . parseDistributionFile
   where
-    filePath = configDistributionFile config
+    filePath = distributionFilePath config
