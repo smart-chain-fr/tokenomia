@@ -2,17 +2,13 @@
 {-# LANGUAGE RankNTypes                   #-}
 {-# LANGUAGE KindSignatures               #-}
 
-module Tokenomia.TokenDistribution.Parser.Address ( addressParser ) where
-
-import Control.Monad            ( mzero )
+module Tokenomia.TokenDistribution.Parser.Address ( deserialiseCardanoAddress ) where
 
 import Ledger.Address           ( Address(..) )
 
 import Data.Text                ( Text, isPrefixOf )
 import Data.Kind                ( Type )
 import Data.Either.Combinators  ( mapLeft, maybeToRight )
-
-import Data.Attoparsec.Text     ( Parser )
 
 import Plutus.Contract.CardanoAPI
     ( fromCardanoAddress )
@@ -36,10 +32,3 @@ deserialiseCardanoAddress :: Text -> Either Text Address
 deserialiseCardanoAddress address
     | "addr" `isPrefixOf` address = deserialiseAddressInEra AsAlonzoEra address
     | otherwise                   = deserialiseAddressInEra AsByronEra  address
-
-addressParser :: Parser Text -> Parser Address
-addressParser parser = parser >>= deserialise
-  where
-    deserialise :: Text -> Parser Address
-    deserialise parsed =
-         either (const mzero) (pure) (deserialiseCardanoAddress parsed)

@@ -4,7 +4,6 @@ module Tokenomia.TokenDistribution.CLI.Parser
     ( networkId
     , distributionFilePath
     , recipientPerTx
-    , assetClass
     , tokenWallet
     , adaWallet
     , collateralWallet
@@ -20,19 +19,11 @@ import Cardano.Api
 
 import Control.Applicative      ( (<|>) )
 
-import Data.Attoparsec.Text     ( parseOnly )
-import Data.Text                ( pack )
-
-import Ledger.Value             ( AssetClass )
-
 import Tokenomia.Wallet.Type    ( WalletName )
-
-import Tokenomia.TokenDistribution.Parser.AssetClass
 
 import Options.Applicative
     ( Parser
     , auto
-    , eitherReader
     , flag'
     , help
     , long
@@ -53,7 +44,7 @@ networkId = mainnet <|> testnet
            short 'm'
         <> long "mainnet"
         <> help "Use the mainnet network"
-    
+
     testnet :: Parser NetworkId
     testnet = fmap (Testnet . NetworkMagic) $ option auto $
            short 't'
@@ -78,13 +69,6 @@ recipientPerTx = option auto $
     <> showDefault
     <> value 10
     <> metavar "SIZE"
-
-assetClass :: Parser AssetClass
-assetClass = option (eitherReader (parseOnly assetClassParser . pack)) $
-       short 'a'
-    <> long "asset-class"
-    <> help "Token asset class"
-    <> metavar "CURRENCY_SYMBOL.TOKEN_NAME"
 
 tokenWallet :: Parser WalletName
 tokenWallet = strOption $

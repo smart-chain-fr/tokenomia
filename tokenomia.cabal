@@ -85,9 +85,7 @@ library
       Tokenomia.TokenDistribution.CLI.Parameters
       Tokenomia.TokenDistribution.CLI.Parser
       Tokenomia.TokenDistribution.Parser.Address
-      Tokenomia.TokenDistribution.Parser.AssetClass
       Tokenomia.TokenDistribution.Distribution
-      Tokenomia.TokenDistribution.Distribution.Recipient
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings
       Tokenomia.ICO.LocalRepository

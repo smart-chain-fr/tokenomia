@@ -1,45 +1,79 @@
 {-# LANGUAGE OverloadedStrings            #-}
 {-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE DeriveGeneric                #-}
+{-# LANGUAGE DeriveAnyClass               #-}
+{-# LANGUAGE ImportQualifiedPost          #-}
 
-module Tokenomia.TokenDistribution.Distribution ( readDistributionFile ) where
+module Tokenomia.TokenDistribution.Distribution
+    ( Distribution(..)
+    , Recipient(..)
+    , readDistributionFile
+    ) where
 
-import Data.Char                ( isSpace )
-import Data.Text                ( Text, lines )
-import Data.Text.IO             ( readFile )
+import Data.Text                ( pack, unpack )
+import Data.ByteString.Lazy     ( readFile )
+import Data.String              ( IsString(fromString) )
+import Data.Aeson.Types         ( Parser, parseJSON )
+import Data.Aeson
+    ( FromJSON
+    , Value
+    , eitherDecode
+    , withObject
+    , (.:)
+    )
 
 import Prelude           hiding ( readFile, lines )
 
-import Data.Attoparsec.Text
-    ( Parser
-    , parseOnly
-    , decimal
-    , skipSpace
-    , takeTill
+import Ledger.Address                   ( Address(..) )
+import Ledger.Value qualified as Ledger ( assetClass )
+import Ledger.Value
+    ( AssetClass(..)
+    , CurrencySymbol(..)
+    , TokenName(..)
     )
 
 import Tokenomia.TokenDistribution.CLI.Parameters
+   ( Parameters(distributionFilePath) )
 import Tokenomia.TokenDistribution.Parser.Address
-import Tokenomia.TokenDistribution.Parser.AssetClass
-import Tokenomia.TokenDistribution.Distribution.Recipient
+   ( deserialiseCardanoAddress )
 
-recipientParser :: Parser Recipient
-recipientParser = do
-    address    <- addressParser $ takeTill isSpace
-    amount     <- skipSpace *> decimal
-    assetClass <- skipSpace *> assetClassParser 
+data  Recipient
+    = Recipient
+    { address :: Address
+    , amount :: Integer
+    } deriving (Show)
 
-    return $ Recipient {..}
+data  Distribution
+    = Distribution
+    { assetClass :: AssetClass
+    , recipients :: [Recipient]
+    } deriving (Show)
 
-parseRecipient :: Text -> Either String Recipient
-parseRecipient recipient =
-    parseOnly recipientParser recipient
+instance FromJSON Recipient where
+    parseJSON = withObject "Recipient" $ \o ->
+        Recipient
+            <$> (o .: "address" >>= addressParser)
+            <*> (o .: "amount")
+      where
+        addressParser :: String -> Parser Address
+        addressParser s =
+            either
+                (fail . unpack)
+                pure
+                (deserialiseCardanoAddress . pack $ s)
 
-parseDistributionFile :: Text -> Either String [Recipient]
-parseDistributionFile content =
-    traverse parseRecipient (lines content)
+instance FromJSON Distribution where
+    parseJSON = withObject "Distribution" $ \o ->
+        Distribution
+            <$> (o .: "assetClass" >>= assetClassParser)
+            <*> (o .: "recipients")
+      where
+        assetClassParser :: Value -> Parser AssetClass
+        assetClassParser = withObject "AssetClass" $ \o ->
+            Ledger.assetClass
+                <$> (CurrencySymbol . fromString <$> o .: "currencySymbol")
+                <*> (TokenName      . fromString <$> o .: "tokenName")
 
-readDistributionFile :: Parameters -> IO (Either String [Recipient])
-readDistributionFile config = 
-    readFile filePath >>= return . parseDistributionFile
-  where
-    filePath = distributionFilePath config
+readDistributionFile :: Parameters -> IO (Either String Distribution)
+readDistributionFile parameters =
+    eitherDecode <$> readFile (distributionFilePath parameters)
