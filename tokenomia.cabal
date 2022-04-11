@@ -86,6 +86,7 @@ library
       Tokenomia.TokenDistribution.CLI.Parser
       Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Distribution
+      Tokenomia.TokenDistribution.PreValidation
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings
       Tokenomia.ICO.LocalRepository
@@ -130,6 +131,7 @@ library
       exceptions,
       lifted-base,
       utf8-string,
+      Unique,
       freer-simple,
       data-default,
       iso8601-time,
