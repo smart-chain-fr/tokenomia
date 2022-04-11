@@ -59,12 +59,12 @@ import           Plutus.Contract.Wallet (getUnspentOutput)
 import Ledger
     ( TxOutRef(..),
       scriptCurrencySymbol,
-      txId,
       pubKeyHashAddress,
       mkMintingPolicyScript,
       PubKeyHash,
       MintingPolicy,
-      CurrencySymbol )                 
+      CurrencySymbol,
+      getCardanoTxId )
 import qualified Ledger.Constraints     as Constraints
 import qualified Ledger.Contexts        as V
 import PlutusTx ( BuiltinData, applyCode, liftCode, compile )
@@ -78,7 +78,6 @@ import           Prelude                (Semigroup (..),Integer)
 import qualified Prelude                as Haskell
 import qualified PlutusTx
 import PlutusTx.Builtins.Internal ()
-
 
 
 
@@ -101,7 +100,7 @@ mkMonetaryPolicyScript param = mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \c -> Scripts.wrapMintingPolicy (monetaryPolicy c) ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode param
-    
+
 {-# INLINABLE monetaryPolicy #-}
 monetaryPolicy :: Params -> BuiltinData -> V.ScriptContext -> Bool
 monetaryPolicy a b c =  burningPolicy a b c || mintingPolicy a b c
@@ -159,7 +158,7 @@ burnContract burnerPK monetaryPolicyParams@Params {..} amountToBurn =
             @Scripts.Any
             (Constraints.mintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInBurnerWallet)
             (Constraints.mustMintValue valueToBurn)
-     >>= awaitTxConfirmed . txId
+     >>= awaitTxConfirmed . getCardanoTxId
 
 
 
@@ -173,7 +172,7 @@ mintContract
     -> Contract w s e (CurrencySymbol,Params)
 mintContract pk tokenName amount =
     mapError (review _CLAPMonetaryPolicyError) $ do
-    txOutRefToConsume <- getUnspentOutput    
+    txOutRefToConsume <- getUnspentOutput
     let monetaryPolicyParams = Params {..}
         policyHash = (scriptCurrencySymbol . mkMonetaryPolicyScript) monetaryPolicyParams
         monetaryPolicyScript = mkMonetaryPolicyScript monetaryPolicyParams
@@ -183,7 +182,7 @@ mintContract pk tokenName amount =
             @Scripts.Any
             (Constraints.mintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInWallet)
             (Constraints.mustSpendPubKeyOutput txOutRefToConsume <> Constraints.mustMintValue valueToMint)
-     >>= awaitTxConfirmed . txId
+     >>= awaitTxConfirmed . getCardanoTxId
      >>  pure (policyHash,monetaryPolicyParams)
 
 

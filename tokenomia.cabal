@@ -152,7 +152,8 @@ library
       nonempty-containers,
       streamly,
       deepseq,
-      hashable
+      hashable,
+      hex-text
     hs-source-dirs: src 
 
 test-suite tokenomia-tests

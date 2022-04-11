@@ -41,7 +41,7 @@ transfer = do
             askToChooseAmongGivenWallets wallets
     WalletUTxO {utxo = UTxO {value}} <- selectBiggestStrictlyADAsNotCollateral (ChildAddressRef name 0) >>= whenNothingThrow NoADAsOnChildAddress
 
-    printLn  $                                       "- Amount Available                : " <> showValue value
+    printLn  $                                       "- Amount Available                : " <> showValueUtf8 value
     amount <- ask @Integer                           "- Amount of Lovelaces to transfer : "
     receiverAddr <- Address <$> askString         "- Receiver address : "
     labelMaybe <- askStringLeaveBlankOption "- Add label to your transaction (leave blank if no) : "

@@ -50,7 +50,7 @@ dispatchAdasOnChildAdresses = do
             printLn "Select the investor wallet : "
             askToChooseAmongGivenWallets wallets
     
-    printLn $ "- We'll dispatch this amount " <> showValue value 
+    printLn $ "- We'll dispatch this amount " <> showValueUtf8 value 
     chunkSize <- Ada.adaOf . fromIntegral <$> ask @Integer "- Chunk size : "
     from <-  ask @Int "- From which index : "
     to   <-  ask @Int "- To which index : "
