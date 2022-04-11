@@ -16,7 +16,7 @@ import Plutus.Contract.CardanoAPI
 import Cardano.Api
     ( AsType (AsAddressInEra, AsAlonzoEra, AsByronEra)
     , IsCardanoEra
-    , deserialiseAddress 
+    , deserialiseAddress
     )
 
 deserialiseAddressInEra

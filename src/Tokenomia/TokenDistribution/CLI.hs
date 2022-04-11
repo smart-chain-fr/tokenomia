@@ -1,4 +1,4 @@
-{-# LANGUAGE ImportQualifiedPost          #-} 
+{-# LANGUAGE ImportQualifiedPost          #-}
 
 module Tokenomia.TokenDistribution.CLI ( runCommand ) where
 

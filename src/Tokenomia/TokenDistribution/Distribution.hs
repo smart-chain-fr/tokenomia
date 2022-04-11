@@ -1,7 +1,4 @@
 {-# LANGUAGE OverloadedStrings            #-}
-{-# LANGUAGE RecordWildCards              #-}
-{-# LANGUAGE DeriveGeneric                #-}
-{-# LANGUAGE DeriveAnyClass               #-}
 {-# LANGUAGE ImportQualifiedPost          #-}
 
 module Tokenomia.TokenDistribution.Distribution
