@@ -80,6 +80,7 @@ showValueUtf8 =
   . intersperse " + "
   . map (\case
            ("","",c) -> show c <> " lovelace"
+           (a, "" ,c) -> show c <> " " <> show a <> " "
            (a, b ,c) -> show c <> " " <> show a <> "." <> decodeToUtf8' b <> " "  )
   . reverse
   . lovelacesFirst
@@ -114,6 +115,7 @@ instance FromCLI Value  where
             = fmap (\case
                 [a,"lovelace"] -> ("","", a)
                 [a,b] -> case T.splitOn "." b of
+                          [ph] -> (ph,"",a)
                           [ph,tn] -> (ph,tn,a)
                           x -> error $ "unexpected format :" <> show (T.unpack <$> x)
                 x ->  error $ "unexpected format :" <> show (T.unpack <$> x) )
