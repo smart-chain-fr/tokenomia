@@ -1,6 +1,9 @@
 module Tokenomia.TokenDistribution.PreValidation ( preValidation ) where
 
-import Data.List.Unique ( allUnique )
+import Control.Arrow            ( left )
+import Data.List.Unique         ( allUnique )
+import Data.List.NonEmpty       ( NonEmpty((:|)) )
+import Data.Either.Validation   ( Validation, eitherToValidation )
 
 import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), Recipient(..) )
@@ -41,10 +44,15 @@ allAddressesUnique _ distribution
   where
     addresses = address <$> recipients distribution
 
-preValidation :: Parameters -> Distribution -> Either DistributionError ()
+preValidation :: Parameters -> Distribution -> Validation (NonEmpty DistributionError) ()
 preValidation parameters distribution =
-    () <$ sequence (checks <*> pure parameters <*> pure distribution)
+    () <$ traverse
+      (eitherToValidation . left singleton)
+      (checks <*> pure parameters <*> pure distribution)
   where
+    singleton :: a -> NonEmpty a
+    singleton = (:| [])
+
     checks :: [Parameters -> Distribution -> Either DistributionError ()]
     checks =
         [ hasRecipient
