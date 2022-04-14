@@ -12,6 +12,7 @@ import Data.Attoparsec.Text
     ( Parser
     , decimal
     , sepBy1
+    , skipSpace
     , signed
     )
 
@@ -25,7 +26,8 @@ import Ledger.Value             ( assetClassValue )
 valueParser :: Parser Value
 valueParser = flip assetClassValue
     <$> signed decimal
-    <*> (" " *> assetClassParser)
+    <*  skipSpace
+    <*> assetClassParser
 
 allValuesParser :: Parser (NonEmpty Value)
 allValuesParser = fromList <$> valueParser `sepBy1` " + "

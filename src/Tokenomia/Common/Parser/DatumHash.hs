@@ -18,15 +18,14 @@ import Plutus.V1.Ledger.Api     ( DatumHash(DatumHash) )
 
 datumHashParser :: Parser (Maybe DatumHash)
 datumHashParser =
-        Nothing <$  datumHashNone
-    <|> Just    <$> datumHash
+        (Nothing <$  datumHashNone)
+    <|> (Just    <$> datumHash)
   where
     datumHashNone :: Parser ()
     datumHashNone = void ("TxOutDatumHashNone" <|> "TxOutDatumNone")
 
     datumHash :: Parser DatumHash
-    datumHash =
-            DatumHash . convert
+    datumHash = DatumHash . convert
         <$> ("TxOutDatumHash ScriptDataInAlonzoEra " *> quoteParser(take 56))
 
     quoteParser :: Parser a -> Parser a
