@@ -11,8 +11,9 @@ import Tokenomia.Common.Data.Convertible
 import Prelude           hiding ( take )
 
 import Control.Applicative      ( (<|>) )
-import Data.Char                ( isSpace )
 import Data.Attoparsec.Text     ( Parser, take, takeWhile1 )
+import Data.Char                ( isSpace )
+import Data.String              ( fromString )
 
 import Ledger.Ada               ( adaSymbol, adaToken )
 import Ledger.Value
@@ -21,17 +22,14 @@ import Ledger.Value
     , TokenName
     )
 import Ledger.Value qualified as Ledger
-    ( assetClass
-    , currencySymbol
-    , tokenName
-    )
+    ( assetClass )
 
 
 currencySymbol :: Parser CurrencySymbol
-currencySymbol = Ledger.currencySymbol . convert <$> take 56
+currencySymbol = fromString . convert <$> take 56
 
 tokenName :: Parser TokenName
-tokenName = Ledger.tokenName . convert <$> takeWhile1 (not . isSpace)
+tokenName = fromString . convert <$> takeWhile1 (not . isSpace)
 
 assetClass :: Parser AssetClass
 assetClass =
@@ -47,6 +45,6 @@ assetClass =
         <*> tokenName
 
     anonymousAssetClass :: Parser AssetClass
-    anonymousAssetClass = Ledger.assetClass 
+    anonymousAssetClass = Ledger.assetClass
         <$> currencySymbol
-        <*> pure (Ledger.tokenName "")
+        <*> pure (fromString "")
