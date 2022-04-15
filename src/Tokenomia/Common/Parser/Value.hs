@@ -2,11 +2,12 @@
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Tokenomia.Common.Parser.Value
-    ( allValuesParser
-    , valueParser
+    ( allValues
+    , value
     ) where
 
-import Tokenomia.Common.Parser.AssetClass (assetClassParser)
+import Tokenomia.Common.Parser.AssetClass qualified as P
+    ( assetClass )
 
 import Data.Attoparsec.Text
     ( Parser
@@ -23,11 +24,11 @@ import Plutus.V1.Ledger.Api     ( Value )
 import Ledger.Value             ( assetClassValue )
 
 
-valueParser :: Parser Value
-valueParser = flip assetClassValue
+value :: Parser Value
+value = flip assetClassValue
     <$> signed decimal
     <*  skipSpace
-    <*> assetClassParser
+    <*> P.assetClass
 
-allValuesParser :: Parser (NonEmpty Value)
-allValuesParser = fromList <$> valueParser `sepBy1` " + "
+allValues :: Parser (NonEmpty Value)
+allValues = fromList <$> value `sepBy1` " + "

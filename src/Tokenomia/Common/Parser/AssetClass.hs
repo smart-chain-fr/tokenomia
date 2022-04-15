@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Tokenomia.Common.Parser.AssetClass
-    ( assetClassParser
+    ( assetClass
     ) where
 
 import Tokenomia.Common.Data.Convertible
@@ -19,32 +19,34 @@ import Ledger.Value
     ( AssetClass
     , CurrencySymbol
     , TokenName
-    , assetClass
+    )
+import Ledger.Value qualified as Ledger
+    ( assetClass
     , currencySymbol
     , tokenName
     )
 
 
-currencySymbolParser :: Parser CurrencySymbol
-currencySymbolParser = currencySymbol . convert <$> take 56
+currencySymbol :: Parser CurrencySymbol
+currencySymbol = Ledger.currencySymbol . convert <$> take 56
 
-tokenNameParser :: Parser TokenName
-tokenNameParser = tokenName . convert <$> takeWhile1 (not . isSpace)
+tokenName :: Parser TokenName
+tokenName = Ledger.tokenName . convert <$> takeWhile1 (not . isSpace)
 
-assetClassParser :: Parser AssetClass
-assetClassParser =
+assetClass :: Parser AssetClass
+assetClass =
     adaAssetClass <|> tokenAssetClass <|> anonymousAssetClass
   where
     adaAssetClass :: Parser AssetClass
-    adaAssetClass = assetClass adaSymbol <$> (adaToken <$ "lovelace")
+    adaAssetClass = Ledger.assetClass adaSymbol <$> (adaToken <$ "lovelace")
 
     tokenAssetClass :: Parser AssetClass
-    tokenAssetClass = assetClass
-        <$> currencySymbolParser
+    tokenAssetClass = Ledger.assetClass
+        <$> currencySymbol
         <*  "."
-        <*> tokenNameParser
+        <*> tokenName
 
     anonymousAssetClass :: Parser AssetClass
-    anonymousAssetClass = assetClass 
-        <$> currencySymbolParser
-        <*> pure (tokenName "")
+    anonymousAssetClass = Ledger.assetClass 
+        <$> currencySymbol
+        <*> pure (Ledger.tokenName "")

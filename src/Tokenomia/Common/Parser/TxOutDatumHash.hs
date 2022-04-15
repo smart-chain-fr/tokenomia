@@ -1,8 +1,8 @@
 {-# LANGUAGE ImportQualifiedPost        #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-module Tokenomia.Common.Parser.DatumHash
-    ( datumHashParser
+module Tokenomia.Common.Parser.TxOutDatumHash
+    ( txOutDatumHash
     ) where
 
 import Tokenomia.Common.Data.Convertible
@@ -16,8 +16,8 @@ import Data.Attoparsec.Text     ( Parser, take)
 import Plutus.V1.Ledger.Api     ( DatumHash(DatumHash) )
 
 
-datumHashParser :: Parser (Maybe DatumHash)
-datumHashParser =
+txOutDatumHash :: Parser (Maybe DatumHash)
+txOutDatumHash =
         (Nothing <$  datumHashNone)
     <|> (Just    <$> datumHash)
   where
@@ -26,7 +26,7 @@ datumHashParser =
 
     datumHash :: Parser DatumHash
     datumHash = DatumHash . convert
-        <$> ("TxOutDatumHash ScriptDataInAlonzoEra " *> quoteParser(take 56))
+        <$> ("TxOutDatumHash ScriptDataInAlonzoEra " *> quote (take 56))
 
-    quoteParser :: Parser a -> Parser a
-    quoteParser p = "\"" *> p <* "\""
+    quote :: Parser a -> Parser a
+    quote p = "\"" *> p <* "\""
