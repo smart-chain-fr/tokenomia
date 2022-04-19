@@ -13,20 +13,19 @@ import Data.Attoparsec.Text
     , decimal
     , sepBy1
     , skipSpace
-    , signed
     )
 
 import Prelude           hiding ( take )
-
 import Plutus.V1.Ledger.Api     ( Value )
-import Ledger.Value             ( assetClassValue )
+
+import Tokenomia.Common.Asset   ( Asset(Asset), ToValue(toValue) )
 
 
 value :: Parser Value
-value = mconcat <$> singletonValue `sepBy1` " + "
+value = foldMap toValue <$> asset `sepBy1` " + "
   where
-    singletonValue :: Parser Value
-    singletonValue = flip assetClassValue
-        <$> signed decimal
+    asset :: Parser Asset
+    asset = flip Asset
+        <$> decimal
         <*  skipSpace
         <*> Parser.assetClass
