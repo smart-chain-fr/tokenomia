@@ -2,9 +2,13 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+
 module Tokenomia.Common.Environment
     ( getTestnetEnvironmment
     , getMainnetEnvironmment
+    , getNetworkEnvironmment
+    , readNetworkMagic
     , Environment (..)
     , toPosixTime
     , toSlot
@@ -29,7 +33,13 @@ import Cardano.Api
       ConsensusModeParams(CardanoModeParams),
       QueryInMode(QuerySystemStart),
       EpochSlots(EpochSlots),
-      NetworkMagic(NetworkMagic) )
+      NetworkMagic(NetworkMagic, unNetworkMagic),
+      NetworkId,
+      toNetworkMagic
+    )
+
+import Cardano.Api qualified
+    ( NetworkId (Testnet, Mainnet) )
 
 import qualified Cardano.Api.Shelley  as Shelley
 import Ouroboros.Consensus.BlockchainTime.WallClock.Types (SystemStart (..) )
@@ -83,6 +93,18 @@ getTestnetEnvironmment magicNumber = do
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
 
     return $ Testnet {..}
+
+readNetworkMagic :: NetworkId -> Integer
+readNetworkMagic = read . show . unNetworkMagic . toNetworkMagic
+
+getNetworkEnvironmment :: MonadIO m => NetworkId -> m Environment
+getNetworkEnvironmment networkId =
+    (getMainnetOrTestnetEnvironmment networkId . readNetworkMagic) networkId
+  where
+    getMainnetOrTestnetEnvironmment :: MonadIO m => NetworkId -> (Integer -> m Environment)
+    getMainnetOrTestnetEnvironmment = \case
+        Cardano.Api.Mainnet   -> getMainnetEnvironmment
+        Cardano.Api.Testnet _ -> getTestnetEnvironmment
 
 -- N.H : This is not neccessary because the transactions are handling PosixTime directly and not Slot
 -- as I was thinking initially... I won't delete the code from now, but it will be eventually...
