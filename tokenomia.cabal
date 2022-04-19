@@ -81,6 +81,9 @@ library
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
+      Tokenomia.Common.Data.ByteString
+      Tokenomia.Common.Data.Convertible
+      Tokenomia.Common.Parser.AssetClass
       Tokenomia.TokenDistribution.Main
       Tokenomia.TokenDistribution.CLI
       Tokenomia.TokenDistribution.CLI.Parameters
@@ -117,6 +120,7 @@ library
       Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
     build-depends:
       base >= 4.9 && < 5,
+      base16-bytestring,
       lens,
       aeson,
       async,

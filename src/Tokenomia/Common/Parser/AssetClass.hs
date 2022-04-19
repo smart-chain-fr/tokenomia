@@ -5,15 +5,13 @@ module Tokenomia.Common.Parser.AssetClass
     ( assetClass
     ) where
 
-import Tokenomia.Common.Data.Convertible
-    ( Convertible(convert) )
-
 import Prelude           hiding ( take )
 
 import Control.Applicative      ( (<|>) )
 import Data.Attoparsec.Text     ( Parser, take, takeWhile1 )
 import Data.Char                ( isSpace )
 import Data.String              ( fromString )
+import Data.Text                ( Text )
 
 import Ledger.Ada               ( adaSymbol, adaToken )
 import Ledger.Value
@@ -22,14 +20,20 @@ import Ledger.Value
     , TokenName
     )
 import Ledger.Value qualified as Ledger
-    ( assetClass )
+    ( assetClass, tokenName )
+
+import Tokenomia.Common.Data.ByteString     ( unsafeDecodeHex )
+import Tokenomia.Common.Data.Convertible    ( Convertible(convert) )
 
 
 currencySymbol :: Parser CurrencySymbol
 currencySymbol = fromString . convert <$> take 56
 
 tokenName :: Parser TokenName
-tokenName = fromString . convert <$> takeWhile1 (not . isSpace)
+tokenName = decodeTokenName <$> takeWhile1 (not . isSpace)
+  where
+    decodeTokenName :: Text -> TokenName
+    decodeTokenName = Ledger.tokenName . unsafeDecodeHex . convert
 
 assetClass :: Parser AssetClass
 assetClass =
