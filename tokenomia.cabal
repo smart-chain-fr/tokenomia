@@ -81,6 +81,7 @@ library
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
+      Tokenomia.TokenDistribution.Main
       Tokenomia.TokenDistribution.CLI
       Tokenomia.TokenDistribution.CLI.Parameters
       Tokenomia.TokenDistribution.CLI.Parser
