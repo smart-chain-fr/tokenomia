@@ -22,15 +22,11 @@ import Data.Aeson
 import Prelude           hiding ( readFile, lines )
 
 import Ledger.Address                   ( Address(..) )
+import Ledger.Value                     ( AssetClass )
 import Ledger.Value qualified as Ledger ( assetClass )
-import Ledger.Value
-    ( AssetClass(..)
-    , CurrencySymbol(..)
-    , TokenName(..)
-    )
 
 import Tokenomia.TokenDistribution.CLI.Parameters
-   ( Parameters(distributionFilePath) )
+   ( Parameters(..) )
 import Tokenomia.TokenDistribution.Parser.Address
    ( deserialiseCardanoAddress )
 
@@ -68,8 +64,8 @@ instance FromJSON Distribution where
         assetClassParser :: Value -> Parser AssetClass
         assetClassParser = withObject "AssetClass" $ \o ->
             Ledger.assetClass
-                <$> (CurrencySymbol . fromString <$> o .: "currencySymbol")
-                <*> (TokenName      . fromString <$> o .: "tokenName")
+                <$> (fromString <$> o .: "currencySymbol")
+                <*> (fromString <$> o .: "tokenName")
 
 readDistributionFile :: Parameters -> IO (Either String Distribution)
 readDistributionFile parameters =
