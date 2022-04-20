@@ -6,6 +6,11 @@
 module Tokenomia.Common.Value 
   ( getTokenFrom
   , getTokensFrom
+  , assetClassValueOfWith
+  , containsAssetClass
+  , maximumAssetClassValueOf
+  , maximumByAssetClassValueOf
+  , maximumByAssetClassValueOf'
   , containingOneToken
   , containingGivenNativeToken
   , containingOnlyGivenAssetClass
@@ -15,7 +20,9 @@ module Tokenomia.Common.Value
 
 import Tokenomia.Common.Serialise
 
-import Data.List as L
+import Data.Function            ( on )
+import Data.List                ( intersperse )
+import Data.List.NonEmpty       ( NonEmpty )
 
 import Plutus.V1.Ledger.Value
 import Ledger.Ada
@@ -47,6 +54,28 @@ containingGivenNativeToken policyhash value
 containingOnlyGivenAssetClass :: AssetClass -> Value -> Bool
 containingOnlyGivenAssetClass givenAssettClass value
     = 1 == (length . filter (\(c,tn,_) -> assetClass c tn  == givenAssettClass ) .flattenValue) value
+
+-- | Check if a value contains the right amount of an asset class.
+assetClassValueOfWith :: (Integer -> Bool) -> Value -> AssetClass -> Bool
+assetClassValueOfWith predicate = (predicate .) . assetClassValueOf
+
+-- | Check if a value contains a non-zero amount of an asset class.
+containsAssetClass :: Value -> AssetClass -> Bool
+containsAssetClass = assetClassValueOfWith (/=0)
+
+-- | Maximum amount of an asset class in a list of values.
+maximumAssetClassValueOf :: NonEmpty Value -> AssetClass -> Integer
+maximumAssetClassValueOf values assetClass =
+    maximum $ flip assetClassValueOf assetClass <$> values
+
+-- | Element with the maximum amount of an asset class in a list of values.
+maximumByAssetClassValueOf :: NonEmpty Value -> AssetClass -> Value
+maximumByAssetClassValueOf = maximumByAssetClassValueOf' id
+
+-- | Element with the maximum amount of an asset class in a list convertible to values.
+maximumByAssetClassValueOf' :: (a -> Value) -> NonEmpty a -> AssetClass -> a
+maximumByAssetClassValueOf' value xs assetClass =
+    maximumBy (compare `on` flip assetClassValueOf assetClass . value) xs
 
 containsCollateral :: Value -> Bool
 containsCollateral = (adaValueOf 2.0 ==) 
