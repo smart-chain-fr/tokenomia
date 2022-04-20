@@ -19,12 +19,9 @@ import Data.List as L
 
 import Plutus.V1.Ledger.Value
 import Ledger.Ada
-import Data.String
 import Data.Foldable
 import qualified Data.Text                        as Text
 
-import qualified Data.Text.Encoding as TSE
-import Text.Hex (decodeHex)
 import Data.Attoparsec.Text (parseOnly)
 
 import Tokenomia.Common.Parser.Value qualified as Parser ( value )
@@ -76,12 +73,6 @@ instance ToCLI Value where
 --showHexadecimal = Text.unpack . encodeHex . BSU.fromString . toString
 --showHexadecimal = Text.unpack . encodeHex . fromBuiltin . unTokenName
 
-decodeToUtf8' :: TokenName -> String 
-decodeToUtf8' name 
-  = case decodeHex (Text.pack $ toString name) of
-      Nothing -> error ("unexpected tokenName format " <> toString name <> " should be hex.")
-      Just hex -> (Text.unpack . TSE.decodeUtf8) hex
-
 showValueUtf8 :: Value -> String
 showValueUtf8 =
   fold
@@ -89,7 +80,7 @@ showValueUtf8 =
   . map (\case
            ("","",c) -> show c <> " lovelace"
            (a, "" ,c) -> show c <> " " <> show a <> " "
-           (a, b ,c) -> show c <> " " <> show a <> "." <> decodeToUtf8' b <> " "  )
+           (a, b ,c) -> show c <> " " <> show a <> "." <> toString b <> " "  )
   . reverse
   . lovelacesFirst
   . flattenValue
