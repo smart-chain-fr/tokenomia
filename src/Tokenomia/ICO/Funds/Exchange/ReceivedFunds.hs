@@ -28,7 +28,7 @@ import Data.Coerce
 import Tokenomia.Common.Address
 
 import Tokenomia.Wallet.UTxO
-import Tokenomia.Wallet.WalletUTxO
+import Tokenomia.Wallet.WalletUTxO hiding ( value )
 
 import Control.Monad.Reader
 

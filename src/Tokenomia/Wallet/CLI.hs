@@ -44,7 +44,7 @@ import           Tokenomia.Common.Environment
 import qualified Tokenomia.Wallet.LocalRepository as Repository
 import           Tokenomia.Wallet.ChildAddress.ChainIndex
 import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO
+import           Tokenomia.Wallet.WalletUTxO hiding ( value )
 
 import           Tokenomia.Common.Value
 import           Tokenomia.Common.Address

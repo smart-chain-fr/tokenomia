@@ -23,7 +23,7 @@ import           Tokenomia.Common.Environment
 
 import           Tokenomia.Wallet.LocalRepository
 import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO
+import           Tokenomia.Wallet.WalletUTxO hiding ( value )
 import           Tokenomia.Wallet.ChildAddress.ChainIndex
 import           Prelude hiding (print)
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
