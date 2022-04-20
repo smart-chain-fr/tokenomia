@@ -9,10 +9,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Tokenomia.Wallet.UTxO
-    ( WalletUTxO (..)
-    , UTxO (..)
-    , getAdas
-    , getDatumHashesAndAdaStrict
+    ( UTxO (..)
     ) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
@@ -37,32 +34,6 @@ import           Tokenomia.Common.Hash
 import           Tokenomia.Common.Value    
 import qualified Data.List.NonEmpty as NEL
 
-data WalletUTxO = WalletUTxO
-              { childAddressRef :: ChildAddressRef 
-              , utxo :: UTxO} 
-              deriving (Eq)
-
-getAdas :: WalletUTxO -> Ada 
-getAdas WalletUTxO {utxo = UTxO {value}} = fromValue value
-
-
-getDatumHashesAndAdaStrict 
-  :: (MonadError  TokenomiaError m)
-  => NEL.NonEmpty WalletUTxO -> m (NEL.NonEmpty (Hash,Ada,WalletUTxO))
-getDatumHashesAndAdaStrict xs = 
-    (return . NEL.nonEmpty . catMaybes . NEL.toList $ ( getDatumHashAndAdaMaybe <$> xs)) 
-      >>= whenNothingThrow ICOExchangeUtxoWithoutHash 
-      >>= (\case
-          ys | NEL.length ys /= NEL.length xs -> throwError ICOExchangeUtxoWithoutHash
-          ys -> return ys ) 
-
-getDatumHashAndAdaMaybe :: WalletUTxO -> Maybe (Hash,Ada,WalletUTxO)
-getDatumHashAndAdaMaybe w@WalletUTxO {utxo = UTxO {maybeDatumHash = Just hash,..}} | containingStrictlyADAs value = Just (hash,fromValue value,w)
-getDatumHashAndAdaMaybe _ = Nothing
-
-instance Ord WalletUTxO where 
-  compare x y = compare (utxo x) (utxo y)
-
 
 data UTxO = UTxO
               { txOutRef :: TxOutRef
@@ -71,16 +42,6 @@ data UTxO = UTxO
 
 instance Ord UTxO where 
   compare x y = compare (txOutRef x) (txOutRef y)
-
-
-instance Show WalletUTxO where
-  show WalletUTxO {utxo = UTxO {maybeDatumHash = Nothing , ..}} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value
-  show WalletUTxO {utxo = UTxO {maybeDatumHash = Just datumHash , ..}} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value <>  " | " <> show datumHash
-
-
-instance DisplayMenuItem WalletUTxO where
-  displayMenuItem WalletUTxO {utxo = UTxO {..}} = showTxOutRef txOutRef <> " : " <> showValueUtf8 value
-
 
 
 type ValueTokenAndDatum = Text

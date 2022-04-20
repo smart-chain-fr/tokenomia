@@ -21,6 +21,7 @@ import           Ledger ( Slot(..) )
 
 import           Tokenomia.Common.Address
 import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.WalletUTxO
 import           Tokenomia.Common.Token
 import           Data.Set.Ordered
 import Tokenomia.ICO.Balanceable

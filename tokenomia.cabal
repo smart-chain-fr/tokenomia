@@ -55,6 +55,7 @@ library
       Tokenomia.Wallet.LocalRepository.Folder
       Tokenomia.Wallet.ChildAddress.ChainIndex
       Tokenomia.Wallet.UTxO
+      Tokenomia.Wallet.WalletUTxO
       Tokenomia.Wallet.Collateral.Write
       Tokenomia.Wallet.Collateral.Read
       Tokenomia.Wallet.ChildAddress.ChildAddressRef

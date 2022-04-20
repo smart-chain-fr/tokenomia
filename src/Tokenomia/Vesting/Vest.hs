@@ -27,6 +27,7 @@ import qualified Tokenomia.Common.Datum as Script
 import qualified Tokenomia.Script.LocalRepository as Script
 
 import           Tokenomia.Wallet.UTxO as Wallet
+import           Tokenomia.Wallet.WalletUTxO
 
 import qualified Tokenomia.Wallet.LocalRepository as Wallet
 import           Tokenomia.Wallet.LocalRepository hiding (fetchById) 
