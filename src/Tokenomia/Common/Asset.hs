@@ -6,14 +6,13 @@ module Tokenomia.Common.Asset
     ) where
 
 import Data.Set.NonEmpty        ( NESet )
-import GHC.Natural              ( Natural )
 import Ledger.Value             ( AssetClass, Value, assetClassValue)
 
 
 data    Asset
     =   Asset
     { assetClass :: AssetClass
-    , amount :: Natural
+    , amount :: Integer
     } deriving (Show)
 
 type NonEmptySet = NESet
@@ -27,9 +26,7 @@ class ToValue a where
 
 instance ToValue Asset where
     toValue Asset{..}
-        = assetClassValue 
-            assetClass
-            (fromIntegral amount)
+        = assetClassValue assetClass amount
 
 instance ToValue Assets where
     toValue (Assets xs)
