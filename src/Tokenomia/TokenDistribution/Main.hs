@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase                   #-}
-
 module Tokenomia.TokenDistribution.Main
     ( main
     ) where
@@ -7,24 +5,21 @@ module Tokenomia.TokenDistribution.Main
 import Control.Monad.Reader     ( ReaderT(runReaderT) )
 import Control.Monad.Except     ( runExceptT )
 
-import Tokenomia.Common.Asset
 import Tokenomia.Common.Environment
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
 
 import Tokenomia.TokenDistribution.CLI
 import Tokenomia.TokenDistribution.CLI.Parameters
 import Tokenomia.TokenDistribution.Distribution
 import Tokenomia.TokenDistribution.PreValidation
 
+
 main :: IO ()
 main = do
     parameters <- runCommand
-    content <- either (error "") id <$> readDistributionFile parameters
-    print $ Tokenomia.TokenDistribution.Distribution.assetClass content
+    distribution <- either error id <$> readDistributionFile parameters
+
     environment <- getNetworkEnvironmment (networkId parameters)
-    result <- runExceptT $ runReaderT
-        ( validateTokenProvisioning
-            (ChildAddressRef "CustomToken" 0)
-            (Asset (Tokenomia.TokenDistribution.Distribution.assetClass content) 10)
+    result <- runReaderT
+        ( preValidation parameters distribution
         ) environment
     print result

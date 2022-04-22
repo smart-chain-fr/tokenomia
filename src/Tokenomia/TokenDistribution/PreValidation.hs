@@ -6,22 +6,23 @@ module Tokenomia.TokenDistribution.PreValidation
     , fetchProvisionedTokenUTxO
     ) where
 
-import Control.Monad.Except
-import Control.Monad.Reader
+import Control.Monad.Except     ( MonadIO )
+import Control.Monad.Reader     ( MonadReader )
 
 import Control.Arrow            ( left )
+import Data.Composition         ( (.:) )
 import Data.List.Unique         ( allUnique )
 import Data.List.NonEmpty       ( NonEmpty((:|)) )
+import Data.Either.Combinators  ( maybeToRight )
 import Data.Either.Validation   ( Validation, eitherToValidation )
 
-import Tokenomia.Common.Asset
-import Tokenomia.Common.Error
-import Tokenomia.Common.Environment
+import Tokenomia.Common.Asset   ( Asset(..) )
+import Tokenomia.Common.Environment ( Environment )
 import Tokenomia.Common.Value   ( assetClassValueOfWith, maximumByAssetClassValueOf' )
 
-import Tokenomia.Wallet.CLI
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import Tokenomia.Wallet.WalletUTxO
+import Tokenomia.Wallet.CLI     ( fetchUTxOFilterBy )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef ( ChildAddressRef(..) )
+import Tokenomia.Wallet.WalletUTxO ( WalletUTxO, value )
 
 import Tokenomia.TokenDistribution.CLI.Parameters  as CLI ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution    as CLI ( Distribution(..), Recipient(..) )
@@ -33,6 +34,7 @@ data DistributionError
     | AmountTooLow
     | AmountTooHigh
     | AddressDuplicate
+    | NoProvisionedTokenSource
     deriving (Show)
 
 hasRecipient :: Parameters -> Distribution -> Either DistributionError ()
@@ -62,22 +64,56 @@ allAddressesUnique _ distribution
   where
     addresses = CLI.address <$> recipients distribution
 
-preValidation :: Parameters -> Distribution -> Validation (NonEmpty DistributionError) ()
-preValidation parameters distribution =
-    () <$ traverse
-      (eitherToValidation . left singleton)
-      (checks <*> pure parameters <*> pure distribution)
+tokenSourceProvisioned ::
+    ( MonadIO m
+    , MonadReader Environment m
+    )
+    => Parameters -> Distribution -> m (Either DistributionError ())
+tokenSourceProvisioned parameters distribution =
+    maybeToRightUnit <$> fetchProvisionedTokenUTxO
+        (ChildAddressRef (tokenWallet parameters) 0)
+        (Asset (CLI.assetClass distribution) totalTokenRequired)
   where
+    totalTokenRequired :: Integer
+    totalTokenRequired = sum (CLI.amount <$> recipients distribution)
+
+    maybeToRightUnit :: Maybe a -> Either DistributionError ()
+    maybeToRightUnit = (() <$) . maybeToRight NoProvisionedTokenSource
+
+checks ::
+    ( MonadIO m
+    , MonadReader Environment m
+    )
+    => [Parameters -> Distribution -> m (Either DistributionError ())]
+checks =
+    [ return .: hasRecipient
+    , return .: recipientPerTxInRange
+    , return .: allAmountsInRange
+    , return .: allAddressesUnique
+    , tokenSourceProvisioned
+    ]
+
+preValidation ::
+    ( MonadIO m
+    , MonadReader Environment m
+    )
+    => Parameters -> Distribution -> m (Validation (NonEmpty DistributionError) ())
+preValidation parameters distribution =
+    toValidation <$> sequencedChecks
+  where
+    sequencedChecks ::
+        ( MonadIO m
+        , MonadReader Environment m
+        )
+        => m [Either DistributionError ()]
+    sequencedChecks = sequence $ checks <*> pure parameters <*> pure distribution
+
+    toValidation ::
+        [Either DistributionError ()] -> Validation (NonEmpty DistributionError) ()
+    toValidation xs = () <$ traverse (eitherToValidation . left singleton) xs
+
     singleton :: a -> NonEmpty a
     singleton = (:| [])
-
-    checks :: [Parameters -> Distribution -> Either DistributionError ()]
-    checks =
-        [ hasRecipient
-        , recipientPerTxInRange
-        , allAmountsInRange
-        , allAddressesUnique
-        ]
 
 type TokenSource = ChildAddressRef
 
@@ -85,14 +121,12 @@ type TokenSource = ChildAddressRef
 fetchProvisionedTokenUTxO ::
     ( MonadIO m
     , MonadReader Environment m
-    , MonadError TokenomiaError m
     )
-    => TokenSource -> Asset -> m WalletUTxO
+    => TokenSource -> Asset -> m (Maybe WalletUTxO)
 fetchProvisionedTokenUTxO tokenSource Asset{..} =
-        fetchUTxOFilterBy predicate tokenSource
-    >>= whenNothingThrow NoUTxOsFound
-    >>= \walletUTxOs ->
-            return (maximumByAssetClassValueOf' value walletUTxOs assetClass)
+    (fmap . fmap)
+        (\walletUTxOs -> maximumByAssetClassValueOf' value walletUTxOs assetClass)
+        (fetchUTxOFilterBy predicate tokenSource)
   where
     predicate :: WalletUTxO -> Bool
     predicate walletUTxO =

@@ -126,6 +126,7 @@ library
       aeson,
       async,
       attoparsec,
+      composition,
       either,
       text,
       time,
