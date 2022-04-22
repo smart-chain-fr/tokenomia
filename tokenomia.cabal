@@ -92,6 +92,7 @@ library
       Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Distribution
       Tokenomia.TokenDistribution.PreValidation
+      Tokenomia.TokenDistribution.Split.SplitDistribution
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings
       Tokenomia.ICO.LocalRepository

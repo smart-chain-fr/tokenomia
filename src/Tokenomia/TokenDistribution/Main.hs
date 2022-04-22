@@ -11,6 +11,7 @@ import Tokenomia.TokenDistribution.CLI
 import Tokenomia.TokenDistribution.CLI.Parameters
 import Tokenomia.TokenDistribution.Distribution
 import Tokenomia.TokenDistribution.PreValidation
+import Tokenomia.TokenDistribution.Split.SplitDistribution
 
 
 main :: IO ()
@@ -23,3 +24,5 @@ main = do
         ( preValidation parameters distribution
         ) environment
     print result
+
+    print $ length . recipients <$> splitDistribution parameters distribution
