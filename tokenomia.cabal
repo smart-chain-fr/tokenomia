@@ -93,6 +93,8 @@ library
       Tokenomia.TokenDistribution.Distribution
       Tokenomia.TokenDistribution.PreValidation
       Tokenomia.TokenDistribution.Split.SplitDistribution
+      Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
+      Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings
       Tokenomia.ICO.LocalRepository
