@@ -79,12 +79,14 @@ library
       Tokenomia.Common.Environment
       Tokenomia.Common.Datum
       Tokenomia.Common.Address
+      Tokenomia.Common.Asset
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
       Tokenomia.Common.Parser.AssetClass
+      Tokenomia.Common.Parser.Value
       Tokenomia.TokenDistribution.Main
       Tokenomia.TokenDistribution.CLI
       Tokenomia.TokenDistribution.CLI.Parameters
