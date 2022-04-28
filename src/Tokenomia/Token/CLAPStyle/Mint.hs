@@ -32,6 +32,7 @@ import           Tokenomia.Common.Environment
 import           Tokenomia.Wallet.CLI
 
 import           Tokenomia.Wallet.UTxO 
+import           Tokenomia.Wallet.WalletUTxO
 import           Tokenomia.Common.Transacting
 
 import           Tokenomia.Wallet.LocalRepository hiding (fetchById)

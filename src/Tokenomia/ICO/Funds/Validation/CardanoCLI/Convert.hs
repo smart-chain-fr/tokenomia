@@ -27,6 +27,7 @@ import           Tokenomia.Wallet.ChildAddress.ChainIndex
 import Data.Coerce
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import Tokenomia.Wallet.UTxO
+import Tokenomia.Wallet.WalletUTxO
 import Ledger.Ada as Ada
 import Plutus.V2.Ledger.Api (TxOutRef)
 import Tokenomia.Common.Datum

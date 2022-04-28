@@ -55,6 +55,7 @@ library
       Tokenomia.Wallet.LocalRepository.Folder
       Tokenomia.Wallet.ChildAddress.ChainIndex
       Tokenomia.Wallet.UTxO
+      Tokenomia.Wallet.WalletUTxO
       Tokenomia.Wallet.Collateral.Write
       Tokenomia.Wallet.Collateral.Read
       Tokenomia.Wallet.ChildAddress.ChildAddressRef
@@ -78,9 +79,24 @@ library
       Tokenomia.Common.Environment
       Tokenomia.Common.Datum
       Tokenomia.Common.Address
+      Tokenomia.Common.Asset
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
+      Tokenomia.Common.Data.ByteString
+      Tokenomia.Common.Data.Convertible
+      Tokenomia.Common.Parser.AssetClass
+      Tokenomia.Common.Parser.Value
+      Tokenomia.TokenDistribution.Main
+      Tokenomia.TokenDistribution.CLI
+      Tokenomia.TokenDistribution.CLI.Parameters
+      Tokenomia.TokenDistribution.CLI.Parser
+      Tokenomia.TokenDistribution.Parser.Address
+      Tokenomia.TokenDistribution.Distribution
+      Tokenomia.TokenDistribution.PreValidation
+      Tokenomia.TokenDistribution.Split.SplitDistribution
+      Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
+      Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
       Tokenomia.ICO.Status
       Tokenomia.ICO.Round.Settings
       Tokenomia.ICO.LocalRepository
@@ -110,9 +126,13 @@ library
       Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
     build-depends:
       base >= 4.9 && < 5,
+      base16-bytestring,
       lens,
       aeson,
       async,
+      attoparsec,
+      composition,
+      either,
       text,
       time,
       mtl,
@@ -123,6 +143,7 @@ library
       exceptions,
       lifted-base,
       utf8-string,
+      Unique,
       freer-simple,
       data-default,
       iso8601-time,
@@ -137,6 +158,7 @@ library
       serialise,
       freer-extras,
       playground-common,
+      plutus-chain-index,
       plutus-contract,
       plutus-tx-plugin,
       plutus-tx,
@@ -148,6 +170,7 @@ library
       blockfrost-pretty,
       prettyprinter,
       safe-money,
+      optparse-applicative,
       ordered-containers,
       nonempty-containers,
       streamly,
@@ -209,4 +232,12 @@ executable tokenomia-cli
     base >= 4.9 && < 5,
     tokenomia
 
-
+executable token-distribution
+  import: lang
+  main-is: Main.hs
+  hs-source-dirs: app/TokenDistribution
+  ghc-options:
+    -threaded
+  build-depends:
+    base >= 4.9 && < 5,
+    tokenomia

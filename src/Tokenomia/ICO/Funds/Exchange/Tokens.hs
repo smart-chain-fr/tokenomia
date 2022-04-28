@@ -19,6 +19,7 @@ import           Prelude hiding (round,print)
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
 
 import Tokenomia.Wallet.UTxO
+import Tokenomia.Wallet.WalletUTxO hiding ( value )
 
 import Control.Monad.Reader
 

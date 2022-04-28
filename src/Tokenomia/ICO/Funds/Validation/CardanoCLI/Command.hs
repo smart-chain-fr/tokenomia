@@ -15,6 +15,7 @@ import           Plutus.V1.Ledger.Ada
 import           Ledger ( Slot(..) )
 
 import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.WalletUTxO
 
 import           Tokenomia.Common.Address
 import           Tokenomia.ICO.Balanceable

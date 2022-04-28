@@ -61,6 +61,7 @@ import           Tokenomia.Common.Serialise (toCLI, fromCLI)
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 
 import qualified Tokenomia.Wallet.UTxO as Wallet
+import qualified Tokenomia.Wallet.WalletUTxO as Wallet
 
 
 import           Tokenomia.Common.Address
@@ -68,6 +69,7 @@ import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.WalletUTxO
 import           Tokenomia.Common.Hash
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef

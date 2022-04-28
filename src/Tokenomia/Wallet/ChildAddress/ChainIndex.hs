@@ -35,6 +35,7 @@ import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Value ()
 
 import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.WalletUTxO
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Wallet.ChildAddress.LocalRepository
 

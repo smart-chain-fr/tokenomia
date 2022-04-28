@@ -25,6 +25,7 @@ import           Tokenomia.Common.Environment
 
 import           Ledger.Ada
 import           Tokenomia.Wallet.UTxO as UTxO
+import           Tokenomia.Wallet.WalletUTxO
 import           Tokenomia.Common.Transacting
 import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
 import           Tokenomia.Common.Error

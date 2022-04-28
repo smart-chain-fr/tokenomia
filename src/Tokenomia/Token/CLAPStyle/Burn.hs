@@ -18,6 +18,7 @@ import           Ledger.Ada
 
 import           Tokenomia.Common.Environment
 import           Tokenomia.Wallet.UTxO as UTxO
+import           Tokenomia.Wallet.WalletUTxO
 import           Tokenomia.Common.Transacting
 import           Tokenomia.Script.LocalRepository
 
