@@ -3,7 +3,7 @@
 
 module Tokenomia.TokenDistribution.PreValidation
     ( preValidation
-    , fetchProvisionedTokenUTxO
+    , tokenSourceProvisionedUTxO
     ) where
 
 import Control.Monad.Except     ( MonadIO )
@@ -25,6 +25,7 @@ import Tokenomia.Wallet.CLI                 ( fetchUTxOFilterBy )
 import Tokenomia.Wallet.WalletUTxO          ( WalletUTxO, value )
 
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef      ( ChildAddressRef(..) )
+
 import Tokenomia.TokenDistribution.CLI.Parameters  as CLI ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution    as CLI ( Distribution(..), Recipient(..) )
 
@@ -65,19 +66,28 @@ allAddressesUnique _ distribution
   where
     addresses = CLI.address <$> recipients distribution
 
-tokenSourceProvisioned ::
+tokenSourceProvisionedUTxO ::
     ( MonadIO m
     , MonadReader Environment m
     )
-    => Parameters -> Distribution -> m (Either DistributionError ())
-tokenSourceProvisioned parameters distribution =
-    maybeToRightUnit <$> fetchProvisionedTokenUTxO
+    => Parameters -> Distribution -> m (Maybe WalletUTxO)
+tokenSourceProvisionedUTxO parameters distribution =
+    fetchProvisionedTokenUTxO
         (ChildAddressRef (tokenWallet parameters) 0)
         (Asset (CLI.assetClass distribution) totalTokenRequired)
   where
     totalTokenRequired :: Integer
     totalTokenRequired = sum (CLI.amount <$> recipients distribution)
 
+-- TODO: Parse, don't validate (avoid recomputation by not discarding the results)
+tokenSourceProvisioned ::
+    ( MonadIO m
+    , MonadReader Environment m
+    )
+    => Parameters -> Distribution -> m (Either DistributionError ())
+tokenSourceProvisioned parameters distribution =
+    maybeToRightUnit <$> tokenSourceProvisionedUTxO parameters distribution
+  where
     maybeToRightUnit :: Maybe a -> Either DistributionError ()
     maybeToRightUnit = (() <$) . maybeToRight NoProvisionedTokenSource
 
