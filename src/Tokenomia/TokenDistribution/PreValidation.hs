@@ -12,13 +12,14 @@ import Control.Monad.Reader     ( MonadReader )
 import Control.Arrow            ( left )
 import Data.Composition         ( (.:) )
 import Data.List.Unique         ( allUnique )
-import Data.List.NonEmpty       ( NonEmpty((:|)) )
+import Data.List.NonEmpty       ( NonEmpty )
 import Data.Either.Combinators  ( maybeToRight )
 import Data.Either.Validation   ( Validation, eitherToValidation )
 
 import Tokenomia.Common.Asset   ( Asset(..) )
 import Tokenomia.Common.Environment ( Environment )
 import Tokenomia.Common.Value   ( assetClassValueOfWith, maximumByAssetClassValueOf' )
+import Tokenomia.Common.Data.List.NonEmpty  ( singleton )
 
 import Tokenomia.Wallet.CLI     ( fetchUTxOFilterBy )
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef ( ChildAddressRef(..) )
@@ -111,9 +112,6 @@ preValidation parameters distribution =
     toValidation ::
         [Either DistributionError ()] -> Validation (NonEmpty DistributionError) ()
     toValidation xs = () <$ traverse (eitherToValidation . left singleton) xs
-
-    singleton :: a -> NonEmpty a
-    singleton = (:| [])
 
 type TokenSource = ChildAddressRef
 

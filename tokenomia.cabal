@@ -85,6 +85,7 @@ library
       Tokenomia.Common.PageNumber 
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
+      Tokenomia.Common.Data.List.NonEmpty
       Tokenomia.Common.Parser.AssetClass
       Tokenomia.Common.Parser.Value
       Tokenomia.TokenDistribution.Main
