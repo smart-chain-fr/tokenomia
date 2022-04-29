@@ -1,17 +1,21 @@
 {-# LANGUAGE FlexibleContexts             #-}
+{-# LANGUAGE RecordWildCards              #-}
 
 module Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     ( deriveMissingChildAddresses
+    , fetchAddressesByWallet
     ) where
 
 import Control.Monad.Reader     ( MonadIO, MonadReader )
 import Control.Monad.Except     ( MonadError )
 
-import Data.List.NonEmpty       ( toList )
+import Data.Functor.Syntax      ( (<$$>) )
+import Data.List.NonEmpty       ( NonEmpty, toList )
 import Data.List                ( (\\) )
 
 import Prelude           hiding ( max )
 
+import Tokenomia.Common.Address     ( Address )
 import Tokenomia.Common.Error       ( TokenomiaError )
 import Tokenomia.Common.Environment ( Environment )
 
@@ -21,7 +25,9 @@ import Tokenomia.Wallet.ChildAddress.ChildAddressRef
     , ChildAddressIndex
     )
 import Tokenomia.Wallet.ChildAddress.LocalRepository
-    ( fetchDerivedChildAddressIndexes
+    ( ChildAddress(..)
+    , fetchDerivedChildAddressIndexes
+    , fetchById
     , deriveChildAddress
     )
 
@@ -50,7 +56,7 @@ missingChildAddressRef walletName max =
         (ChildAddressRef walletName)
         (missingChildAddressIndex walletName max)
 
-deriveMissingChildAddresses :: 
+deriveMissingChildAddresses ::
     ( MonadIO m
     , MonadReader Environment m
     , MonadError TokenomiaError m
@@ -58,3 +64,16 @@ deriveMissingChildAddresses ::
     => WalletName -> ChildAddressIndex -> m ()
 deriveMissingChildAddresses walletName max =
     missingChildAddressRef walletName max >>= mapM_ deriveChildAddress
+
+fetchAddressesByWallet ::
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError  TokenomiaError m
+    )
+    => WalletName -> m (NonEmpty Address)
+fetchAddressesByWallet walletName = do
+    indexes <- ChildAddressRef walletName <$$> fetchDerivedChildAddressIndexes walletName
+    getAddress <$$> mapM fetchById indexes
+  where
+    getAddress :: ChildAddress -> Address
+    getAddress ChildAddress{..} = address
