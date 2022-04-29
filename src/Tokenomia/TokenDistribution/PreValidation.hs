@@ -16,15 +16,15 @@ import Data.List.NonEmpty       ( NonEmpty )
 import Data.Either.Combinators  ( maybeToRight )
 import Data.Either.Validation   ( Validation, eitherToValidation )
 
-import Tokenomia.Common.Asset   ( Asset(..) )
-import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Common.Value   ( assetClassValueOfWith, maximumByAssetClassValueOf' )
+import Tokenomia.Common.Asset               ( Asset(..) )
+import Tokenomia.Common.Environment         ( Environment )
+import Tokenomia.Common.Value               ( assetClassValueOfWith, maximumByAssetClassValueOf' )
 import Tokenomia.Common.Data.List.NonEmpty  ( singleton )
 
-import Tokenomia.Wallet.CLI     ( fetchUTxOFilterBy )
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef ( ChildAddressRef(..) )
-import Tokenomia.Wallet.WalletUTxO ( WalletUTxO, value )
+import Tokenomia.Wallet.CLI                 ( fetchUTxOFilterBy )
+import Tokenomia.Wallet.WalletUTxO          ( WalletUTxO, value )
 
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef      ( ChildAddressRef(..) )
 import Tokenomia.TokenDistribution.CLI.Parameters  as CLI ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution    as CLI ( Distribution(..), Recipient(..) )
 
