@@ -1,10 +1,17 @@
+{-# LANGUAGE FlexibleContexts             #-}
+
 module Tokenomia.TokenDistribution.Main
     ( main
     ) where
 
-import Control.Monad.Reader     ( ReaderT(runReaderT) )
-import Control.Monad.Except     ( runExceptT )
+import Control.Monad.Reader     ( MonadIO, MonadReader, ReaderT(runReaderT) )
+import Control.Monad.Except     ( MonadError, runExceptT )
+import Control.Monad.IO.Class
 
+import Data.Maybe               (fromJust )
+
+import Tokenomia.Common.Error       ( TokenomiaError )
+import Tokenomia.Common.Environment ( Environment )
 import Tokenomia.Common.Environment
 
 import Tokenomia.TokenDistribution.CLI
@@ -14,24 +21,35 @@ import Tokenomia.TokenDistribution.PreValidation
 import Tokenomia.TokenDistribution.Split.SplitDistribution
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
+import Tokenomia.TokenDistribution.Split.SplitTokenSource
 
 
 main :: IO ()
 main = do
-    parameters <- runCommand
-    distribution <- either error id <$> readDistributionFile parameters
-
+    parameters  <- runCommand
     environment <- getNetworkEnvironmment (networkId parameters)
-    result <- runReaderT
-        ( preValidation parameters distribution
-        ) environment
+
+    result      <- runExceptT $ runReaderT
+        (run parameters)
+        environment
     print result
 
-    print $ length . recipients <$> splitDistribution parameters distribution
+run ::
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError  TokenomiaError m
+    )
+    => Parameters -> m ()
+run parameters = do
+    distribution <- either error id <$> liftIO (readDistributionFile parameters)
 
-    result <- runExceptT $ runReaderT
-        ( deriveMissingChildAddresses "TestWallet"
-            $ maxChildAddressIndexRequired
-                $ splitDistribution parameters distribution
-        ) environment
-    print result
+    preValidation parameters distribution >>= liftIO . print
+
+    let distributions = splitDistribution parameters distribution
+    liftIO . print $ length . recipients <$> distributions
+
+    walletUTxO <- fromJust <$> tokenSourceProvisionedUTxO parameters distribution
+    liftIO . print $ walletUTxO
+
+    splitTokenSource walletUTxO parameters distributions
+    return ()
