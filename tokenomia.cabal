@@ -95,6 +95,7 @@ library
       Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Distribution
       Tokenomia.TokenDistribution.PreValidation
+      Tokenomia.TokenDistribution.Split.EstimateFees
       Tokenomia.TokenDistribution.Split.SplitDistribution
       Tokenomia.TokenDistribution.Split.SplitTokenSource
       Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
@@ -163,6 +164,7 @@ library
       playground-common,
       plutus-chain-index,
       plutus-contract,
+      plutus-core,
       plutus-tx-plugin,
       plutus-tx,
       plutus-ledger,

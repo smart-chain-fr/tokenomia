@@ -29,6 +29,7 @@ module Tokenomia.Common.Transacting
     , submitAndWait
     , waitConfirmation
     , submitWithoutWaitingConfimation
+    , mockBuild
     , BuiltTx (..)
     , Fees
     ) where
@@ -79,7 +80,7 @@ import           Ledger.Ada as Ada
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 type Fees = Ada
-load SearchPath ["echo","cardano-cli","md5sum","mv" ]
+load SearchPath ["echo","cardano-cli","md5sum","mv", "rm" ]
 
 
 buildAndSubmit
@@ -117,6 +118,20 @@ build txBalance collateralMaybe txBuild@TxBuild {..}  = do
             (toCardanoCLIOptions txBuild <> collateralOptions <> feesOptions)
 
     return BuiltTx {oneTxInput = firstInputTxOutRef,txSignedPath, txBuiltPath,estimatedFees }
+
+mockBuild
+    :: ( MonadIO m
+       , MonadReader Environment m
+       , MonadError TokenomiaError m)
+    => TxBalance
+    -> Maybe CollateralAddressRef
+    -> TxBuild
+    -> m Ada
+mockBuild txBalance collateralMaybe txBuild =
+    build txBalance collateralMaybe txBuild >>= \BuiltTx{..} -> do
+        liftIO $ rm txBuiltPath
+        liftIO $ rm txSignedPath
+        return estimatedFees
 
 getCollateralCardanoCLIOptions 
  :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) 
