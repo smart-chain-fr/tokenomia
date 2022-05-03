@@ -5,21 +5,19 @@ module Tokenomia.TokenDistribution.Split.SplitTokenSource
     ( splitTokenSource
     ) where
 
-import Prelude           hiding ( repeat, tail, zipWith3 )
+import Prelude           hiding ( repeat, zipWith3 )
 
 import Control.Monad.Reader     ( MonadIO, MonadReader )
 import Control.Monad.Except     ( MonadError )
 
-import Data.List.NonEmpty       ( NonEmpty, fromList, repeat, tail )
+import Data.List.NonEmpty       ( NonEmpty, fromList, repeat )
 
 import Ledger.Ada               ( lovelaceValueOf )
 import Ledger.Value             ( Value, assetClassValue )
 
-import Tokenomia.Common.Address     ( Address )
 import Tokenomia.Common.Error       ( TokenomiaError )
 import Tokenomia.Common.Environment ( Environment )
 import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO )
-import Tokenomia.Wallet.Type        ( WalletName )
 
 import Tokenomia.Common.Transacting
     ( TxInFromWallet(..)
@@ -35,7 +33,7 @@ import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), Recipient(..) )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-    ( fetchAddressesByWallet )
+    ( fetchAddressesByWalletWithNonZeroIndex )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
     ( defaultFeeAddressRef, defaultCollateralAddressRef )
@@ -77,7 +75,7 @@ splitTokenSourceOutputs ::
     )
     => Parameters -> NonEmpty Distribution -> m (NonEmpty TxOut)
 splitTokenSourceOutputs Parameters{..} distributions = do
-    addresses <- fetchOutputAddressesByWallet tokenWallet
+    addresses <- fromList <$> fetchAddressesByWalletWithNonZeroIndex tokenWallet
     let values = tokenSum <$> distributions
     return $ zipWith3 ToWallet addresses values (repeat Nothing)
   where
@@ -88,12 +86,3 @@ splitTokenSourceOutputs Parameters{..} distributions = do
 
     ε :: Value
     ε = lovelaceValueOf minLovelacesPerUtxo
-
-fetchOutputAddressesByWallet ::
-    ( MonadIO m
-    , MonadReader Environment m
-    , MonadError  TokenomiaError m
-    )
-    => WalletName -> m (NonEmpty Address)
-fetchOutputAddressesByWallet walletName =
-    fromList . tail <$> fetchAddressesByWallet walletName
