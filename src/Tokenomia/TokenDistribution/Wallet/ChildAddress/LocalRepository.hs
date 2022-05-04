@@ -6,6 +6,7 @@ module Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     , fetchAddressesByWallet
     , fetchAddressesByWalletWithIndexFilter
     , fetchAddressesByWalletWithNonZeroIndex
+    , fetchAddressesByWalletWithIndexInRange
     ) where
 
 import Control.Monad.Reader     ( MonadIO, MonadReader )
@@ -23,7 +24,7 @@ import Tokenomia.Common.Environment ( Environment )
 import Tokenomia.Wallet.Type        ( WalletName )
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
     ( ChildAddressRef(..)
-    , ChildAddressIndex
+    , ChildAddressIndex(..)
     )
 import Tokenomia.Wallet.ChildAddress.LocalRepository
     ( ChildAddress(..)
@@ -111,3 +112,16 @@ fetchAddressesByWalletWithNonZeroIndex ::
     => WalletName -> m [Address]
 fetchAddressesByWalletWithNonZeroIndex =
     fetchAddressesByWalletWithIndexFilter (/= 0)
+
+fetchAddressesByWalletWithIndexInRange ::
+    ( MonadIO m
+    , MonadReader Environment m
+    , MonadError  TokenomiaError m
+    , Integral a
+    )
+    => [a] -> WalletName -> m [Address]
+fetchAddressesByWalletWithIndexInRange range =
+    fetchAddressesByWalletWithIndexFilter (`elem` childAddressIndexRange range)
+  where
+    childAddressIndexRange :: Integral a => [a] -> [ChildAddressIndex]
+    childAddressIndexRange = fmap (ChildAddressIndex . toInteger)
