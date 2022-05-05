@@ -3,6 +3,7 @@
 
 module Tokenomia.TokenDistribution.Split.EstimateFees
     ( estimateFees
+    , distributionOutputs
     )
     where
 
@@ -17,15 +18,12 @@ import Ledger.Ada               ( Ada(..), lovelaceValueOf )
 import Tokenomia.Common.Address     ( Address(..) )
 import Tokenomia.Common.Error       ( TokenomiaError )
 import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO )
-import Tokenomia.Wallet.Type        ( WalletName )
 
 import Tokenomia.Common.Data.Convertible                ( convert )
 import Tokenomia.Common.Data.List.NonEmpty              ( singleton )
 import Tokenomia.TokenDistribution.CLI.Parameters       ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution         ( Distribution(..), Recipient(..) )
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef    ( ChildAddressRef(..) )
-import Tokenomia.Wallet.ChildAddress.ChainIndex         ( queryUTxO )
 
 import Tokenomia.Common.Transacting
     ( TxOut(ToWallet)
@@ -37,8 +35,13 @@ import Tokenomia.Common.Transacting
 
 import Tokenomia.TokenDistribution.Parser.Address
     ( unsafeSerialiseCardanoAddress )
+
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
     ( defaultFeeAddressRef, defaultCollateralAddressRef )
+
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
+    ( fetchProvisionedUTxO )
+
 
 estimateFees ::
     ( MonadIO m
@@ -47,7 +50,7 @@ estimateFees ::
     )
     => Parameters -> NonEmpty Distribution -> m Ada
 estimateFees parameters@Parameters{..} distributions = do
-    tokenUTxO <- fetchProvisionedTokenUTxO (defaultTokenSource tokenWallet)
+    tokenUTxO <- fetchProvisionedUTxO (ChildAddressRef tokenWallet 1)
     let distribution = Data.List.NonEmpty.head distributions
         txbuild = TxBuild
             { inputsFromScript          = Nothing
@@ -72,16 +75,3 @@ distributionOutputs Parameters{..} Distribution{..} =
   where
     ε :: Value
     ε = lovelaceValueOf minLovelacesPerUtxo
-
-type TokenSource = ChildAddressRef
-
-fetchProvisionedTokenUTxO ::
-    ( MonadIO m
-    , MonadReader Environment m
-    )
-    => TokenSource -> m WalletUTxO
-fetchProvisionedTokenUTxO tokenSource =
-    Prelude.head <$> queryUTxO tokenSource
-
-defaultTokenSource :: WalletName -> TokenSource
-defaultTokenSource = flip ChildAddressRef 1

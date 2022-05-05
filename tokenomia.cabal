@@ -95,10 +95,12 @@ library
       Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Distribution
       Tokenomia.TokenDistribution.PreValidation
+      Tokenomia.TokenDistribution.Transfer
       Tokenomia.TokenDistribution.Split.EstimateFees
       Tokenomia.TokenDistribution.Split.SplitDistribution
       Tokenomia.TokenDistribution.Split.SplitAdaSource
       Tokenomia.TokenDistribution.Split.SplitTokenSource
+      Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
       Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
       Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
       Tokenomia.ICO.Status
