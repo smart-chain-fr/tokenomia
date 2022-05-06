@@ -12,7 +12,7 @@ import Control.Monad.Except     ( MonadError )
 
 import Data.List.NonEmpty       ( NonEmpty, fromList, repeat, head )
 
-import Ledger.Ada               ( lovelaceValueOf, toValue )
+import Ledger.Ada               ( Ada, lovelaceValueOf, toValue )
 import Ledger.Value             ( Value )
 
 import Tokenomia.Common.Error       ( TokenomiaError )
@@ -32,9 +32,6 @@ import Tokenomia.Common.Data.List.NonEmpty          ( singleton, zipWith3 )
 import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution     ( Distribution(..) )
 
-import Tokenomia.TokenDistribution.Split.EstimateFees
-    ( estimateFees )
-
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     ( fetchAddressesByWalletWithIndexInRange )
 
@@ -47,9 +44,9 @@ splitAdaSource ::
     , MonadReader Environment m
     , MonadError  TokenomiaError m
     )
-    => WalletUTxO -> Parameters -> NonEmpty Distribution -> m ()
-splitAdaSource source parameters distributions = do
-    splitAdaSourceTxBuild source parameters distributions >>=
+    => WalletUTxO -> Ada -> Parameters -> NonEmpty Distribution -> m ()
+splitAdaSource source fees parameters distributions = do
+    splitAdaSourceTxBuild source fees parameters distributions >>=
         buildAndSubmit
             (Unbalanced $ defaultFeeAddressRef $ adaWallet parameters)
             (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
@@ -59,9 +56,9 @@ splitAdaSourceTxBuild ::
     , MonadReader Environment m
     , MonadError  TokenomiaError m
     )
-    => WalletUTxO -> Parameters -> NonEmpty Distribution -> m TxBuild
-splitAdaSourceTxBuild source parameters distributions = do
-    outputs <- splitAdaSourceOutputs parameters distributions
+    => WalletUTxO -> Ada -> Parameters -> NonEmpty Distribution -> m TxBuild
+splitAdaSourceTxBuild source fees parameters distributions = do
+    outputs <- splitAdaSourceOutputs fees parameters distributions
     return TxBuild
         { inputsFromScript          = Nothing
         , inputsFromWallet          = singleton $ FromWallet source
@@ -76,14 +73,13 @@ splitAdaSourceOutputs ::
     , MonadReader Environment m
     , MonadError  TokenomiaError m
     )
-    => Parameters -> NonEmpty Distribution -> m (NonEmpty TxOut)
-splitAdaSourceOutputs parameters@Parameters{..} distributions = do
+    => Ada -> Parameters -> NonEmpty Distribution -> m (NonEmpty TxOut)
+splitAdaSourceOutputs fees Parameters{..} distributions = do
     let range = [1..(length distributions)]
     addresses <- fromList <$> fetchAddressesByWalletWithIndexInRange range adaWallet
 
-    fees <- toValue <$> estimateFees parameters distributions
     let n = toInteger . length . recipients . head $ distributions
-        value = fees <> nε (max 1 (n - 1))
+        value = toValue fees <> nε (max 1 (n - 1))
 
     return $ zipWith3 ToWallet addresses (repeat value) (repeat Nothing)
   where
