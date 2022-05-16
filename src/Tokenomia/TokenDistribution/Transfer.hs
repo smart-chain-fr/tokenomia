@@ -32,7 +32,8 @@ import Tokenomia.Common.Transacting
     , TxBuild(..)
     , TxBalance(..)
     , Fees
-    , buildAndSubmit
+    , build
+    , submitWithoutWaitingConfimation
     )
 
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
@@ -71,11 +72,13 @@ singleTransfer ::
     => Fees -> Parameters -> (ChildAddressIndex, Distribution) -> m ()
 singleTransfer fees parameters (index, distribution) = do
     liftIO . print $ "Building " <> show index
-    () <$ (singleTransferTxBuild parameters (index, distribution) >>=
-        buildAndSubmit
+    txBuild <- singleTransferTxBuild parameters (index, distribution)
+    builtTx <-
+        build
             (Balanced fees)
-            (Just $ defaultCollateralAddressRef $ collateralWallet parameters))
-    liftIO . print $ "Done for " <> show index
+            (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
+            txBuild
+    () <$ submitWithoutWaitingConfimation builtTx
 
 singleTransferTxBuild ::
     ( MonadIO m
