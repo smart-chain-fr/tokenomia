@@ -6,14 +6,18 @@ module Tokenomia.Common.Parser.TxOutDatumHash
     ) where
 
 import Tokenomia.Common.Data.Convertible
-    ( Convertible(convert) )
+    ( convert )
 
-import Prelude           hiding ( take )
+import Prelude           hiding ( takeWhile )
+
 import Control.Applicative      ( (<|>) )
 import Control.Monad            ( void )
-import Data.Attoparsec.Text     ( Parser, take)
 
-import Plutus.V1.Ledger.Api     ( DatumHash(DatumHash) )
+import Data.Attoparsec.Text     ( Parser, takeWhile)
+import Data.String              ( fromString )
+import Data.Text                ( Text )
+
+import Plutus.V1.Ledger.Api     ( DatumHash )
 
 
 txOutDatumHash :: Parser (Maybe DatumHash)
@@ -25,8 +29,11 @@ txOutDatumHash =
     datumHashNone = void ("TxOutDatumHashNone" <|> "TxOutDatumNone")
 
     datumHash :: Parser DatumHash
-    datumHash = DatumHash . convert
-        <$> ("TxOutDatumHash ScriptDataInAlonzoEra " *> quote (take 56))
+    datumHash = fromString . convert
+        <$> ("TxOutDatumHash ScriptDataInAlonzoEra " *> quoted)
+
+    quoted :: Parser Text
+    quoted = quote $ takeWhile (/= '\"')
 
     quote :: Parser a -> Parser a
     quote p = "\"" *> p <* "\""

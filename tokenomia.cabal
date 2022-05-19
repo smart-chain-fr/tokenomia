@@ -88,6 +88,9 @@ library
       Tokenomia.Common.Data.List.NonEmpty
       Tokenomia.Common.Parser.AssetClass
       Tokenomia.Common.Parser.Value
+      Tokenomia.Common.Parser.TxOutDatumHash
+      Tokenomia.Common.Parser.TxOutRef
+      Tokenomia.Common.Parser.Utxo
       Tokenomia.TokenDistribution.Main
       Tokenomia.TokenDistribution.CLI
       Tokenomia.TokenDistribution.CLI.Parameters
