@@ -11,6 +11,7 @@ module Tokenomia.TokenDistribution.Split.EstimateFees
 import Control.Monad.Reader     ( MonadIO, MonadReader )
 import Control.Monad.Except     ( MonadError )
 
+import Data.Maybe               ( fromJust )
 import Data.List.NonEmpty       ( NonEmpty, fromList, head )
 
 import Ledger.Value             ( AssetClass, Value, assetClassValue )
@@ -59,7 +60,7 @@ estimateFees parameters@Parameters{..} distributions = do
     let distribution = Data.List.NonEmpty.head distributions
         txbuild = TxBuild
             { inputsFromScript          = Nothing
-            , inputsFromWallet          = singleton $ FromWallet tokenUTxO
+            , inputsFromWallet          = singleton $ FromWallet . fromJust $ tokenUTxO
             , outputs                   = distributionOutputs parameters distribution
             , validitySlotRangeMaybe    = Nothing
             , metadataMaybe             = Nothing
