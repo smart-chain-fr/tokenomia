@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts             #-}
+{-# LANGUAGE ImportQualifiedPost          #-}
 {-# LANGUAGE RecordWildCards              #-}
 
 module Tokenomia.TokenDistribution.Split.EstimateFees
@@ -12,8 +13,12 @@ import Control.Monad.Except     ( MonadError )
 
 import Data.List.NonEmpty       ( NonEmpty, fromList, head )
 
-import Ledger.Value             ( Value, assetClassValue )
-import Ledger.Ada               ( Ada(..), lovelaceValueOf )
+import Ledger.Value             ( AssetClass, Value, assetClassValue )
+import Ledger.Ada               ( Ada(..), adaSymbol, adaToken, lovelaceValueOf )
+
+import Ledger.Value qualified as Value
+    ( assetClass
+    )
 
 import Tokenomia.Common.Address     ( Address(..) )
 import Tokenomia.Common.Error       ( TokenomiaError )
@@ -70,8 +75,16 @@ distributionOutputs :: Parameters -> Distribution -> NonEmpty TxOut
 distributionOutputs Parameters{..} Distribution{..} =
     fromList $ zipWith3 ToWallet
         (Address . convert . unsafeSerialiseCardanoAddress networkId . address <$> recipients)
-        ((ε <>) . assetClassValue assetClass . amount <$> recipients)
+        (addε . assetClassValue assetClass . amount <$> recipients)
         (repeat Nothing)
   where
     ε :: Value
     ε = lovelaceValueOf minLovelacesPerUtxo
+
+    adaAssetClass :: AssetClass
+    adaAssetClass = Value.assetClass adaSymbol adaToken
+
+    addε :: Value -> Value
+    addε
+        | assetClass == adaAssetClass   = id
+        | otherwise                     = (ε <>)
