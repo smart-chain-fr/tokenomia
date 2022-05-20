@@ -5,6 +5,7 @@ module Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
     ) where
 
 import Control.Monad.Reader     ( MonadIO, MonadReader )
+import Data.Maybe               ( listToMaybe )
 
 import Tokenomia.Common.Environment ( Environment )
 import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO )
@@ -19,6 +20,6 @@ fetchProvisionedUTxO ::
     ( MonadIO m
     , MonadReader Environment m
     )
-    => ChildAddressRef -> m WalletUTxO
+    => ChildAddressRef -> m (Maybe WalletUTxO)
 fetchProvisionedUTxO childAddressRef =
-    head <$> queryUTxO childAddressRef
+    listToMaybe <$> queryUTxO childAddressRef

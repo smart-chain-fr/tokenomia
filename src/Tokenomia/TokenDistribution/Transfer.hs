@@ -6,10 +6,12 @@ module Tokenomia.TokenDistribution.Transfer
     ( transferTokenInParallel
     ) where
 
+import Control.Monad (void)
 import Control.Monad.Reader     ( MonadIO, MonadReader, liftIO )
 import Control.Monad.Except     ( MonadError )
 
 import Data.List.NonEmpty       ( NonEmpty((:|)), toList )
+import Data.Functor.Syntax      ( (<$$>) )
 
 import Prelude hiding           ( repeat, mapM )
 
@@ -72,36 +74,50 @@ singleTransfer ::
     => Fees -> Parameters -> (ChildAddressIndex, Distribution) -> m ()
 singleTransfer fees parameters (index, distribution) = do
     liftIO . print $ "Building " <> show index
-    txBuild <- singleTransferTxBuild parameters (index, distribution)
-    builtTx <-
-        build
-            (Balanced fees)
-            (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
-            txBuild
-    () <$ submitWithoutWaitingConfimation builtTx
+    singleTransferTxBuild parameters (index, distribution)
+    >>= maybe
+            (pure ())
+            buildAndSubmitWithoutWaitingConfimation
+  where
+    buildAndSubmitWithoutWaitingConfimation ::
+        ( MonadIO m
+        , MonadReader Environment m
+        , MonadError  TokenomiaError m
+        )
+        => TxBuild -> m ()
+    buildAndSubmitWithoutWaitingConfimation txBuild =
+            build
+                (Balanced fees)
+                (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
+                txBuild
+        >>= void . submitWithoutWaitingConfimation
 
 singleTransferTxBuild ::
     ( MonadIO m
     , MonadReader Environment m
     )
-    => Parameters -> (ChildAddressIndex, Distribution) -> m TxBuild
-singleTransferTxBuild parameters (index, distribution) = do
-    inputs  <- singleTransferInputs  parameters index
-    return TxBuild
-        { inputsFromScript          = Nothing
-        , inputsFromWallet          = inputs
-        , outputs                   = distributionOutputs parameters distribution
-        , validitySlotRangeMaybe    = Nothing
-        , metadataMaybe             = Nothing
-        , tokenSupplyChangesMaybe   = Nothing
-        }
+    => Parameters -> (ChildAddressIndex, Distribution) -> m (Maybe TxBuild)
+singleTransferTxBuild parameters (index, distribution) =
+         singleTransferTxBuild'
+    <$$> singleTransferInputs parameters index
+    where
+        singleTransferTxBuild' :: NonEmpty TxInFromWallet -> TxBuild
+        singleTransferTxBuild' inputs =
+            TxBuild
+                { inputsFromScript          = Nothing
+                , inputsFromWallet          = inputs
+                , outputs                   = distributionOutputs parameters distribution
+                , validitySlotRangeMaybe    = Nothing
+                , metadataMaybe             = Nothing
+                , tokenSupplyChangesMaybe   = Nothing
+                }
 
 singleTransferInputs ::
     ( MonadIO m
     , MonadReader Environment m
     )
-    => Parameters -> ChildAddressIndex  -> m (NonEmpty TxInFromWallet)
+    => Parameters -> ChildAddressIndex  -> m (Maybe (NonEmpty TxInFromWallet))
 singleTransferInputs Parameters{..} index = do
     tokenUTxO <- fetchProvisionedUTxO (ChildAddressRef tokenWallet index)
     adaUTxO   <- fetchProvisionedUTxO (ChildAddressRef adaWallet index)
-    return $ FromWallet <$> (tokenUTxO :| [adaUTxO])
+    return $ FromWallet <$$> sequence (tokenUTxO :| [adaUTxO])
