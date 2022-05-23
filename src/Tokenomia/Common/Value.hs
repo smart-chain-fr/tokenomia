@@ -25,6 +25,17 @@ import Data.List                ( intersperse )
 import Data.List.NonEmpty       ( NonEmpty )
 
 import Plutus.V1.Ledger.Value
+    ( AssetClass
+    , CurrencySymbol
+    , TokenName
+    , Value
+    , assetClassValueOf
+    , flattenValue
+    , singleton
+    , symbols
+    , toString
+    )
+import Plutus.V1.Ledger.Value qualified as Ledger ( assetClass )
 import Ledger.Ada
 import Data.Foldable
 import qualified Data.Text                        as Text
@@ -53,7 +64,7 @@ containingGivenNativeToken policyhash value
 
 containingOnlyGivenAssetClass :: AssetClass -> Value -> Bool
 containingOnlyGivenAssetClass givenAssettClass value
-    = 1 == (length . filter (\(c,tn,_) -> assetClass c tn  == givenAssettClass ) .flattenValue) value
+    = 1 == (length . filter (\(c,tn,_) -> Ledger.assetClass c tn  == givenAssettClass ) .flattenValue) value
 
 -- | Check if a value contains the right amount of an asset class.
 assetClassValueOfWith :: (Integer -> Bool) -> Value -> AssetClass -> Bool

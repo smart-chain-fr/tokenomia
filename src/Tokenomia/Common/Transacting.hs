@@ -70,7 +70,7 @@ import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO
+import           Tokenomia.Wallet.WalletUTxO ( WalletUTxO(..) )
 import           Tokenomia.Common.Hash
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
