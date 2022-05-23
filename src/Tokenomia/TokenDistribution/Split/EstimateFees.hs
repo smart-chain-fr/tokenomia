@@ -36,6 +36,7 @@ import Tokenomia.Common.Transacting
     , TxInFromWallet(FromWallet)
     , TxBuild(..)
     , TxBalance(..)
+    , Metadata(..)
     , mockBuild
     )
 
@@ -63,7 +64,7 @@ estimateFees parameters@Parameters{..} distributions = do
             , inputsFromWallet          = singleton $ FromWallet . fromJust $ tokenUTxO
             , outputs                   = distributionOutputs parameters distribution
             , validitySlotRangeMaybe    = Nothing
-            , metadataMaybe             = Nothing
+            , metadataMaybe             = Metadata <$> metadataFilePath
             , tokenSupplyChangesMaybe   = Nothing
             }
 

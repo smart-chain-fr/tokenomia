@@ -25,6 +25,8 @@ Available options:
                            Wallet name for collateral
   -e,--min-lovelaces-per-utxo AMOUNT
                            Minimum lovelace amount per UTxO (default: 1379280)
+  -d,--metadata-file FILENAME
+                           Metadata shared by all transactions
   -y,--dry-run             Build transactions without submitting them
   -v,--verbose             Show more details about build processes
   -h,--help                Show this help text

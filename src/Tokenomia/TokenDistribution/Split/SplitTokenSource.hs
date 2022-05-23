@@ -24,6 +24,7 @@ import Tokenomia.Common.Transacting
     , TxOut(..)
     , TxBuild(..)
     , TxBalance(..)
+    , Metadata(..)
     , buildAndSubmit
     )
 
@@ -64,7 +65,7 @@ splitTokenSourceTxBuild source parameters distributions = do
         , inputsFromWallet          = singleton $ FromWallet source
         , outputs                   = outputs
         , validitySlotRangeMaybe    = Nothing
-        , metadataMaybe             = Nothing
+        , metadataMaybe             = Metadata <$> metadataFilePath parameters
         , tokenSupplyChangesMaybe   = Nothing
         }
 
