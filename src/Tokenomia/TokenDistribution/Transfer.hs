@@ -6,7 +6,7 @@ module Tokenomia.TokenDistribution.Transfer
     ( transferTokenInParallel
     ) where
 
-import Control.Monad (void)
+import Control.Monad            ( void )
 import Control.Monad.Reader     ( MonadIO, MonadReader, liftIO )
 import Control.Monad.Except     ( MonadError )
 
@@ -74,7 +74,7 @@ singleTransfer ::
     => Fees -> Parameters -> (ChildAddressIndex, Distribution) -> m ()
 singleTransfer fees parameters (index, distribution) = do
     liftIO . print $ "Building " <> show index
-    singleTransferTxBuild parameters (index, distribution)
+    singleTransferInputs parameters index
     >>= maybe
             (pure ())
             buildAndSubmitWithoutWaitingConfimation
@@ -84,33 +84,24 @@ singleTransfer fees parameters (index, distribution) = do
         , MonadReader Environment m
         , MonadError  TokenomiaError m
         )
-        => TxBuild -> m ()
-    buildAndSubmitWithoutWaitingConfimation txBuild =
+        => NonEmpty TxInFromWallet -> m ()
+    buildAndSubmitWithoutWaitingConfimation inputs =
             build
                 (Balanced fees)
                 (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
-                txBuild
+                (singleTransferTxBuild parameters distribution inputs)
         >>= void . submitWithoutWaitingConfimation
 
-singleTransferTxBuild ::
-    ( MonadIO m
-    , MonadReader Environment m
-    )
-    => Parameters -> (ChildAddressIndex, Distribution) -> m (Maybe TxBuild)
-singleTransferTxBuild parameters (index, distribution) =
-         singleTransferTxBuild'
-    <$$> singleTransferInputs parameters index
-    where
-        singleTransferTxBuild' :: NonEmpty TxInFromWallet -> TxBuild
-        singleTransferTxBuild' inputs =
-            TxBuild
-                { inputsFromScript          = Nothing
-                , inputsFromWallet          = inputs
-                , outputs                   = distributionOutputs parameters distribution
-                , validitySlotRangeMaybe    = Nothing
-                , metadataMaybe             = Nothing
-                , tokenSupplyChangesMaybe   = Nothing
-                }
+singleTransferTxBuild :: Parameters -> Distribution -> NonEmpty TxInFromWallet -> TxBuild
+singleTransferTxBuild parameters distribution inputs =
+    TxBuild
+        { inputsFromScript          = Nothing
+        , inputsFromWallet          = inputs
+        , outputs                   = distributionOutputs parameters distribution
+        , validitySlotRangeMaybe    = Nothing
+        , metadataMaybe             = Nothing
+        , tokenSupplyChangesMaybe   = Nothing
+        }
 
 singleTransferInputs ::
     ( MonadIO m
