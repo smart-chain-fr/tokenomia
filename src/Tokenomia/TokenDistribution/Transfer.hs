@@ -33,6 +33,7 @@ import Tokenomia.Common.Transacting
     ( TxInFromWallet(..)
     , TxBuild(..)
     , TxBalance(..)
+    , Metadata(..)
     , Fees
     , build
     , submitWithoutWaitingConfimation
@@ -99,7 +100,7 @@ singleTransferTxBuild parameters distribution inputs =
         , inputsFromWallet          = inputs
         , outputs                   = distributionOutputs parameters distribution
         , validitySlotRangeMaybe    = Nothing
-        , metadataMaybe             = Nothing
+        , metadataMaybe             = Metadata <$> metadataFilePath parameters
         , tokenSupplyChangesMaybe   = Nothing
         }
 
