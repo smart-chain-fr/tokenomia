@@ -79,10 +79,17 @@ splitAdaSourceOutputs fees Parameters{..} distributions = do
     let range = [1..(length distributions)]
     addresses <- fromList <$> fetchAddressesByWalletWithIndexInRange range adaWallet
 
-    let n = toInteger . length . recipients . head $ distributions
-        value = toValue fees <> nε (max 1 (n - 1))
-
-    return $ zipWith3 ToWallet addresses (repeat value) (repeat Nothing)
+    return $ zipWith3 ToWallet addresses values (repeat Nothing)
   where
     nε :: Integer -> Value
     nε n = lovelaceValueOf (n * minLovelacesPerUtxo)
+
+    value :: Integer -> Value
+    value n
+        | n > 1     = toValue fees <> nε (n - 1)
+        | otherwise = toValue fees
+
+    values :: NonEmpty Value
+    values =
+        let ns = toInteger . length . recipients <$> distributions
+        in  value <$> ns
