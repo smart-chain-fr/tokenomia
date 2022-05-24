@@ -24,6 +24,8 @@ import Data.Function            ( on )
 import Data.List                ( intersperse )
 import Data.List.NonEmpty       ( NonEmpty )
 
+import Text.Hex                 ( encodeHex )
+
 import Plutus.V1.Ledger.Value
     ( AssetClass
     , CurrencySymbol
@@ -43,6 +45,8 @@ import qualified Data.Text                        as Text
 import Data.Attoparsec.Text (parseOnly)
 
 import Tokenomia.Common.Parser.Value qualified as Parser ( value )
+import Tokenomia.Common.Data.Convertible ( convert )
+
 
 getTokenFrom :: Value -> (CurrencySymbol,TokenName,Integer)
 getTokenFrom  = head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
@@ -103,15 +107,13 @@ instance ToCLI Value where
     . map (\case
             ("","",c) -> show c <> " lovelace"
             (a,"" ,c) -> show c <> " " <> show a <> " "
-            --(a, b ,c) -> show c <> " " <> show a <> "." <> showHexadecimal b <> " "  )
-            (a, b ,c) -> show c <> " " <> show a <> "." <> toString b <> " "  )
+            (a, b ,c) -> show c <> " " <> show a <> "." <> showHexadecimal b <> " "  )
     . reverse
     . lovelacesFirst
     . flattenValue
 
---showHexadecimal :: TokenName -> String
---showHexadecimal = Text.unpack . encodeHex . BSU.fromString . toString
---showHexadecimal = Text.unpack . encodeHex . fromBuiltin . unTokenName
+showHexadecimal :: TokenName -> String
+showHexadecimal = convert . encodeHex . convert . toString
 
 showValueUtf8 :: Value -> String
 showValueUtf8 =
