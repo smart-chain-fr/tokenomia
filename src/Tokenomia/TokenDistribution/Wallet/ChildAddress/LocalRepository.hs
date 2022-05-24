@@ -4,6 +4,8 @@
 module Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     ( deriveMissingChildAddresses
     , fetchAddressesByWallet
+    , fetchAddressByWalletAtIndex
+    , fetchAddressesByWalletAtIndexes
     , fetchAddressesByWalletWithIndexFilter
     , fetchAddressesByWalletWithNonZeroIndex
     , fetchAddressesByWalletWithIndexInRange
@@ -14,6 +16,7 @@ import Control.Monad.Except     ( MonadError )
 
 import Data.List.NonEmpty       ( NonEmpty, filter, toList )
 import Data.List                ( (\\) )
+import Data.Maybe               ( listToMaybe )
 
 import Prelude           hiding ( filter, max )
 
@@ -75,13 +78,21 @@ fetchAddressByChildAddressRef ::
 fetchAddressByChildAddressRef childAddressRef =
     address <$> fetchById childAddressRef
 
-fetchAddressByWalletAtIndexes ::
+fetchAddressByWalletAtIndex ::
+    ( MonadIO m
+    , MonadReader Environment m
+    )
+    => ChildAddressIndex -> WalletName -> m (Maybe Address)
+fetchAddressByWalletAtIndex index walletName =
+    listToMaybe <$> fetchAddressesByWalletAtIndexes [index] walletName
+
+fetchAddressesByWalletAtIndexes ::
     ( MonadIO m
     , MonadReader Environment m
     , Traversable t
     )
     => t ChildAddressIndex -> WalletName -> m (t Address)
-fetchAddressByWalletAtIndexes indexes walletName =
+fetchAddressesByWalletAtIndexes indexes walletName =
     mapM fetchAddressByChildAddressRef (ChildAddressRef walletName <$> indexes)
 
 fetchAddressesByWallet ::
@@ -92,7 +103,7 @@ fetchAddressesByWallet ::
     => WalletName -> m (NonEmpty Address)
 fetchAddressesByWallet walletName = do
     indexes <- fetchDerivedChildAddressIndexes walletName
-    fetchAddressByWalletAtIndexes indexes walletName
+    fetchAddressesByWalletAtIndexes indexes walletName
 
 fetchAddressesByWalletWithIndexFilter ::
     ( MonadIO m
@@ -102,7 +113,7 @@ fetchAddressesByWalletWithIndexFilter ::
     => (ChildAddressIndex -> Bool) -> WalletName -> m [Address]
 fetchAddressesByWalletWithIndexFilter predicate walletName = do
     indexes <- filter predicate <$> fetchDerivedChildAddressIndexes walletName
-    fetchAddressByWalletAtIndexes indexes walletName
+    fetchAddressesByWalletAtIndexes indexes walletName
 
 fetchAddressesByWalletWithNonZeroIndex ::
     ( MonadIO m

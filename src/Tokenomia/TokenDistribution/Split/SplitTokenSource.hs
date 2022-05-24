@@ -10,18 +10,24 @@ import Prelude           hiding ( repeat, zipWith3 )
 import Control.Monad.Reader     ( MonadIO, MonadReader )
 import Control.Monad.Except     ( MonadError )
 
-import Data.List.NonEmpty       ( NonEmpty, fromList, repeat )
+import Data.List.NonEmpty       ( NonEmpty((:|)), (<|), fromList, repeat )
+import Data.Maybe               ( fromJust )
 
 import Ledger.Ada               ( lovelaceValueOf )
-import Ledger.Value             ( Value, assetClassValue )
+import Ledger.Value
+    ( AssetClass
+    , Value
+    , assetClassValue
+    , assetClassValueOf
+    )
 
 import Tokenomia.Common.Error       ( TokenomiaError )
 import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO )
+import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO, value )
 
 import Tokenomia.Common.Transacting
     ( TxInFromWallet(..)
-    , TxOut(..)
+    , TxOut(ToWallet)
     , TxBuild(..)
     , TxBalance(..)
     , Metadata(..)
@@ -34,7 +40,9 @@ import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
 import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), Recipient(..) )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-    ( fetchAddressesByWalletWithNonZeroIndex )
+    ( fetchAddressByWalletAtIndex
+    , fetchAddressesByWalletWithNonZeroIndex
+    )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
     ( defaultFeeAddressRef, defaultCollateralAddressRef )
@@ -58,31 +66,62 @@ splitTokenSourceTxBuild ::
     , MonadError  TokenomiaError m
     )
     => WalletUTxO -> Parameters -> NonEmpty Distribution -> m TxBuild
-splitTokenSourceTxBuild source parameters distributions = do
-    outputs <- splitTokenSourceOutputs parameters distributions
+splitTokenSourceTxBuild source Parameters{..} distributions = do
+    change  <- splitTokenSourceChange
+    outputs <- splitTokenSourceOutputs
     return TxBuild
         { inputsFromScript          = Nothing
         , inputsFromWallet          = singleton $ FromWallet source
-        , outputs                   = outputs
+        , outputs                   = change <| outputs
         , validitySlotRangeMaybe    = Nothing
-        , metadataMaybe             = Metadata <$> metadataFilePath parameters
+        , metadataMaybe             = Metadata <$> metadataFilePath
         , tokenSupplyChangesMaybe   = Nothing
         }
-
-splitTokenSourceOutputs ::
-    ( MonadIO m
-    , MonadReader Environment m
-    , MonadError  TokenomiaError m
-    )
-    => Parameters -> NonEmpty Distribution -> m (NonEmpty TxOut)
-splitTokenSourceOutputs Parameters{..} distributions = do
-    addresses <- fromList <$> fetchAddressesByWalletWithNonZeroIndex tokenWallet
-    let values = tokenSum <$> distributions
-    return $ zipWith3 ToWallet addresses values (repeat Nothing)
   where
+    splitTokenSourceChange ::
+        ( MonadIO m
+        , MonadReader Environment m
+        )
+        => m TxOut
+    splitTokenSourceChange = do
+        changeAddress <- fromJust <$> fetchAddressByWalletAtIndex 0 tokenWallet
+
+        let assetClass          = getAssetClass distributions
+
+            provisionnedToken   = assetClassValueOf (value source) assetClass
+            requiredToken       = sum $ amountSum <$> distributions
+            remainingToken      = provisionnedToken - requiredToken
+
+            remainingTokenValue = tokenValue assetClass remainingToken
+
+        return $ ToWallet changeAddress remainingTokenValue Nothing
+
+    splitTokenSourceOutputs ::
+        ( MonadIO m
+        , MonadReader Environment m
+        , MonadError  TokenomiaError m
+        )
+        => m (NonEmpty TxOut)
+    splitTokenSourceOutputs = do
+        addresses <- fromList <$> fetchAddressesByWalletWithNonZeroIndex tokenWallet
+        let values = tokenSum <$> distributions
+        return $ zipWith3 ToWallet addresses values (repeat Nothing)
+
+    getAssetClass :: NonEmpty Distribution -> AssetClass
+    getAssetClass (Distribution{..} :| _) = assetClass
+
+    amountSum :: Distribution -> Integer
+    amountSum Distribution{..} = sum $ amount <$> recipients
+
     tokenSum :: Distribution -> Value
-    tokenSum Distribution{..} =
-            assetClassValue assetClass (sum (amount <$> recipients))
+    tokenSum distribution =
+        tokenValue
+            (assetClass distribution)
+            (amountSum  distribution)
+
+    tokenValue :: AssetClass -> Integer -> Value
+    tokenValue assetClass amount =
+            assetClassValue assetClass amount
         <>  ε
 
     ε :: Value
