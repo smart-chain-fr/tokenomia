@@ -14,16 +14,13 @@ import Control.Monad.Except     ( MonadError )
 import Data.Maybe               ( fromJust )
 import Data.List.NonEmpty       ( NonEmpty, fromList, head )
 
-import Ledger.Value             ( AssetClass, Value, assetClassValue )
-import Ledger.Ada               ( Ada(..), adaSymbol, adaToken, lovelaceValueOf )
-
-import Ledger.Value qualified as Value
-    ( assetClass
-    )
+import Ledger.Value             ( Value, assetClassValue )
+import Ledger.Ada               ( Ada(..), lovelaceValueOf )
 
 import Tokenomia.Common.Address     ( Address(..) )
 import Tokenomia.Common.Error       ( TokenomiaError )
 import Tokenomia.Common.Environment ( Environment )
+import Tokenomia.Common.AssetClass  ( adaAssetClass )
 
 import Tokenomia.Common.Data.Convertible                ( convert )
 import Tokenomia.Common.Data.List.NonEmpty              ( singleton )
@@ -82,9 +79,6 @@ distributionOutputs Parameters{..} Distribution{..} =
   where
     ε :: Value
     ε = lovelaceValueOf minLovelacesPerUtxo
-
-    adaAssetClass :: AssetClass
-    adaAssetClass = Value.assetClass adaSymbol adaToken
 
     addε :: Value -> Value
     addε

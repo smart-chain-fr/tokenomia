@@ -68,6 +68,7 @@ library
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
       Tokenomia.Common.Value
       Tokenomia.Common.Serialise

@@ -17,13 +17,7 @@ import Data.List.NonEmpty       ( NonEmpty )
 import Data.Either.Combinators  ( maybeToRight )
 import Data.Either.Validation   ( Validation, eitherToValidation )
 
-import Ledger.Ada               ( adaSymbol, adaToken )
-import Ledger.Value             ( AssetClass )
-
-import Ledger.Value qualified as Value
-    ( assetClass
-    )
-
+import Tokenomia.Common.AssetClass          ( adaAssetClass )
 import Tokenomia.Common.Asset               ( Asset(..) )
 import Tokenomia.Common.Environment         ( Environment )
 import Tokenomia.Common.Value               ( assetClassValueOfWith, maximumByAssetClassValueOf' )
@@ -115,9 +109,6 @@ adaSourceProvisionedUTxO Parameters{..} distribution =
         let n = toInteger . length $ recipients distribution
         in
             n * ε
-
-    adaAssetClass :: AssetClass
-    adaAssetClass = Value.assetClass adaSymbol adaToken
 
     ε :: Integer
     ε = minLovelacesPerUtxo

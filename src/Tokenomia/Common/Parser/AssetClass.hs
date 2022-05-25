@@ -13,7 +13,6 @@ import Data.Char                ( isSpace )
 import Data.String              ( fromString )
 import Data.Text                ( Text )
 
-import Ledger.Ada               ( adaSymbol, adaToken )
 import Ledger.Value
     ( AssetClass
     , CurrencySymbol
@@ -22,9 +21,11 @@ import Ledger.Value
 import Ledger.Value qualified as Ledger
     ( assetClass, tokenName )
 
+import Tokenomia.Common.AssetClass qualified as Ledger
+    ( adaAssetClass )
+
 import Tokenomia.Common.Data.ByteString     ( unsafeDecodeHex )
 import Tokenomia.Common.Data.Convertible    ( Convertible(convert) )
-
 
 currencySymbol :: Parser CurrencySymbol
 currencySymbol = fromString . convert <$> take 56
@@ -40,7 +41,7 @@ assetClass =
     adaAssetClass <|> tokenAssetClass <|> anonymousAssetClass
   where
     adaAssetClass :: Parser AssetClass
-    adaAssetClass = Ledger.assetClass adaSymbol <$> (adaToken <$ "lovelace")
+    adaAssetClass = Ledger.adaAssetClass <$ "lovelace"
 
     tokenAssetClass :: Parser AssetClass
     tokenAssetClass = Ledger.assetClass
