@@ -1,14 +1,18 @@
 {-# LANGUAGE ImportQualifiedPost          #-}
 
 module Tokenomia.Common.Data.List.NonEmpty
-    ( singleton
+    ( prependMaybe
+    , singleton
     , zipWith3
     ) where
 
-import Data.List.NonEmpty       ( NonEmpty((:|)) )
+import Data.List.NonEmpty       ( NonEmpty((:|)), (<|) )
 import Data.List qualified as L ( zipWith3 )
 import Prelude           hiding ( zipWith3 )
 
+
+prependMaybe :: Maybe a -> NonEmpty a -> NonEmpty a
+prependMaybe x xs = maybe xs (<| xs) x
 
 singleton :: a -> NonEmpty a
 singleton = (:| [])
