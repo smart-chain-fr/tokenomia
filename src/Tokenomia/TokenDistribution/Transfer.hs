@@ -31,6 +31,7 @@ import Tokenomia.TokenDistribution.Distribution     ( Distribution(..) )
 
 import Tokenomia.Common.Transacting
     ( TxInFromWallet(..)
+    , TxOut(..)
     , TxBuild(..)
     , TxBalance(..)
     , Metadata(..)
@@ -74,31 +75,33 @@ singleTransfer ::
     )
     => Fees -> Parameters -> (ChildAddressIndex, Distribution) -> m ()
 singleTransfer fees parameters (index, distribution) = do
-    liftIO . print $ "Building " <> show index
-    singleTransferInputs parameters index
-    >>= maybe
-            (pure ())
-            buildAndSubmitWithoutWaitingConfimation
+        liftIO . print $ "Building " <> show index
+        singleTransferInputs parameters index
+    >>= maySkip buildAndSubmitWithoutWaitingConfimation
   where
+    maySkip :: Applicative m => (a -> m ()) -> Maybe a -> m ()
+    maySkip = maybe $ pure ()
+
     buildAndSubmitWithoutWaitingConfimation ::
         ( MonadIO m
         , MonadReader Environment m
         , MonadError  TokenomiaError m
         )
         => NonEmpty TxInFromWallet -> m ()
-    buildAndSubmitWithoutWaitingConfimation inputs =
+    buildAndSubmitWithoutWaitingConfimation inputs = do
+            outputs <- distributionOutputs parameters distribution
             build
                 (Balanced fees)
                 (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
-                (singleTransferTxBuild parameters distribution inputs)
+                (singleTransferTxBuild parameters inputs outputs)
         >>= void . submitWithoutWaitingConfimation
 
-singleTransferTxBuild :: Parameters -> Distribution -> NonEmpty TxInFromWallet -> TxBuild
-singleTransferTxBuild parameters distribution inputs =
+singleTransferTxBuild :: Parameters -> NonEmpty TxInFromWallet -> NonEmpty TxOut -> TxBuild
+singleTransferTxBuild parameters inputs outputs =
     TxBuild
         { inputsFromScript          = Nothing
         , inputsFromWallet          = inputs
-        , outputs                   = distributionOutputs parameters distribution
+        , outputs                   = outputs
         , validitySlotRangeMaybe    = Nothing
         , metadataMaybe             = Metadata <$> metadataFilePath parameters
         , tokenSupplyChangesMaybe   = Nothing
