@@ -54,13 +54,20 @@ recipientPerTxInRange parameters _
     | otherwise                      = Right ()
 
 allAmountsInRange :: Parameters -> Distribution -> Either DistributionError ()
-allAmountsInRange _ distribution =
-    () <$ traverse amountInRange (recipients distribution)
+allAmountsInRange Parameters{..} Distribution{..} =
+    () <$ traverse amountInRange recipients
   where
     amountInRange :: Recipient -> Either DistributionError ()
-    amountInRange recipient
-        | CLI.amount recipient <=   0 = Left AmountTooLow
-        | otherwise               = Right ()
+    amountInRange Recipient{..}
+        |     distributeAda && amount <= ε  = Left AmountTooLow
+        | not distributeAda && amount <= 0  = Left AmountTooLow
+        | otherwise                         = Right ()
+
+    distributeAda :: Bool
+    distributeAda = assetClass == adaAssetClass
+
+    ε :: Integer
+    ε = minLovelacesPerUtxo
 
 allAddressesUnique :: Parameters -> Distribution -> Either DistributionError ()
 allAddressesUnique _ distribution
