@@ -19,6 +19,7 @@ import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Test.QuickCheck.Instances ()
 import           Tokenomia.Common.Hash
 import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.WalletUTxO
 import  Data.Set.NonEmpty as NES
 import  Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
 
