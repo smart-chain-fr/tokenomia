@@ -59,6 +59,16 @@ Provide a `JSON` file containing the list of address and associated amount of to
 }
 ```
 
+**METADATA FILE**
+
+Provide a `JSON` file with an integer top level key (as per cardano [transaction metadata requirement](https://developers.cardano.org/docs/transaction-metadata/). This random integer can be used as an identifier for the distribution to be retrieved with a metadata cache.
+
+```json
+{
+  "4204510689596672392": "Cardashift airdrop"
+}
+```
+
 **PREREQUISITES**
 
 - `recipients` input list must be non empty
@@ -66,3 +76,18 @@ Provide a `JSON` file containing the list of address and associated amount of to
 - `amount` must all be strictly positive `> 0`
 - `address` must all be unique, no duplicate
 - `tokenSource` must already be provisionned with sufficient amount of token
+- `adaSource` must already be provisionned with sufficient amount of ADA for fees and minADAperUTxO value
+- `collateralSource` must already be provisionned with an UTxO containing 2 ADA
+
+**BENCHMARK**
+
+Date : May 31 2022 </br>
+cardano-cli 1.34.1
+
+| Batchs per execution | Tx per batch | Total Tx | Status |
+|----------------------|--------------|----------|--------|
+| 1                    | 148          | 148      | OK     |
+| 40                   | 10           | 400      | OK     |
+| 40                   | 70           | 2800     | NOK    |
+| 35                   | 70           | 2450     | OK     |
+| 35                   | 100          | 3500     | OK     |
