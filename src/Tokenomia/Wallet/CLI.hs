@@ -149,8 +149,13 @@ register
 register = do
   printLn "-----------------------------------"
   walletName <- askWalletName
-  _ <- Repository.register walletName
-  printLn "Wallet Created and Registered!"
+  exists <- Repository.exists walletName
+  if exists
+    then
+      printLn "Wallet already exists!"
+    else do
+      _ <- Repository.register walletName
+      printLn "Wallet Created and Registered!"
   printLn "-----------------------------------"
 
 
@@ -267,5 +272,3 @@ restoreByMnemonics = do
   seedPhrase <- words <$> getSeedPhrase
   _ <- Repository.restoreByMnemonics walletName seedPhrase
   printLn "-----------------------------------"
-
-
