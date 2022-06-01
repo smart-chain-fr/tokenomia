@@ -23,6 +23,7 @@ module Tokenomia.Common.Transacting
     , Metadata (..)
     , ValiditySlotRange (..)
     , MonetaryAction (..)
+    , calculateMinRequiredUTxO
     , createMetadataFile
     , build
     , buildAndSubmit
@@ -58,6 +59,9 @@ import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Environment
 
 
+import           Tokenomia.Common.Data.Convertible          ( convert )
+import           Tokenomia.Common.Parser                    ( unsafeParseOnly )
+import           Tokenomia.Common.Parser.MinRequiredUTxO    ( minRequiredUTxO )
 import           Tokenomia.Common.Serialise (toCLI, fromCLI)
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 
@@ -176,6 +180,21 @@ getBuildMode :: TxBalance -> String
 getBuildMode (Unbalanced _) = "build"
 getBuildMode Balanced {}  = "build-raw"   
 
+calculateMinRequiredUTxO ::
+    ( MonadIO m
+    , MonadReader Environment m
+    )
+    => TxOut -> m Value
+calculateMinRequiredUTxO txOut = do
+    protocolParametersPath <- register_protocol_parameters
+    result <- liftIO $
+        cardano_cli
+            "transaction"
+            "calculate-min-required-utxo"
+            "--protocol-params-file" protocolParametersPath
+            (toCardanoCLIOptions txOut)
+        |> capture
+    pure $ unsafeParseOnly minRequiredUTxO (convert result)
 
 build'
     :: ( ExecArg a
