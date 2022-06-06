@@ -87,7 +87,9 @@ library
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
       Tokenomia.Common.Data.List.NonEmpty
+      Tokenomia.Common.Parser
       Tokenomia.Common.Parser.AssetClass
+      Tokenomia.Common.Parser.MinRequiredUTxO
       Tokenomia.Common.Parser.Value
       Tokenomia.Common.Parser.TxOutDatumHash
       Tokenomia.Common.Parser.TxOutRef
