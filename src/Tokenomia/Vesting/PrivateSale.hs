@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module PrivateSale where
+module PrivateSale (verifyPrivateSale) where
 
 -- TODO: add necessary imports, clear unnecessary imports 
 import           Prelude                (IO, Semigroup (..), Show (..), String)
@@ -30,7 +30,7 @@ import qualified Data.ByteString.Lazy as BS
 import           Data.Time              (UTCTime(UTCTime))
 import           Data.Function          (on)
 import           Data.List              (sort)
-import           Money.SomeDiscrete     (someDiscreteAmount, someDiscreteCurrency)
+import qualified Money.SomeDiscrete   as SD 
 import qualified Blockfrost.Client    as B
 
 type Percentage = Integer 
@@ -40,59 +40,6 @@ instance FromJSON PrivateSale
 instance FromJSON PrivateInvestor 
 instance FromJSON Investment 
 instance FromJSON Tranche 
-
-{-
-Everything in this file has yet to be integrated, once the logic is complete I can 
-integrate it into the CLI quite easily, exporting relevant fxns. 
-For now it's disorganized and incomplete. 
-*************************************************************************************
-STRUCTURE:
-----------
-I'm going to build based on the assumption that we have access to TxHash in the JSON
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-If we have access to TxId/TxHash, then simply pull the Tx's from treasury address using
-
-  getAddressTransactions :: MonadBlockfrost m => Address -> m [AddressTransaction]
-
-On each AddressTransaction, we have a TxHash.
-
-We then pull the TxHashes from Investment, filtering [AddressTransaction] by these TxHashes,
-comparing the Amount and AssetClass
-
-We'll need to access fields of Investment using optics b/c nested records
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-But if we don't have access to TxId/TxHash in Investor, then we have 2 other options:
-
-We can search by PrivateInvestor address. Using the getAddressTransactions again,
-we get [AddressTransaction], from which we can extract the [TxHash], which we can use
-to pull up the full Transaction using 
-
-  getTx :: MonadBlockfrost m => TxHash -> m Transaction
-
-We have a lot more fields to look at in the Transaction type, but still we can't just see
-addresses / UTXOs
-
-So then maybe use
-
-  getTxUtxos :: MonadBlockfrost m => TxHash -> m TransactionUtxos
-
-And the type TransactionUtxos has a field _transactionUtxosOutputs :: [UtxoOutput]
-
-And UtxoOutput has _utxoOutputAddress :: Address and _utxoOutputAmount :: [Amount]
-
-So we can filter _utxoOutputAddress by the treasury address and make sure the Amount is correct,
-but we're not confirming the AssetClass here. To do that, we should pull the AssetClass from
-Investor and use 
-
-  getAssetTransactions :: MonadBlockfrost m => AssetId -> m [AssetTransaction]
-
-from which we can extract TxHash just like with AddressTransaction, and filter those TxHash
-by the ones we got earlier.
-
-*************************************************************************************
--}
-
 
 data PrivateSale
   = PrivateSale
@@ -118,7 +65,7 @@ data PrivateInvestor
 
 data Investment
   = Investment
-    { _invTx             :: TxId    -- Tx that sends below asset class to payment address
+    { _invTx             :: TxHash    -- Tx that sends below asset class to payment address
     , _invAssetClass     :: AssetClass
     , _invAmount         :: Integer -- Amount of above asset class expected to be sent to payment address
     } deriving (Generic, Show)
@@ -127,45 +74,6 @@ makeLenses ''PrivateSale
 makeLenses ''Tranche
 makeLenses ''PrivateInvestor
 makeLenses ''Investment
-
-{-
-look up txId and verify that amount and assetClass are the same as what we pulled from address
-  address privateSale ... This is the treasury address 
-  using getAddressTransactions I can pull up all the Tx's for that address:
-  getAddressTransactions :: MonadBlockfrost m => Address -> m [AddressTransaction] -- Each AddrTx will have a TxHash
-  then AddressTransaction has:
-
-  _addressTransactionTxHash :: TxHash
-
-  then using TxHash I can pull up Transaction with a ton of fields
-
------------------------------------------------
-  
-  PrivateSale -> [PrivateInvestor] -> [[Investment]] -> TxId ... we use this TxId to lookup assetclass / amount and compare to 
-    treasury address info... but how?
-    the following are all fxn's that take TxHash as a param (in blockfrost-client):
-    getTx :: MonadBlockfrost m => TxHash -> m Transaction
-    getTxUtxos :: MonadBlockfrost m => TxHash -> m TransactionUtxos
-
-  If I have TxHash, then I could maybe use getTx:
-  getTx :: MonadBlockfrost m => TxHash -> m Transaction
-
-  Then Transaction has the following fields of interest:
-  _transactionOutputAmount :: [Amount] -- where data Amount = AdaAmount Lovelaces | AssetAmount SomeDiscrete 
-    SomeDiscrete appears to be for non-Ada assets, but it appears to only have a field for the token name, not the full AssetClass
-
-note: the pair below for AssetAmount is pseudocode
-  so it's: TxHash -> Transaction -> [Amount] -> [AssetAmount (amount, tokenName)] -> 
-
------
-***
-If I don't have access to the TxId/TxHash for the Investment type, I can search by AssetClass by doing:
-
-getAssetTransactions :: MonadBlockfrost m => AssetId -> m [AssetTransaction]
-
-where AssetId is the currency symbol / tokenName concatenated 
-
--}
 
 getPsInvestments :: PrivateSale -> [Investment]
 getPsInvestments ps = investments 
@@ -210,29 +118,77 @@ compareAssets (AssetAmount sd) ps = sdTokenName == tokenNames && sdAmount == amo
 -- someDiscreteCurrency :: SomeDiscrete -> Text
 -- someDiscreteAmount :: SomeDiscrete -> Integer
 
-getTokenName :: AssetClass -> TokenName
-getTokenName = snd . unAssetClass
 
--- TODO: abstract as much as possible out of this mess
-main :: IO ()
-main = do 
+-- TODO: pass prj into all blockfrost API fxns
+verifyPrivateSale
+ :: (MonadIO m
+   , MonadReader Environment m
+   , MonadError TokenomiaError m)
+   => m ()
+verifyPrivateSale = do
   putStrLn "Please enter the filepath to a private sale .json file"
-  jsonFile <- getLine
-  contents <- BS.readFile jsonFile
-  case (decode contents :: Maybe PrivateSale) of
-    Nothing -> putStrLn "Unable to parse"
-    Just ps -> let treasuryTransactions = getAddressTransactions . psAddress $ ps in do -- V :: m [AddressTransaction]
+  jsonFilePath <- getLine
+  fileContents <- BS.readFile jsonFilePath
+  case (decode fileContents :: Maybe PrivateSale) of
+    Nothing -> putStrLn "Unable to parse JSON file"
+    Just ps -> do 
       prj <- B.projectFromEnv''
-      treasuryTransactions' <- liftIO (B.runBlockfrost prj treasuryTransactions) -- TODO: check types (is this [AddressTransaction] ?)
+      treasAddrTxs <- liftIO (B.runBlockfrost prj (B.getAddressTransactions . psAddress $ ps)) -- :: [AddressTransaction]
                                   >>= (\case 
-                                          Left e    -> throwError $ BlockFrostError e
-                                          Right res -> return res)
-        let investmentTxHashes = (^. invTx) <$> getPsInvestments ps in -- [TxHash]
-          let txhs = filter (`elem` investmentTxHashes) (_addressTransactionTxHash <$> treasuryTransactions') in -- :: [TxHash]
+                                          Left e    -> tryError $ BlockfrostError e
+                                          Right res -> return res)  
+                     
+        let invs = getPsInvestments ps in      -- :: [Investment]
+          let invTxhs = (^. invTx) <$> invs in -- :: [TxHash]
+            let txhs = filter (`elem` invTxhs) (_addressTransactionTxHash <$> treasAddrTxs) in -- :: [TxHash]
+              case (compare `on` length) txhs invTxhs of -- TODO: is comparing the length enough to make sure
+                                                         --   all the TXs are there? seems likely
+                LT -> throwError $ BlockFrostError "failed, missing TXs"
+                GT -> throwError $ BlockFrostError "this line can only execute if blockfrost provides duplicate TXs"
 
-          -- TODO: abstract into its own fxn
-            case (compare `on` length) txhs investmentTxHashes of -- TODO: is comparing the length enough to make sure
-                                                                                  -- all the TXs are there? seems likely
+                EQ -> foldl (\z txh -> 
+                  let inv = getInvByTxHash txh invs in                      -- :: Investment (the one that matches the TxHash)
+                    let tokenName = getTokenName $ inv ^. invAssetClass in  -- :: TokenName
+                      let amount = inv ^. invAmount in do
+                        bfTx <- liftIO (B.runBlockfrost prj getTx txh)      -- TODO: fix this line w/ some (.) and ($)
+                                  >>= (\case
+                                          Left e -> tryError $ BlockfrostError e
+                                          Right res -> return res)          -- should be :: Transaction
+                                          -- TODO: get [Amount] from Transaction and compare to tokenName and amount above
+                          let bfAmts = _transactionOutputAmount bftx in      -- :: [Amount]
+                            -- TODO: now filter bfAmounts by Amounts where the amount's tokenName == tokenName above
+                            -- TODO: below, make sure types of tokenName and someDiscreteCurrency match
+                            let matchingAmt = head . filter (\bfAmt -> SD.someDiscreteCurrency bfAmt == tokenName) bfAmts in
+                              case SD.someDiscreteAmount matchingAmt of 
+                                amount -> return "success"
+                                _      -> tryError $ BlockfrostError e
+                              SD.someDiscreteAmount matchingAmt == amount
+
+                            -- getInvByTxHash :: TxHash -> [Investment] -> Investment
+                            -- getInvByTxHash txh = head . filter (\inv -> (inv ^. invTx) == txh)
+
+                        -- let bfTx = getTx txh in      
+                          
+
+
+                        -- bfTx :: m Transaction  (this line needs some work, will need to pass prj)
+
+
+
+                          -- let bfAmount = 
+ 
+                          -- head . filter (== tokenName) (_transactionOutputAmount txh)
+
+                          -- compareAssets :: Amount -> PrivateSale -> Bool
+
+
+                          compareAssets ( txh)
+                          -- in blockfrost, do: TxHash --> Transaction --> Amount --> someDiscreteAmount, 
+                          -- someDiscreteCurrency
+                  -- now we have the Investment that corresponds to this TxHash, so get the AssetClass and Integer from Investment
+
+                  ) z txhs
+
 
 -- TODO: probably don't need to use `on`, just compare length instead. no need to have a GT line when it won't execute anyway
 -- TODO: decide if the fold that returns a list of transactions that didn't pass our comparison tests
@@ -243,27 +199,17 @@ main = do
 --   TokenName, make sure the Amount is the same
 --   So... get TokenName first, then search through [[Amount]]
 --   So I need to make use of these 2 fxn's used earlier:
+-- TODO: use nonEmpty instead of unsafely using head?
+-- TODO: look into blockfrost lenses
 
-              LT -> putStrLn "failed, missing TXs"
-              GT -> putStrLn "this line will never execute"
-              EQ -> let investments = getPsInvestments ps in 
-                foldl (\z txh -> 
-                  let inv = filterTransactions txh investments in
-                    let assetClass = inv ^. invAssetClass in
-                      let tokenName = getTokenName assetClass in
-                        head . filter (== tokenName) (_transactionOutputAmount txh)
-                  -- now we have the Investment that corresponds to this TxHash, so get the AssetClass and Integer from Investment
-
-                  ) z txhs
-
-tokenNames :: [TokenName]
-tokenNames = getTokenName <$> assetClasses
+getTokenName :: AssetClass -> TokenName
+getTokenName = snd . unAssetClass
 
 assetClasses :: [AssetClass]
 assetClasses = (^. invAssetClass) <$> getPsInvestments ps 
 
-filterTransactions :: TxHash -> [Investment] -> Investment
-filterTransactions txh = head . filter (== txh)            
+getInvByTxHash :: TxHash -> [Investment] -> Investment
+getInvByTxHash txh = head . filter (\inv -> (inv ^. invTx) == txh)
                 
               -- so we have filteredTransactions (treas) [TxHash] and investments ([Investment])
                 

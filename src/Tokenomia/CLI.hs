@@ -37,6 +37,7 @@ import qualified Tokenomia.Ada.Transfer as Ada
 
 import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
+import qualified Tokenomia.Vesting.PrivateSale as PrivateSale
 
 import qualified Tokenomia.Node.Status as Node
 import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
@@ -116,7 +117,7 @@ recursiveMenu = do
         NoWalletWithCollateral    -> printLn "No Wallets with collateral..."
         WalletWithoutCollateral   -> printLn "Wallets selected without a required collateral..."
         AlreadyACollateral        -> printLn "Collateral Already Created..."
-        NoADAsOnChildAddress ->             printLn "Please, add ADAs to your wallet..."
+        NoADAsOnChildAddress      -> printLn "Please, add ADAs to your wallet..."
         NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
         TryingToBurnTokenWithoutScriptRegistered 
                                   -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
@@ -130,18 +131,18 @@ recursiveMenu = do
                                      printLn $ "Inconsistencies Blockfrost vs Local Node  :" <> errorMsg
         NoICOTransactionsToBePerformOnThisWallet  
                                   -> printLn "No ICO Transactions to be performed on wallet used "
-        NoDerivedChildAddress  -> printLn "No derived child adresses on this wallet"
-        NoUTxOsFound           -> printLn "No UTxOs found"
+        NoDerivedChildAddress     -> printLn "No derived child adresses on this wallet"
+        NoUTxOsFound              -> printLn "No UTxOs found"
         ICOExchangeUtxoWithoutHash 
-                               -> printLn "ICO - Echange UTxOs without Hashes"
+                                  -> printLn "ICO - Echange UTxOs without Hashes"
         ICOTokensDispatchedOnMultipleUTxOs 
-                               -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
-        ICONoValidTxs message  -> liftIO $ putStrLn $ "ICO - No Valid Txs Found : " <>  message
-        ICOPaybackAddressNotAvailable walletName index -> 
-                                  printLn $ "ICO - Payback Address not available for  : " <>  walletName <> " index #" <> show index
+                                  -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
+        ICONoValidTxs message     -> liftIO $ putStrLn $ "ICO - No Valid Txs Found : " <>  message
+        ICOPaybackAddressNotAvailable walletName index 
+                                  -> printLn $ "ICO - Payback Address not available for  : " <>  walletName <> " index #" <> show index
         ICOWhitelistingNotValid index indexRetrieved -> 
                                   printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved  
-        InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
+        InvalidTransaction e      -> printLn $ "Invalid Transaction : " <> e
         ChildAddressNotIndexed w address 
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")
             
@@ -171,6 +172,7 @@ runAction = \case
       AdaTransfer      -> Ada.transfer
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
+      VestingVerifyPrivateSale -> Vesting.verifyPrivateSale
       NodeStatus           -> Node.displayStatus
       NodeTranslateSlotToTime    -> Node.translateSlotToTime
       NodeTranslateTimeToSlot    -> Node.translateTimeToSlot
@@ -199,6 +201,7 @@ actions = NonEmpty.fromList [
     AdaTransfer,
     VestingVestFunds,
     VestingRetrieveFunds,
+    VestingVerifyPrivateSale,
     NodeStatus,
     NodeTranslateSlotToTime,
     NodeTranslateTimeToSlot,
@@ -226,6 +229,7 @@ data Action
   | AdaTransfer
   | VestingVestFunds
   | VestingRetrieveFunds
+  | VestingVerifyPrivateSale
   | NodeStatus 
   | NodeTranslateSlotToTime
   | NodeTranslateTimeToSlot
@@ -239,25 +243,26 @@ data Action
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
-    WalletList            -> " [Wallet]  - List Registered Wallets" 
-    WalletDisplay         -> " [Wallet]  - Display wallet utxos"
+    WalletList               -> " [Wallet]  - List Registered Wallets" 
+    WalletDisplay            -> " [Wallet]  - Display wallet utxos"
     WalletDisplayWihtinIndexRange   
-                          -> " [Wallet]  - Display wallet utxos within child address index range"     
-    WalletRestore         -> " [Wallet]  - Restore Wallets from your 24 words seed phrase (Shelley Wallet)"
-    WalletCreate          -> " [Wallet]  - Create a new Wallet"
+                             -> " [Wallet]  - Display wallet utxos within child address index range"     
+    WalletRestore            -> " [Wallet]  - Restore Wallets from your 24 words seed phrase (Shelley Wallet)"
+    WalletCreate             -> " [Wallet]  - Create a new Wallet"
     WalletGenerateChildAddresses 
-                          -> " [Wallet]  - Derive Child Adresses"
-    WalletCollateral      -> " [Wallet]  - Create a unique collateral for transfer"
-    WalletRemove          -> " [Wallet]  - Remove an existing Wallet"
-    TokenMint             -> " [Token]   - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy)"
-    TokenBurn             ->  "[Token]   - Burn Tokens with CLAP type policy"
-    TokenTransfer         ->  "[Token]   - Transfer Tokens"
-    AdaTransfer           ->  "[Ada]     - Transfer ADAs"
-    VestingVestFunds      ->  "[Vesting] - Vest Funds"
-    VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
-    NodeStatus            ->  "[Node]    - Status"
-    NodeTranslateSlotToTime -> "[Node]    - Translate Slot To Time"
-    NodeTranslateTimeToSlot -> "[Node]    - Translate Time To Slot"
+                             -> " [Wallet]  - Derive Child Adresses"
+    WalletCollateral         -> " [Wallet]  - Create a unique collateral for transfer"
+    WalletRemove             -> " [Wallet]  - Remove an existing Wallet"
+    TokenMint                -> " [Token]   - Mint with CLAP type policy (Fix Total Supply | one-time Minting and open Burning Policy)"
+    TokenBurn                -> " [Token]   - Burn Tokens with CLAP type policy"
+    TokenTransfer            -> " [Token]   - Transfer Tokens"
+    AdaTransfer              -> " [Ada]     - Transfer ADAs"
+    VestingVestFunds         -> " [Vesting] - Vest Funds"
+    VestingRetrieveFunds     -> " [Vesting] - Retrieve Funds"
+    VestingVerifyPrivateSale -> " [Vesting] - Verify Private Sale"
+    NodeStatus               -> " [Node]    - Status"
+    NodeTranslateSlotToTime  -> " [Node]    - Translate Slot To Time"
+    NodeTranslateTimeToSlot  -> " [Node]    - Translate Time To Slot"
     ICOStatus                  ->  "[ICO]     - Status"
     ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
     ICOFundsValidationRun      ->  "[ICO]     - Funds Validation Run"
