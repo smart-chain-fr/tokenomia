@@ -32,6 +32,7 @@ import           Data.Function          (on)
 import           Data.List              (sort)
 import qualified Money.SomeDiscrete   as SD 
 import qualified Blockfrost.Client    as B
+import qualified Blockfrost.Lens      as B
 
 type Percentage = Integer 
 type Duration   = Integer 
@@ -75,40 +76,13 @@ makeLenses ''Tranche
 makeLenses ''PrivateInvestor
 makeLenses ''Investment
 
-
--- compareAssets :: Amount -> PrivateSale -> Bool
--- compareAssets (AdaAmount ll) ps = tokenNames == BS.empty && llAmount == amounts
--- compareAssets (AssetAmount sd) ps = sdTokenName == tokenNames && sdAmount == amounts
-
-
---   where -- TODO: define llAmount
---     tokenNames :: [TokenName]
---     tokenNames = getTokenName <$> assetClasses
-
---     assetClasses :: [AssetClass]
---     assetClasses = (^. invAssetClass) <$> getPsInvestments ps 
-
---     amounts :: [Integer]
---     amounts = (^. invAmount) <$> getPsInvestments ps
-
---     sdTokenName :: Text
---     sdTokenName = someDiscreteCurrency sd
-
---     sdAmount :: Integer
---     sdAmount = someDiscreteAmount sd
-
--- someDiscreteCurrency :: SomeDiscrete -> Text
--- someDiscreteAmount :: SomeDiscrete -> Integer
-
-
 -- TODO: pass relevant vals as params to verifyPrivateSale, instead of binding everything inline
--- TODO: find out what to do with foldl ... what is the end result? a non-empty list means that something went wrong?
 -- TODO: fix types for verifyPrivateSale
 verifyPrivateSale
  :: (MonadIO m
    , MonadReader Environment m
    , MonadError TokenomiaError m)
-   => m ()
+   => m Bool
 verifyPrivateSale = do
   putStrLn "Please enter the filepath to a private sale .json file"
   jsonFilePath <- getLine
@@ -126,76 +100,70 @@ verifyPrivateSale = do
             let invTxhs = (^. invTx) <$> invs    -- :: [TxHash]
                 txhs = verifyTxHashList invTxhs treasAddrTxs' in
                   case (compare `on` length) txhs invTxhs of -- TODO: is comparing the length enough to make sure
-                                                           --   all the TXs are there? seems likely
+                                                             --   all the TXs are there? seems likely
                     LT -> throwError $ BlockFrostError "failed, missing TXs"
                     GT -> throwError $ BlockFrostError "this line can only execute if blockfrost provides duplicate TXs"
-                  -- the below fold should return an empty list if all the Amounts match up.
-                  -- otherwise, for any non-matching pair of Amounts, it conses a pair of (bfAmount, psAmount) : []
-                    EQ -> foldl (\z txh -> do
-                      bfTx <- liftIO (B.runBlockfrost prj (B.getTx txh))     -- bfTx :: Either BlockfrostError B.Transaction
-                      inv <- getInvByTxHash txh invs                         -- :: Just Investment (the one that matches the TxHash)
-                      let tokenName = getTokenName $ inv ^. invAssetClass    -- :: Text
-                          amount = inv ^. invAmount in                       -- :: Integer
-                            case bfTx of 
-                              Left e      -> throwError $ BlockFrostError e
-                              Right bfTx' ->                                     -- bfTx' :: B.Transaction
-                                  -- let bfAmts = _transactionOutputAmount bfTx' in do  -- :: [B.Amount] redoing w/ a lens:
-                                let bfAmts = bfTx' ^. outputAmount in                 -- :: [B.Amount]
-                                  -- amt <- head (getAmountByTokenName tokenName <$> bfAmts) -- :: [Maybe B.Amount] should be a singleton list
-                                  case head (getAmountByTokenName tokenName <$> bfAmts) of
-                                    Nothing  -> throwError $ BlockFrostError "No matching Amount"
-                                    Just amt -> 
-                                      -- if getDiscreteAmount amt == amount then z else False
-                                      (getDiscreteAmount amt == amount) && z
-                                  -- TODO: rethink this logic, what do I do in the case we don't have a matching Amount
-                                  --   or something else goes wrong? just filling up a [(,)] of failed TXs?
-                              ) True txhs
+                  -- note: the GT line above means that the only way the [TxHash] from the investment address can be greater than
+                  -- invTxhs after filtering with verifyTxHashList is if we have duplicate transactions, so probably 
+                  -- a good idea to account for that possibility
+
+                    EQ -> 
+                      let txsAreValid = foldl (\z txh -> do
+                          bfTx <- liftIO (B.runBlockfrost prj (B.getTx txh))     -- bfTx :: Either BlockfrostError B.Transaction
+                          inv  <- getInvByTxHash txh invs                         -- :: Just Investment (the one that matches the TxHash)
+                          let invTokenName = getTokenName $ inv ^. invAssetClass    -- :: Text
+                              invAmount' = inv ^. invAmount in                       -- :: Integer
+                                case bfTx of 
+                                  Left e      -> throwError $ BlockFrostError e
+                                  Right bfTx' ->                                      -- bfTx' :: B.Transaction
+                                    let bfAmts = bfTx' ^. outputAmount in                   -- :: [B.Amount]
+                                      case head (getAmountByTokenName invTokenName <$> bfAmts) of
+                                        Nothing  -> throwError $ BlockFrostError "No matching Amount for the given tokenName"
+                                        Just amt -> return ((getDiscreteAmount amt == invAmount') && z)
+                          ) True txhs in
+                        return txsAreValid
+                      return txsAreValid
 
 getPsInvestments :: PrivateSale -> [Investment]
 getPsInvestments ps = investments 
 
   where
-    investments :: [Investment]
+    investments  :: [Investment]
     investments = investmentss ^.. folded . folded
 
     investmentss :: [[Investment]]
     investmentss = (^. piInvestments) <$> investors
 
-    investors :: [PrivateInvestor]
+    investors    :: [PrivateInvestor]
     investors = ps ^. psInvestors
 
 verifyTxHashList :: [TxHash] -> [AddressTransaction] -> [TxHash]
 verifyTxHashList txhs addrTxs = 
-  -- filter (`elem` txhs) (_addressTransactionTxHash <$> addrTxs)
   filter (`elem` txhs) ((^. txHash) <$> addrTxs)
 
-    -- TODO: pattern match for Ada / SomeDiscrete
-    -- TODO: this fxn takes a list of Amounts but my logic is not correct at all.
-    --      actually I should pass in just a single B.Amount then I can <$> this fxn
 getAmountByTokenName :: Text -> B.Amount -> Maybe B.Amount
 getAmountByTokenName "ADA" amt@(AdaAmount _) = Just amt
 getAmountByTokenName _ (AdaAmount _)         = Nothing
 getAmountByTokenName tokenName amt@(AssetAmount sd) = 
   if getDiscreteCurrency sd == tokenName then Just amt else Nothing
 
-  -- let matchingAmt = head . filter (\amt -> getDiscreteCurrency amt == tokenName) amts in
-
-  -- TODO: extract tokenName from ( AdaAmount Lovelaces ) where:
-  -- type Lovelaces = Discrete "ADA" "lovelace"
+-- type Lovelaces = Discrete "ADA" "lovelace"
 
 -- gets the TokenName that corresponds to the B.Amount (where B.Amount is like AssetClass)
 getDiscreteCurrency :: B.Amount -> Text
-getDiscreteCurrency (AdaAmount ll) = "ADA"
+getDiscreteCurrency (AdaAmount ll)   = "ADA"
 getDiscreteCurrency (AssetAmount sd) = SD.someDiscreteCurrency amt
 
 -- TODO: must use discreteToDecimal :: GoodScale scale => DecimalConf -> Approximation -> Discrete' currency scale -> Text
 --      in order to pull out the AdaAmount
 -- gets the value of the transaction for that AssetClass (Amount in blockfrost is like both AssetClass and # of tokens in a Tx)
 getDiscreteAmount :: B.Amount -> Integer
-getDiscreteAmount (AdaAmount ll) = undefined
+getDiscreteAmount (AdaAmount ll)   = undefined
 getDiscreteAmount (AssetAmount sd) = SD.someDiscreteAmount sd
 
--- TODO: convert to Text for comparison to someDiscreteCurrency, which returns type Text
+-- someDiscreteCurrency :: SomeDiscrete -> Text
+-- someDiscreteAmount :: SomeDiscrete -> Integer
+
 --    if I have a String type, I can use pack :: String -> Text in Data.Text
   -- newtype CurrencySymbol = CurrencySymbol { unCurrencySymbol :: Builtins.ByteString }
   -- newtype TokenName = TokenName { unTokenName :: Builtins.ByteString }
@@ -213,17 +181,8 @@ assetClasses = (^. invAssetClass) <$> getPsInvestments ps
 -- TODO: add support for Maybe
 getInvByTxHash :: TxHash -> [Investment] -> Maybe Investment
 getInvByTxHash _ [] = Nothing
-getInvByTxHash txh invs = Just (head . filter (\inv -> (inv ^. invTx) == txh) invs)
-                
-              -- so we have filteredTransactions (treas) [TxHash] and investments ([Investment])
-                
-              -- let investmentAmounts = (^. invAmount) <$> getPsInvestments ps in -- [Integer]                
-              
-              -- Iterate through filteredTransactions, and for each TxHash, call _transactionOutputAmount to get [Amount] 
-              -- Then filter getPsInvestments by that TxHash and get the AssetClass, and then extract the TokenName 
-              -- Then filter the [Amount] by TokenName, and for the matching Amount for that TokenName, compare the Integer and the Amount
+getInvByTxHash txh invs = Just (head . filter (\inv -> (inv ^. invTx) == txh) invs)           
 
--- we extract the TokenName from the AssetClass like so: 
 -- newtype AssetClass = AssetClass { unAssetClass :: (CurrencySymbol, TokenName) }
 
 -- a list comprehension may be a good replacement for the fold in main. meditating on it
