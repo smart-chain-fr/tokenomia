@@ -27,4 +27,3 @@ cabal.project.local~
 result*
 .envrc
 .vim
-tasks.json
