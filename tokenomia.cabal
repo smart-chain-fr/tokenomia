@@ -67,6 +67,7 @@ library
       Tokenomia.Vesting.Repository
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
+      Tokenomia.Vesting.PrivateSale
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Common.Blockfrost
       Tokenomia.Common.Value
@@ -174,6 +175,7 @@ library
       ordered-containers,
       nonempty-containers,
       streamly,
+      transformers,
       deepseq,
       hashable,
       hex-text

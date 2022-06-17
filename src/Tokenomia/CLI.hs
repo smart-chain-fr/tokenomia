@@ -37,7 +37,7 @@ import qualified Tokenomia.Ada.Transfer as Ada
 
 import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
-import qualified Tokenomia.Vesting.PrivateSale as PrivateSale
+import qualified Tokenomia.Vesting.PrivateSale as Vesting
 
 import qualified Tokenomia.Node.Status as Node
 import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
