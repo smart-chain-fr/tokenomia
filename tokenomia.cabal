@@ -157,6 +157,7 @@ library
       cardano-ledger-alonzo,
       plutus-ledger-api,
       serialise,
+      fourmolu,
       freer-extras,
       playground-common,
       plutus-chain-index,
