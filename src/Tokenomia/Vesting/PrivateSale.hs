@@ -54,6 +54,12 @@ instance FromJSON Tranche
 type Percentage = Integer 
 type Duration   = Integer 
 
+instance Eq Text where 
+  x == y = True
+
+instance Eq B.TxHash where
+  x == y = True
+
 data PrivateSale
   = PrivateSale
     { _psAddress         :: B.Address    -- Treasury address
@@ -88,58 +94,76 @@ makeLenses ''Tranche
 makeLenses ''PrivateInvestor
 makeLenses ''Investment
 
--- verifyPrivateSale
---  :: (MonadIO m
---    , MonadReader Environment m
---    , MonadError TokenomiaError m)
---    => String
---    -> m Bool
--- verifyPrivateSale :: FilePath -> IO Bool
-verifyPrivateSale
-  :: (MonadIO m
+verifyPrivateSale :: 
+  (MonadIO m
+  , MonadError  TokenomiaError m
+  , MonadReader Environment m)
+  => m ()
+verifyPrivateSale = do
+  liftIO . putStrLn $ "Please enter a filepath with JSON data"
+  jsonFilePath <- liftIO getLine
+  verifyPrivateSale' jsonFilePath
+
+verifyPrivateSale' :: 
+  (MonadIO m
   , MonadError  TokenomiaError m
   , MonadReader Environment m)
   => FilePath 
-  -> MaybeT m Bool
-verifyPrivateSale jsonFilePath = do        
-  ps <- liftIO . jsonToPrivateSale $ jsonFilePath     -- :: PrivateSale <- IO PrivateSale
-  treasAddrTxs <- getTreasAddrTxs ps           -- :: [B.AddressTransaction] <- m [B.AddressTransaction]
-  let invs = getPsInvestments ps in            -- :: [Investment]
-    let invTxhs = (^. invTx) <$> invs in       -- :: [TxHash]
-      let txhs = verifyTxHashList invTxhs treasAddrTxs in
-        if length txhs == length invTxhs then do
-          verifyTxs invs txhs
-          else return False
-        -- return (length txhs == length invTxhs) && do verifyTxs invs txhs
-         
-verifyTxs
-  :: (MonadIO m
+  -> m ()
+verifyPrivateSale' jsonFilePath = do
+  ps <- jsonToPrivateSale jsonFilePath
+  treasAddrTxs <- getTreasAddrTxs ps               -- :: [B.AddressTransaction] <- m [B.AddressTransaction] 
+  let invTxhs = privateSaleToTxhs ps in
+    let txhs = verifyTxHashList invTxhs treasAddrTxs in
+      if length txhs == length invTxhs then do
+        verifyTxs (getPsInvestments ps) txhs
+        else throwError . BlockFrostError . B.BlockfrostError $ "Unequal lengths, means missing TXs"
+
+jsonToPrivateSale ::
+  (MonadIO m
+  , MonadError  TokenomiaError m
+  , MonadReader Environment m)
+  => FilePath 
+  -> m PrivateSale
+jsonToPrivateSale jsonFilePath = do
+    fileContents <- liftIO . readFile $ jsonFilePath
+    case (decode fileContents :: Maybe PrivateSale) of
+        Nothing -> throwError . BlockFrostError . B.BlockfrostError $ "Unable to parse JSON"
+        Just ps -> return ps
+
+privateSaleToTxhs :: PrivateSale -> [B.TxHash]
+privateSaleToTxhs ps = invTxhs 
+
+  where
+    invTxhs :: [B.TxHash]
+    invTxhs = (^. invTx) <$> invs
+
+    invs :: [Investment]
+    invs = getPsInvestments ps
+
+verifyTxs ::
+  (MonadIO m
   , MonadError  TokenomiaError m
   , MonadReader Environment m)
   => [Investment]
   -> [B.TxHash]
-  -> MaybeT m Bool
+  -> m ()
 verifyTxs invs = 
-  foldl (\z txh -> do
+    foldl (\z txh -> do
     bfTx <- lift . getTxByTxHash $ txh                                      -- :: m B.Transaction
-    inv  <- MaybeT . return $ (getInvByTxHash txh invs)                                         -- :: Maybe Investment
-    let invTokenName = getTokenName $ inv ^. invAssetClass                  -- :: Text
-        bfAmts = bfTx ^. B.outputAmount                                     -- :: [B.Amount]
-        invAmount' = inv ^. invAmount in                                    -- :: Integer
-            let amt = getAmountByTokenName invTokenName bfAmts in           -- :: B.Amount
-            -- pure (getDiscreteAmount amt == invAmount') || z              -- :: Maybe Bool
-            if getDiscreteAmount amt == invAmount' then return True else z
-            ) (return False)
-
-jsonToPrivateSale :: FilePath -> IO PrivateSale
-jsonToPrivateSale jsonFilePath = do
-  fileContents <- readFile jsonFilePath        -- :: ByteString <- IO ByteString
-  case (decode fileContents :: Maybe PrivateSale) of
-    Nothing -> throwError "Unable to parse JSON"
-    Just ps -> return ps
+    -- inv  <- MaybeT . return $ getInvByTxHash txh invs                    -- :: Maybe Investment
+    -- inv <- getInvByTxHash txh invs
+    let inv = getInvByTxHash txh invs in
+      let invTokenName = getTokenName $ inv ^. invAssetClass                  -- :: Text
+          bfAmts = bfTx ^. B.outputAmount                                     -- :: [B.Amount]
+          invAmount' = inv ^. invAmount in                                    -- :: Integer
+              let amt = getAmountByTokenName invTokenName bfAmts in           -- :: B.Amount
+              if getDiscreteAmount amt == invAmount' then z 
+              else throwError . BlockFrostError . B.BlockfrostError $ "Amts don't match"
+              ) (return ())
         
-getTreasAddrTxs 
-  :: (MonadIO m
+getTreasAddrTxs ::
+  (MonadIO m
   , MonadError  TokenomiaError m
   , MonadReader Environment m)
   => PrivateSale 
@@ -149,11 +173,11 @@ getTreasAddrTxs ps = do
   liftIO $ B.runBlockfrost prj $ do
     B.getAddressTransactions (ps ^. psAddress)
   >>= (\case 
-        Left e    -> throwError $ BlockFrostError e
-        Right res -> return res)
+      Left e    -> throwError $ BlockFrostError e
+      Right res -> return res)
 
-getTxByTxHash
-  :: (MonadIO m
+getTxByTxHash ::
+  (MonadIO m
   , MonadError  TokenomiaError m
   , MonadReader Environment m)
   => B.TxHash
@@ -169,9 +193,15 @@ getTxByTxHash txh = do
 getTokenName :: AssetClass -> Text
 getTokenName = pack . unpackChars . fromBuiltin . unTokenName . snd . unAssetClass
         
-getInvByTxHash :: B.TxHash -> [Investment] -> Maybe Investment
-getInvByTxHash _ [] = Nothing
-getInvByTxHash txh invs = Just . head . filter (\inv -> (inv ^. invTx) == txh) $ invs
+--TODO: use nonEmpty so I don't have to have a case for an empty list. then I don't need to return maybe
+--   and then I wont need to use MaybeT
+-- getInvByTxHash :: B.TxHash -> [Investment] -> Maybe Investment
+-- getInvByTxHash _ [] = Nothing
+-- getInvByTxHash txh invs = Just . head . filter (\inv -> (inv ^. invTx) == txh) $ invs
+--TODO: FIX!!
+getInvByTxHash :: B.TxHash -> [Investment] -> Investment
+-- getInvByTxHash _ [] = undefined
+getInvByTxHash txh invs = head . filter (\inv -> (inv ^. invTx) == txh) $ invs
 
 getPsInvestments :: PrivateSale -> [Investment]
 getPsInvestments ps = investments 
@@ -180,7 +210,7 @@ getPsInvestments ps = investments
     investments  :: [Investment]
     investments = concat ((^. piInvestments) <$> investors)
 
-    investors    :: [PrivateInvestor]
+    investors :: [PrivateInvestor]
     investors = ps ^. psInvestors
 
 verifyTxHashList :: [B.TxHash] -> [B.AddressTransaction] -> [B.TxHash]
@@ -195,9 +225,6 @@ getDiscreteCurrency :: B.Amount -> Text
 getDiscreteCurrency (B.AdaAmount ll)   = "ADA"
 getDiscreteCurrency (B.AssetAmount sd) = someDiscreteCurrency sd
 
--- AdaAmount Lovelaces
--- type Lovelaces = Discrete "ADA" "lovelaces"
--- the chain is: getTx :: Transaction -> [B.Amount] -> Maybe B.Amount -> toSomeDiscrete :: Discrete' currency scale -> SomeDiscrete
 getDiscreteAmount :: B.Amount -> Integer
 getDiscreteAmount (B.AdaAmount ll)   = someDiscreteAmount . toSomeDiscrete $ ll 
 getDiscreteAmount (B.AssetAmount sd) = someDiscreteAmount sd
@@ -236,3 +263,65 @@ newtype Address = Address Text
 -- getAmountByTokenName _ (B.AdaAmount _)         = Nothing
 -- getAmountByTokenName tokenName amt@(B.AssetAmount sd) = 
 --   if someDiscreteCurrency sd == tokenName then Just amt else Nothing
+
+
+
+
+-- jsonToPrivateSale :: FilePath -> IO PrivateSale
+-- jsonToPrivateSale jsonFilePath = do 
+--   fileContents <- readFile jsonFilePath       -- :: ByteString <- IO ByteString      
+--   case (decode fileContents :: Maybe PrivateSale) of
+--       Nothing -> throwError "Unable to parse JSON"
+--       Just ps -> return ps
+
+
+
+  -- let invs = getPsInvestments ps in                -- :: [Investment]
+  --   let invTxhs = (^. invTx) <$> invs in           -- :: [TxHash]
+
+
+    -- ps <- liftIO . jsonToPrivateSale $ jsonFilePath  -- :: PrivateSale <- IO PrivateSale                      -- MaybeT IO Bool
+
+    -- jsonToPrivateSale :: FilePath -> IO PrivateSale
+
+
+      -- ps <- jsonToPrivateSale jsonFilePath                
+  -- treasAddrTxs <- getTreasAddrTxs ps               -- :: [B.AddressTransaction] <- m [B.AddressTransaction] 
+  -- let invTxhs = privateSaleToTxhs ps in
+  --   let txhs = verifyTxHashList invTxhs treasAddrTxs in
+  --     if length txhs == length invTxhs then do
+  --       verifyTxs (getPsInvestments ps) txhs
+  --       else throwError . BlockFrostError . B.BlockfrostError $ "Unequal lengths, means missing TXs"
+
+
+
+    --TODO: get rid of MaybeT in verifyTxs and return m ()
+-- verifyTxs ::
+--   (MonadIO m
+--   , MonadError  TokenomiaError m
+--   , MonadReader Environment m)
+--   => [Investment]
+--   -> [B.TxHash]
+--   -> MaybeT m ()
+-- verifyTxs ::
+--   (MonadIO m
+--   , MonadError  TokenomiaError m
+--   , MonadReader Environment m)
+--   => [Investment]
+--   -> [B.TxHash]
+--   -> m ()
+-- verifyTxs invs = 
+--   foldl (\z txh -> do
+--     bfTx <- lift . getTxByTxHash $ txh                                      -- :: m B.Transaction
+--     inv  <- MaybeT . return $ getInvByTxHash txh invs                       -- :: Maybe Investment
+--     let invTokenName = getTokenName $ inv ^. invAssetClass                  -- :: Text
+--         bfAmts = bfTx ^. B.outputAmount                                     -- :: [B.Amount]
+--         invAmount' = inv ^. invAmount in                                    -- :: Integer
+--             let amt = getAmountByTokenName invTokenName bfAmts in           -- :: B.Amount
+--             if getDiscreteAmount amt == invAmount' then z else throwError . BlockFrostError . B.BlockfrostError $ "Amts don't match"
+--             ) (MaybeT . return . Just $ ())
+
+
+-- AdaAmount Lovelaces
+-- type Lovelaces = Discrete "ADA" "lovelaces"
+-- the chain is: getTx :: Transaction -> [B.Amount] -> Maybe B.Amount -> toSomeDiscrete :: Discrete' currency scale -> SomeDiscrete
