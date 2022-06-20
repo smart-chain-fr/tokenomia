@@ -7,6 +7,7 @@ import qualified Spec.Tokenomia.Common.Value
 import qualified Spec.Tokenomia.ICO.Funds.Exchange.Plan
 import qualified Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
 import qualified Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+import qualified Spec.Tokenomia.Common.Data.Function.Memoize
 import Test.Tasty ( TestTree, defaultMain, testGroup )
 
 main :: IO ()
@@ -19,4 +20,5 @@ tests = testGroup "use cases" [
     Spec.Tokenomia.ICO.Funds.Exchange.Plan.tests,
     Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan.tests,
     Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan.tests
+    Spec.Tokenomia.Common.Data.Function.Memoize.tests
     ]
