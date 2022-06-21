@@ -27,3 +27,4 @@ cabal.project.local~
 result*
 .envrc
 .vim
+.vscode
