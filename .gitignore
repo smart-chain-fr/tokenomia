@@ -27,4 +27,5 @@ cabal.project.local~
 result*
 .envrc
 .vim
-.vscode
+.vscode/
+testdata.json
