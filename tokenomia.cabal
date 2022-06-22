@@ -87,6 +87,7 @@ library
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
       Tokenomia.Common.Data.Function.Memoize
+      Tokenomia.Common.Data.Sequence.IntegerPartitions
       Tokenomia.Common.Data.List.NonEmpty
       Tokenomia.Common.Parser
       Tokenomia.Common.Parser.AssetClass
@@ -213,6 +214,7 @@ test-suite tokenomia-tests
     Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
     Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
     Spec.Tokenomia.Common.Data.Function.Memoize
+    Spec.Tokenomia.Common.Data.Sequence.IntegerPartitions
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,

@@ -2,23 +2,15 @@
 module Main(main) where
 
 
-import qualified Spec.Tokenomia.Wallet.UTxO
-import qualified Spec.Tokenomia.Common.Value
-import qualified Spec.Tokenomia.ICO.Funds.Exchange.Plan
-import qualified Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
-import qualified Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
 import qualified Spec.Tokenomia.Common.Data.Function.Memoize
+import qualified Spec.Tokenomia.Common.Data.Sequence.IntegerPartitions
 import Test.Tasty ( TestTree, defaultMain, testGroup )
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "use cases" [
-    Spec.Tokenomia.Wallet.UTxO.tests ,
-    Spec.Tokenomia.Common.Value.tests,
-    Spec.Tokenomia.ICO.Funds.Exchange.Plan.tests,
-    Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan.tests,
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan.tests
-    Spec.Tokenomia.Common.Data.Function.Memoize.tests
+tests = testGroup "use cases"
+    [ Spec.Tokenomia.Common.Data.Function.Memoize.tests
+    , Spec.Tokenomia.Common.Data.Sequence.IntegerPartitions.tests
     ]
