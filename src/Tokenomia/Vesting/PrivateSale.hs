@@ -18,8 +18,6 @@ import Ledger hiding (mint, singleton)
 import Ledger.Value as Value
 import Prelude hiding (readFile)
 
-import PlutusTx.Prelude (fromBuiltin)
-
 import Control.Monad hiding (fmap)
 import Control.Monad.Reader hiding (ask)
 import GHC.Generics (Generic)
@@ -33,16 +31,14 @@ import Control.Lens
 import Control.Monad.Except
 import Data.Aeson (FromJSON, decode, eitherDecodeFileStrict)
 import Data.Bifunctor (first)
-import Data.ByteString.Internal (unpackChars)
 import Data.ByteString.Lazy (readFile)
 import Data.Foldable (find)
 import Data.Text (Text, pack, unpack)
-import Data.Time (UTCTime (UTCTime))
 import Money
 import System.IO (FilePath, getLine, putStrLn)
 
 import qualified Blockfrost.Client as B
-import qualified Blockfrost.Lens as B
+import qualified Blockfrost.Lens   as B
 
 import Tokenomia.Common.Blockfrost (projectFromEnv'')
 import Tokenomia.Common.Environment
@@ -125,19 +121,6 @@ jsonToPrivateSale jsonFilePath = do
     eitherErrPs <- liftIO . eitherDecodeFileStrict $ jsonFilePath
     liftEither (first (BlockFrostError . B.BlockfrostError . pack) eitherErrPs)
 
-
---     jsonToPrivateSale ::
---     ( MonadIO m
---     , MonadError TokenomiaError m
---     , MonadReader Environment m
---     ) =>
---     FilePath ->
---     m PrivateSale
--- jsonToPrivateSale jsonFilePath = do
---     eitherErrPs <- liftIO . eitherDecodeFileStrict $ jsonFilePath
---     liftEither (first (BlockFrostError . B.BlockfrostError . pack) eitherErrPs)
-
-
 getTreasAddrTxs ::
     ( MonadIO m
     , MonadError TokenomiaError m
@@ -145,16 +128,10 @@ getTreasAddrTxs ::
     ) =>
     PrivateSale ->
     m [B.AddressTransaction]
-getTreasAddrTxs ps =
-    do
-        prj <- projectFromEnv''
-        liftIO $
-            B.runBlockfrost prj $ do
-                B.getAddressTransactions (ps ^. psAddress)
-                -- eitherErrAddrTxs <- 
-        >>= \case
-            Left e -> throwError $ BlockFrostError e
-            Right res -> return res
+getTreasAddrTxs ps = do
+    prj <- projectFromEnv''
+    eitherErrAddrTxs <- liftIO $ B.runBlockfrost prj (B.getAddressTransactions (ps ^. psAddress))
+    liftEither $ first BlockFrostError eitherErrAddrTxs
 
 getTxhsByPrivateSale :: PrivateSale -> [B.TxHash]
 getTxhsByPrivateSale ps = invTxhs
@@ -208,15 +185,10 @@ getTxUtxosByTxHash ::
     ) =>
     B.TxHash ->
     m B.TransactionUtxos
-getTxUtxosByTxHash txh =
-    do
-        prj <- projectFromEnv''
-        liftIO $
-            B.runBlockfrost prj $ do
-                B.getTxUtxos txh
-        >>= \case
-            Left e -> throwError $ BlockFrostError e
-            Right res -> return res
+getTxUtxosByTxHash txh = do
+    prj <- projectFromEnv''
+    eitherErrTxUtxos <- liftIO $ B.runBlockfrost prj (B.getTxUtxos txh)
+    liftEither $ first BlockFrostError eitherErrTxUtxos
 
 getInvByTxHash :: B.TxHash -> [Investment] -> Either TokenomiaError Investment
 getInvByTxHash txh invs =
@@ -249,137 +221,3 @@ amountToAssetValue (B.AssetAmount sd) = (Value.assetClass (fromString cs) (fromS
     encodedName = unpack $ someDiscreteCurrency sd
     cs = take 56 encodedName
     name = either error id $ unhex $ drop 56 encodedName
-
--- getInvByTxHash _ [] = throwError . BlockFrostError . B.BlockfrostError $ "Investment list is empty"
--- getInvByTxHash txh (inv : invs) = Right . head . filter (\inv -> (inv ^. invTx) == txh) $ invs
-
--- getInvByTxHash :: B.TxHash -> [Investment] -> Maybe Investment
--- getInvByTxHash _ [] = Nothing
--- getInvByTxHash txh invs = Just . head . filter (\inv -> (inv ^. invTx) == txh) $ invs
---TODO: FIX!!
--- TokenomiaError m => Maybe a -> TokenomiaError -> m a
--- getInvByTxHash :: B.TxHash -> [Investment] -> Maybe Investment
--- getInvByTxHash :: B.TxHash -> [Investment] -> Investment
-
--- TODO: maybe use Data.Foldable.find to get the left-most thing matching a predicate
-
--- case find (\inv -> (inv ^. invTx) == txh) invs of
---     Nothing -> Left . BlockFrostError . B.BlockfrostError $ "Investment list is empty"
---     Just res -> Right res
-
--- if getDiscreteAmount amt == invAmount'
---     then return ()
---     else throwError . BlockFrostError . B.BlockfrostError $ "Amounts don't match"
-
--- amt = getAmountByTokenName invTokenName bfAmts -- :: B.Amount
-
---  decode :: FromJSON a => ByteString -> Maybe a
--- liftEither . Data.Bifunctor.first (BlockFrostError . B.BlockfrostError)
--- fileContents <- liftIO . readFile $ jsonFilePath
-
--- case (decode fileContents :: Maybe PrivateSale) of
---     Nothing -> throwError . BlockFrostError . B.BlockfrostError $ "Unable to parse JSON"
---     Just ps -> return ps
-
--- getAmountByTokenName tn amts =
---     case find (\amt -> getDiscreteCurrency amt == tn) amts of
---         Nothing -> throwError . BlockFrostError . B.BlockfrostError $ "No Amount matching this token name"
---         Just amt -> amt
-
--- liftEither (bimap (BlockFrostError . B.BlockfrostError) pack eitherErrPs)
-
--- eitherDecodeFileStrict jsonFilePath >>= (liftEither . first (throwError . BlockFrostError . B.BlockfrostError))
-
--- eitherDecodeFileStrict :: FromJSON a => FilePath -> IO (Either String a)
--- first :: (a -> b) -> p a c -> p b c
--- liftEither :: MonadError e m => Either e a -> m a
--- liftEither (first (throwError . BlockFrostError . B.BlockfrostError) eitherVal)
-
---TODO use -XTypeApplications ?
-
--- getInvByTxHash txh [] = Left . BlockFrostError . B.BlockfrostError $ "Investment list is empty"
--- getInvByTxHash txh (inv : invs) =
---     maybe
---         ( Left . BlockFrostError . B.BlockfrostError $
---             "Investment list is empty"
---         )
---         Right
---         (find (\inv -> (inv ^. invTx) == txh) invs)
-
---     Left . BlockFrostError . B.BlockfrostError $
---         "No Amount matching this token name"
--- getAmountByTokenName tn (amt : amts) =
---     maybe
---         ( Left . BlockFrostError . B.BlockfrostError $
---             "No Amount matching this token name"
---         )
---         Right
---         (find (\amt -> getDiscreteCurrency amt == tn) amts)
-
--- getTxByTxHash ::
---     ( MonadIO m
---     , MonadError TokenomiaError m
---     , MonadReader Environment m
---     ) =>
---     B.TxHash ->
---     m B.Transaction
--- getTxByTxHash txh =
---     do
---         prj <- projectFromEnv''
---         liftIO $
---             B.runBlockfrost prj $ do
---                 B.getTx txh
---         >>= \case
---             Left e -> throwError $ BlockFrostError e
---             Right res -> return res
-
--- bfAmts = bfTx ^. B.outputAmount -- :: [B.Amount]
-
--- let invTokenName = getTokenName $ inv ^. invAssetClass -- :: Text
-
---TODO search by assetclass rather than tokenname
---    compare currsym with getDiscreteCurrency and tokenname with getName
-
--- getAmountByTokenName :: Text -> [B.Amount] -> Either TokenomiaError B.Amount
--- getAmountByTokenName tn amts =
---     maybe
---         ( Left . BlockFrostError . B.BlockfrostError $
---             "No Amount matching this token name"
---         )
---         Right
---         (find (\amt -> getDiscreteCurrency amt == tn) amts)
-
--- getDiscreteCurrency :: B.Amount -> Text
--- getDiscreteCurrency (B.AdaAmount ll) = "ADA"
--- getDiscreteCurrency (B.AssetAmount sd) = someDiscreteCurrency sd
-
--- getDiscreteAmount :: B.Amount -> Integer
--- getDiscreteAmount (B.AdaAmount ll) = someDiscreteAmount . toSomeDiscrete $ ll
--- getDiscreteAmount (B.AssetAmount sd) = someDiscreteAmount sd
-
---TODO: now filter the UtxoOutputs for those that send to the treasury addr, and tokenname / currsym match
--- lens to get utxoOutputAddress: address, -- (^. B.address) <$> bfUtxoOutputs :: [B.Address]
--- lens to get tokenname / currsym (this comes from his fxn, so I just need Amount): (^. amount) <$> bfUtxoOutputs :: [[B.Amount]]
--- amountToAssetValue <$> treasAddrUtxos
---TODO: flatten with concat?
---  in do
--- amt <- liftEither $ getAmountByTokenName invTokenName values
-
--- unless (traceShowId (getDiscreteAmount amt) == traceShowId invAmount') $
---     throwError . BlockFrostError . B.BlockfrostError $ "Amounts don't match"
-
---TODO: the acc for the fold can just be the amount, and at the last step check that the amounts match
---    TRACE: it's failing at the check with fst val == ps ^. psAssetClass
-
--- snd val + z
--- getAmountByTokenName :: Text -> [B.Amount] -> Either TokenomiaError B.Amount
--- getAmountByTokenName tn amts =
---     maybe
---         ( Left . BlockFrostError . B.BlockfrostError $
---             "No Amount matching this token name"
---         )
---         Right
---         (find (\amt -> getDiscreteCurrency amt == tn) amts)
-
--- getTokenName :: Value.AssetClass -> Text
--- getTokenName = pack . unpackChars . fromBuiltin . unTokenName . snd . unAssetClass
