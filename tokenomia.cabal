@@ -178,6 +178,7 @@ library
       transformers,
       deepseq,
       hashable,
+      hex,
       hex-text
     hs-source-dirs: src 
 
