@@ -2,7 +2,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -43,6 +44,8 @@ import qualified Blockfrost.Lens   as B
 import Tokenomia.Common.Blockfrost (projectFromEnv'')
 import Tokenomia.Common.Environment
 import Tokenomia.Common.Error
+-- import Control.Monad.Identity (IdentityT)
+import Control.Monad.Trans.Identity
 
 data PrivateSale = PrivateSale
     { _psAddress :: B.Address -- Treasury address
@@ -82,6 +85,29 @@ makeLenses ''Tranche
 makeLenses ''PrivateInvestor
 makeLenses ''Investment
 
+
+class Monad m => MonadRunBlockfrost m where
+  getAddressTransactions :: B.Address -> m [B.AddressTransaction]
+  getTxUtxos :: B.TxHash -> m B.TransactionUtxos
+
+newtype RealBlockfrost (m :: * -> *) (a :: *) =
+  RealBlockfrost {runRealBlockfrost :: m a}
+  deriving (Functor, Applicative, Monad) via IdentityT m
+
+newtype FakeBlockfrost (m :: * -> *) (a :: *) = 
+  FakeBlockfrost { runFakeBlockfrost :: m a } 
+  deriving (Functor, Applicative, Monad) via IdentityT m
+
+instance (MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) => MonadRunBlockfrost (RealBlockfrost m) where
+  getAddressTransactions ad = RealBlockfrost $ do
+     prj <- projectFromEnv''
+     eitherErrAddrTxs <- liftIO $ B.runBlockfrost prj (B.getAddressTransactions ad)
+     liftEither $ first BlockFrostError eitherErrAddrTxs
+  getTxUtxos txh = RealBlockfrost $ do
+      prj <- projectFromEnv''
+      eitherErrTxUtxos <- liftIO $ B.runBlockfrost prj (B.getTxUtxos txh)
+      liftEither $ first BlockFrostError eitherErrTxUtxos
+
 verifyPrivateSale ::
     ( MonadIO m
     , MonadError TokenomiaError m
@@ -91,18 +117,18 @@ verifyPrivateSale ::
 verifyPrivateSale = do
     liftIO . putStrLn $ "Please enter a filepath with JSON data"
     jsonFilePath <- liftIO getLine
-    verifyPrivateSale' jsonFilePath
+    ps <- jsonToPrivateSale jsonFilePath
+    runRealBlockfrost $ verifyPrivateSale' ps
 
 verifyPrivateSale' ::
-    ( MonadIO m
+    ( MonadRunBlockfrost m
     , MonadError TokenomiaError m
     , MonadReader Environment m
     ) =>
-    FilePath ->
+    PrivateSale ->
     m ()
-verifyPrivateSale' jsonFilePath = do
-    ps <- jsonToPrivateSale jsonFilePath
-    treasAddrTxs <- getTreasAddrTxs ps -- :: [B.AddressTransaction] <- m [B.AddressTransaction]
+verifyPrivateSale' ps = do
+    treasAddrTxs <- getAddressTransactions (ps ^. psAddress) -- :: [B.AddressTransaction] <- m [B.AddressTransaction]
     let invTxhs = getTxhsByPrivateSale ps
         txhs = verifyTxHashList invTxhs treasAddrTxs
     if length txhs == length invTxhs
@@ -113,25 +139,12 @@ verifyPrivateSale' jsonFilePath = do
 jsonToPrivateSale ::
     ( MonadIO m
     , MonadError TokenomiaError m
-    , MonadReader Environment m
     ) =>
     FilePath ->
     m PrivateSale
 jsonToPrivateSale jsonFilePath = do
     eitherErrPs <- liftIO . eitherDecodeFileStrict $ jsonFilePath
     liftEither (first (BlockFrostError . B.BlockfrostError . pack) eitherErrPs)
-
-getTreasAddrTxs ::
-    ( MonadIO m
-    , MonadError TokenomiaError m
-    , MonadReader Environment m
-    ) =>
-    PrivateSale ->
-    m [B.AddressTransaction]
-getTreasAddrTxs ps = do
-    prj <- projectFromEnv''
-    eitherErrAddrTxs <- liftIO $ B.runBlockfrost prj (B.getAddressTransactions (ps ^. psAddress))
-    liftEither $ first BlockFrostError eitherErrAddrTxs
 
 getTxhsByPrivateSale :: PrivateSale -> [B.TxHash]
 getTxhsByPrivateSale ps = invTxhs
@@ -143,7 +156,7 @@ getTxhsByPrivateSale ps = invTxhs
     invs = getPsInvestments ps
 
 verifyTxs ::
-    ( MonadIO m
+    ( MonadRunBlockfrost m
     , MonadError TokenomiaError m
     , MonadReader Environment m
     ) =>
@@ -155,7 +168,7 @@ verifyTxs ps =
      in mapM_ (verifyTx invs)
   where
     verifyTx ::
-        ( MonadIO m
+        ( MonadRunBlockfrost m
         , MonadError TokenomiaError m
         , MonadReader Environment m
         ) =>
@@ -163,7 +176,7 @@ verifyTxs ps =
         B.TxHash ->
         m ()
     verifyTx invs txh = do
-        bfTxUtxos <- getTxUtxosByTxHash txh -- :: B.TransactionUtxos
+        bfTxUtxos <- getTxUtxos txh -- :: B.TransactionUtxos
         inv <- liftEither $ getInvByTxHash txh invs -- :: Investment
         let bfUtxoOutputs = bfTxUtxos ^. B.outputs -- :: [B.UtxoOutput]
             treasAddrOutputs = filter (\output -> (output ^. B.address) == (ps ^. psAddress)) bfUtxoOutputs -- :: [B.UtxoOutput]
@@ -178,17 +191,6 @@ verifyTxs ps =
 confirmValues :: PrivateSale -> [(Value.AssetClass, Integer)] -> Integer
 confirmValues ps = foldr (\val z -> if fst val == ps ^. psAssetClass then snd val + z else z) 0
 
-getTxUtxosByTxHash ::
-    ( MonadIO m
-    , MonadError TokenomiaError m
-    , MonadReader Environment m
-    ) =>
-    B.TxHash ->
-    m B.TransactionUtxos
-getTxUtxosByTxHash txh = do
-    prj <- projectFromEnv''
-    eitherErrTxUtxos <- liftIO $ B.runBlockfrost prj (B.getTxUtxos txh)
-    liftEither $ first BlockFrostError eitherErrTxUtxos
 
 getInvByTxHash :: B.TxHash -> [Investment] -> Either TokenomiaError Investment
 getInvByTxHash txh invs =
