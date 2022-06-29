@@ -25,8 +25,6 @@ import GHC.Generics (Generic)
 import Data.Hex (unhex)
 import Data.String (fromString)
 
-import Debug.Trace (traceShowId)
-
 import Control.Lens
 import Control.Monad.Except
 import Data.Aeson (FromJSON, eitherDecodeFileStrict)
@@ -150,11 +148,8 @@ verifyTxs ::
   [B.TxHash] ->
   m ()
 verifyTxs ps =
-  mapM_ $ verifyTx invs
+  mapM_ $ verifyTx $ getPsInvestments ps
   where
-    invs :: [Investment]
-    invs = getPsInvestments ps
-
     verifyTx ::
       ( MonadIO m
       , MonadError TokenomiaError m
@@ -164,15 +159,16 @@ verifyTxs ps =
       B.TxHash ->
       m ()
     verifyTx invs txh = do
-      bfTxUtxos <- getTxUtxosByTxHash txh -- :: B.TransactionUtxos
-      inv <- liftEither $ getInvByTxHash (traceShowId txh) invs -- :: Investment
-      let bfUtxoOutputs = bfTxUtxos ^. B.outputs -- :: [B.UtxoOutput]
-          treasAddrOutputs = filter (\output -> (output ^. B.address) == (ps ^. psAddress)) bfUtxoOutputs -- :: [B.UtxoOutput]
-          bfAmts = concat ((^. B.amount) <$> treasAddrOutputs) -- :: [B.Amount]
-          bfValues = amountToAssetValue <$> bfAmts -- :: [(Value.AssetClass, Integer)]
-          confirmedVals = confirmValues inv (traceShowId bfValues) -- :: Integer
-          invAmount' = inv ^. invAmount -- :: Integer
-          invAssetClass' = inv ^. invAssetClass -- :: Value.AssetClass
+      bfTxUtxos <- getTxUtxosByTxHash txh
+      inv <- liftEither $ getInvByTxHash txh invs
+      let bfUtxoOutputs = bfTxUtxos ^. B.outputs
+          treasAddrOutputs =
+            filter (\output -> (output ^. B.address) == (ps ^. psAddress)) bfUtxoOutputs
+          bfAmts = concat ((^. B.amount) <$> treasAddrOutputs)
+          bfValues = amountToAssetValue <$> bfAmts
+          confirmedVals = confirmValues inv bfValues
+          invAmount' = inv ^. invAmount
+          invAssetClass' = inv ^. invAssetClass
        in unless (invAmount' == confirmedVals && invAssetClass' == inv ^. invAssetClass) $
             throwError . BlockFrostError . B.BlockfrostError $ "Values don't match"
 
@@ -221,8 +217,10 @@ verifyTxHashList txhs addrTxs =
 -}
 
 amountToAssetValue :: B.Amount -> (Value.AssetClass, Integer)
-amountToAssetValue (B.AdaAmount ll) = (Value.assetClass "" "", M.someDiscreteAmount $ M.toSomeDiscrete ll)
-amountToAssetValue (B.AssetAmount sd) = (Value.assetClass (fromString currSym) (fromString name), M.someDiscreteAmount (traceShowId sd))
+amountToAssetValue (B.AdaAmount ll) =
+  (Value.assetClass "" "", M.someDiscreteAmount $ M.toSomeDiscrete ll)
+amountToAssetValue (B.AssetAmount sd) =
+  (Value.assetClass (fromString currSym) (fromString name), M.someDiscreteAmount sd)
   where
     encodedName :: String
     encodedName = unpack $ M.someDiscreteCurrency sd

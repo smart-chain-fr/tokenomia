@@ -1,7 +1,7 @@
-indentation: 4
+indentation: 2
 comma-style: leading
 import-export-comma-style: leading
-indent-wheres: false
+indent-wheres: true
 record-brace-space: true
 diff-friendly-import-export: true
 respectful: true
