@@ -29,3 +29,5 @@ result*
 .vim
 .vscode/
 testdata.json
+.node/
+tokenomia-setup.md
