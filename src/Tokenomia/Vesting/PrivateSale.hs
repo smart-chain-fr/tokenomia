@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Tokenomia.Vesting.PrivateSale (verifyPrivateSale) where
 
@@ -20,7 +21,7 @@ import Ledger.Value as Value
 import Prelude hiding (readFile)
 
 import Control.Monad hiding (fmap)
-import Control.Monad.Reader hiding (ask)
+import Control.Monad.Reader
 import GHC.Generics (Generic)
 
 import Debug.Trace
@@ -30,16 +31,15 @@ import Data.String (fromString)
 
 import Control.Lens
 import Control.Monad.Except
-import Data.Aeson (FromJSON, decode, eitherDecodeFileStrict)
+import Data.Aeson (FromJSON, eitherDecodeFileStrict)
 import Data.Bifunctor (first)
-import Data.ByteString.Lazy (readFile)
 import Data.Foldable (find)
-import Data.Text (Text, pack, unpack)
+import Data.Text (pack, unpack)
 import Money
-import System.IO (FilePath, getLine, putStrLn)
+-- import System.IO (FilePath, getLine, putStrLn)
 
 import qualified Blockfrost.Client as B
-import qualified Blockfrost.Lens   as B
+-- import qualified Blockfrost.Lens   as B
 
 import Tokenomia.Common.Blockfrost (projectFromEnv'')
 import Tokenomia.Common.Environment
@@ -98,6 +98,16 @@ newtype FakeBlockfrost (m :: * -> *) (a :: *) =
   FakeBlockfrost { runFakeBlockfrost :: m a } 
   deriving (Functor, Applicative, Monad) via IdentityT m
 
+instance (MonadReader Environment m) => MonadReader Environment (RealBlockfrost m) where
+  ask = RealBlockfrost ask
+  -- reader = RealBlockfrost . reader
+  local f = RealBlockfrost . local f . runRealBlockfrost
+
+instance (MonadError TokenomiaError m) => MonadError TokenomiaError (RealBlockfrost m) where
+  throwError = RealBlockfrost . throwError
+  catchError (RealBlockfrost m) f = RealBlockfrost $ catchError m (runRealBlockfrost . f)
+
+
 instance (MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) => MonadRunBlockfrost (RealBlockfrost m) where
   getAddressTransactions ad = RealBlockfrost $ do
      prj <- projectFromEnv''
@@ -123,7 +133,6 @@ verifyPrivateSale = do
 verifyPrivateSale' ::
     ( MonadRunBlockfrost m
     , MonadError TokenomiaError m
-    , MonadReader Environment m
     ) =>
     PrivateSale ->
     m ()
@@ -158,7 +167,6 @@ getTxhsByPrivateSale ps = invTxhs
 verifyTxs ::
     ( MonadRunBlockfrost m
     , MonadError TokenomiaError m
-    , MonadReader Environment m
     ) =>
     PrivateSale ->
     [B.TxHash] ->
@@ -170,7 +178,6 @@ verifyTxs ps =
     verifyTx ::
         ( MonadRunBlockfrost m
         , MonadError TokenomiaError m
-        , MonadReader Environment m
         ) =>
         [Investment] ->
         B.TxHash ->
