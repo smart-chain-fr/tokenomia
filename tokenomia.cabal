@@ -32,7 +32,7 @@ common lang
       -Wincomplete-uni-patterns -Wincomplete-record-updates
       -Wredundant-constraints -Widentities -rtsopts
       -Wcompat -Wmissing-export-lists
-      -Wmissing-deriving-strategies -Werror
+      -Wmissing-deriving-strategies
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
