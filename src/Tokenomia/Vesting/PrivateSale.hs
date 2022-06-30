@@ -1,54 +1,58 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ExplicitForAll #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Tokenomia.Vesting.PrivateSale (verifyPrivateSale) where
 
-import Ledger qualified
-import Ledger.Value qualified as Value
-import Prelude
-
-import Control.Monad
-import Control.Monad.Reader
-import GHC.Generics (Generic)
-
-import Data.Hex (unhex)
-import Data.String (fromString)
-
-import Control.Lens
-import Control.Monad.Except
+import Blockfrost.Client (
+  Address,
+  AddressTransaction,
+  Amount (AdaAmount, AssetAmount),
+  BlockfrostError (BlockfrostError),
+  TransactionUtxos,
+  TxHash,
+ )
+import Blockfrost.Client qualified as Client
+import Blockfrost.Lens (address, amount, outputs, txHash)
+import Control.Lens (makeLenses, (^.))
+import Control.Monad (unless)
+import Control.Monad.Except (MonadError (throwError), liftEither)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, eitherDecodeFileStrict)
 import Data.Bifunctor (first)
+import Data.Either.Combinators (maybeToRight)
 import Data.Foldable (find)
-import Data.Text (Text, pack, unpack)
-import Money qualified as M
-import System.IO (FilePath, getLine, putStrLn)
-
-import Blockfrost.Client qualified as B
-import Blockfrost.Lens qualified as B
-
+import Data.Hex (unhex)
+import Data.Kind (Type)
+import Data.String (fromString)
+import Data.Text (pack, unpack)
+import GHC.Generics (Generic)
+import Ledger (POSIXTime)
+import Ledger.Value (AssetClass, assetClass)
+import Money qualified
 import Tokenomia.Common.Blockfrost (projectFromEnv'')
-import Tokenomia.Common.Environment
-import Tokenomia.Common.Error
+import Tokenomia.Common.Environment (Environment)
+import Tokenomia.Common.Error (TokenomiaError (BlockFrostError))
 
 data PrivateSale = PrivateSale
   { -- | Treasury address
-    _psAddress :: B.Address
-  , _psStart :: Ledger.POSIXTime
-  , _psTranches :: [Tranche]
+    _psAddress :: Address
+  , -- | Starting time of private sale
+    _psStart :: POSIXTime
+  , -- | List of tranches containing percentages and durations
+    _psTranches :: [Tranche]
   , -- | Vesting token
-    _psAssetClass :: Value.AssetClass
-  , _psInvestors :: [PrivateInvestor]
+    _psAssetClass :: AssetClass
+  , -- | All investors
+    _psInvestors :: [PrivateInvestor]
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON)
@@ -61,7 +65,7 @@ data Tranche = Tranche
   deriving anyclass (FromJSON)
 
 data PrivateInvestor = PrivateInvestor
-  { _piAddress :: B.Address
+  { _piAddress :: Address
   , -- | Amount of vesting tokens to lock (note, this is likely NOT equal
     -- to the total amounts of investments, as different tokens)
     _piAllocation :: Integer
@@ -71,10 +75,11 @@ data PrivateInvestor = PrivateInvestor
   deriving anyclass (FromJSON)
 
 data Investment = Investment
-  { -- | Tx that sends below asset class to payment address
-    _invTx :: B.TxHash
-  , _invAssetClass :: Value.AssetClass
-  , -- | Amount of above asset class expected to be sent to payment address
+  { -- | Tx that sends asset class to payment address
+    _invTx :: TxHash
+  , -- | Asset class to be sent to payment address
+    _invAssetClass :: AssetClass
+  , -- | Amount of asset class expected to be sent to payment address
     _invAmount :: Integer
   }
   deriving stock (Generic, Show)
@@ -86,6 +91,7 @@ makeLenses ''PrivateInvestor
 makeLenses ''Investment
 
 verifyPrivateSale ::
+  forall (m :: Type -> Type).
   ( MonadIO m
   , MonadError TokenomiaError m
   , MonadReader Environment m
@@ -97,6 +103,7 @@ verifyPrivateSale = do
   verifyPrivateSale' jsonFilePath
 
 verifyPrivateSale' ::
+  forall (m :: Type -> Type).
   ( MonadIO m
   , MonadError TokenomiaError m
   , MonadReader Environment m
@@ -105,95 +112,103 @@ verifyPrivateSale' ::
   m ()
 verifyPrivateSale' jsonFilePath = do
   ps <- jsonToPrivateSale jsonFilePath
-  treasAddrTxs <- getTreasAddrTxs ps -- :: [B.AddressTransaction] <- m [B.AddressTransaction]
+  treasAddrTxs <- getTreasAddrTxs ps
   let invTxhs = getTxhsByPrivateSale ps
       txhs = verifyTxHashList invTxhs treasAddrTxs
   if length txhs == length invTxhs
-    then do
-      verifyTxs ps txhs
-    else throwError . BlockFrostError . B.BlockfrostError $ "Missing Transactions"
+    then verifyTxs ps txhs
+    else
+      throwError . BlockFrostError . BlockfrostError $
+        "Missing Transactions"
 
 jsonToPrivateSale ::
+  forall (m :: Type -> Type).
   ( MonadIO m
   , MonadError TokenomiaError m
-  , MonadReader Environment m
   ) =>
   FilePath ->
   m PrivateSale
 jsonToPrivateSale jsonFilePath = do
   eitherErrPs <- liftIO . eitherDecodeFileStrict $ jsonFilePath
-  liftEither (first (BlockFrostError . B.BlockfrostError . pack) eitherErrPs)
+  liftEither $ first (BlockFrostError . BlockfrostError . pack) eitherErrPs
 
 getTreasAddrTxs ::
+  forall (m :: Type -> Type).
   ( MonadIO m
   , MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
   PrivateSale ->
-  m [B.AddressTransaction]
+  m [AddressTransaction]
 getTreasAddrTxs ps = do
   prj <- projectFromEnv''
-  eitherErrAddrTxs <- liftIO $ B.runBlockfrost prj (B.getAddressTransactions (ps ^. psAddress))
+  eitherErrAddrTxs <-
+    liftIO $ Client.runBlockfrost prj (Client.getAddressTransactions (ps ^. psAddress))
   liftEither $ first BlockFrostError eitherErrAddrTxs
 
-getTxhsByPrivateSale :: PrivateSale -> [B.TxHash]
+getTxhsByPrivateSale :: PrivateSale -> [TxHash]
 getTxhsByPrivateSale ps = (^. invTx) <$> getPsInvestments ps
 
 verifyTxs ::
+  forall (m :: Type -> Type).
   ( MonadIO m
   , MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
   PrivateSale ->
-  [B.TxHash] ->
+  [TxHash] ->
   m ()
 verifyTxs ps =
   mapM_ $ verifyTx $ getPsInvestments ps
   where
     verifyTx ::
+      forall (m :: Type -> Type).
       ( MonadIO m
       , MonadError TokenomiaError m
       , MonadReader Environment m
       ) =>
       [Investment] ->
-      B.TxHash ->
+      TxHash ->
       m ()
     verifyTx invs txh = do
       bfTxUtxos <- getTxUtxosByTxHash txh
       inv <- liftEither $ getInvByTxHash txh invs
-      let bfUtxoOutputs = bfTxUtxos ^. B.outputs
+      let bfUtxoOutputs = bfTxUtxos ^. outputs
           treasAddrOutputs =
-            filter (\output -> (output ^. B.address) == (ps ^. psAddress)) bfUtxoOutputs
-          bfAmts = concat ((^. B.amount) <$> treasAddrOutputs)
+            filter (\output -> (output ^. address) == (ps ^. psAddress)) bfUtxoOutputs
+          bfAmts = concat ((^. amount) <$> treasAddrOutputs)
           bfValues = amountToAssetValue <$> bfAmts
           confirmedVals = confirmValues inv bfValues
           invAmount' = inv ^. invAmount
           invAssetClass' = inv ^. invAssetClass
-       in unless (invAmount' == confirmedVals && invAssetClass' == inv ^. invAssetClass) $
-            throwError . BlockFrostError . B.BlockfrostError $ "Values don't match"
+      unless (invAmount' == confirmedVals && invAssetClass' == inv ^. invAssetClass) $
+        throwError . BlockFrostError . BlockfrostError $ "Values don't match"
 
-confirmValues :: Investment -> [(Value.AssetClass, Integer)] -> Integer
+confirmValues :: Investment -> [(AssetClass, Integer)] -> Integer
 confirmValues inv = foldr (\val z -> if fst val == inv ^. invAssetClass then snd val + z else z) 0
 
 getTxUtxosByTxHash ::
+  forall (m :: Type -> Type).
   ( MonadIO m
   , MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
-  B.TxHash ->
-  m B.TransactionUtxos
+  TxHash ->
+  m TransactionUtxos
 getTxUtxosByTxHash txh = do
   prj <- projectFromEnv''
-  eitherErrTxUtxos <- liftIO $ B.runBlockfrost prj (B.getTxUtxos txh)
+  eitherErrTxUtxos <- liftIO $ Client.runBlockfrost prj (Client.getTxUtxos txh)
   liftEither $ first BlockFrostError eitherErrTxUtxos
 
-getInvByTxHash :: B.TxHash -> [Investment] -> Either TokenomiaError Investment
+getInvByTxHash ::
+  TxHash ->
+  [Investment] ->
+  Either TokenomiaError Investment
 getInvByTxHash txh invs =
-  maybe
-    ( Left . BlockFrostError . B.BlockfrostError $
+  maybeToRight
+    ( BlockFrostError . BlockfrostError $
         "Investment list doesn't contain matching TxHash"
     )
-    Right
     (find (\inv -> (inv ^. invTx) == txh) invs)
 
 getPsInvestments ::
@@ -204,32 +219,38 @@ getPsInvestments ps = concat ((^. piInvestments) <$> investors)
     investors :: [PrivateInvestor]
     investors = ps ^. psInvestors
 
-verifyTxHashList :: [B.TxHash] -> [B.AddressTransaction] -> [B.TxHash]
+verifyTxHashList ::
+  [TxHash] ->
+  [AddressTransaction] ->
+  [TxHash]
 verifyTxHashList txhs addrTxs =
-  filter (`elem` txhs) ((^. B.txHash) <$> addrTxs)
+  filter (`elem` txhs) ((^. txHash) <$> addrTxs)
 
 {-
-  Below, currSymPart is the first part of a 2-part value returned by M.someDiscreteCurrency,
-  and it's 56 characters long. The String returned by M.someDiscreteCurrency has the
-  form "CurrencysymbolName" :: Text, where we have to manually extract the currency symbol
+  Below, currencySymbolLength is the first part of a 2-part value returned by Money.someDiscreteCurrency,
+  and it's 56 characters long. The String returned by Money.someDiscreteCurrency has the
+  form: "CurrencysymbolName" :: Text, where we have to manually extract the currency symbol
   embedded in the first half using take, and extract the token name in the second half
   using drop.
+
+  Also note that amountToAssetValue is partial, but the error case of it implies that blockfrost
+  is broken, i.e. an unrecoverable error.
 -}
 
-amountToAssetValue :: B.Amount -> (Value.AssetClass, Integer)
-amountToAssetValue (B.AdaAmount ll) =
-  (Value.assetClass "" "", M.someDiscreteAmount $ M.toSomeDiscrete ll)
-amountToAssetValue (B.AssetAmount sd) =
-  (Value.assetClass (fromString currSym) (fromString name), M.someDiscreteAmount sd)
+amountToAssetValue :: Amount -> (AssetClass, Integer)
+amountToAssetValue (AdaAmount ll) =
+  (assetClass "" "", Money.someDiscreteAmount $ Money.toSomeDiscrete ll)
+amountToAssetValue (AssetAmount sd) =
+  (assetClass (fromString currencySymbol) (fromString name), Money.someDiscreteAmount sd)
   where
     encodedName :: String
-    encodedName = unpack $ M.someDiscreteCurrency sd
+    encodedName = unpack $ Money.someDiscreteCurrency sd
 
-    currSym :: String
-    currSym = take currSymPart encodedName
-
-    currSymPart :: Int
-    currSymPart = 56
+    currencySymbol :: String
+    currencySymbol = take currencySymbolLength encodedName
 
     name :: String
-    name = either error id $ unhex $ drop currSymPart encodedName
+    name = either error id $ unhex $ drop currencySymbolLength encodedName
+
+    currencySymbolLength :: Int
+    currencySymbolLength = 56
