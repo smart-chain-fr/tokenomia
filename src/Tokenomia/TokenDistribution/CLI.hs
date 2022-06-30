@@ -36,5 +36,6 @@ runCommand = execParser $
         <*> Parser.adaWallet
         <*> Parser.collateralWallet
         <*> Parser.minLovelaces
+        <*> Parser.metadataFilePath
         <*> Parser.dryRun
         <*> Parser.verbose

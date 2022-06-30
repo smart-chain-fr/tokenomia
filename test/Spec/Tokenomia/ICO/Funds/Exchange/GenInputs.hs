@@ -24,6 +24,7 @@ import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Common.Hash
 import           Tokenomia.Common.Token hiding (assetClass)
 import           Tokenomia.Wallet.UTxO
+import           Tokenomia.Wallet.WalletUTxO
 import Tokenomia.ICO.Funds.Exchange.Plan.Settings
 import           Tokenomia.ICO.Round.Settings
 import Tokenomia.ICO.Funds.Exchange.ReceivedFunds
