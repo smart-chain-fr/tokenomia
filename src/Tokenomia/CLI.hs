@@ -37,6 +37,7 @@ import qualified Tokenomia.Ada.Transfer as Ada
 
 import qualified Tokenomia.Vesting.Vest as Vesting
 import qualified Tokenomia.Vesting.Retrieve as Vesting
+import qualified Tokenomia.Vesting.PrivateSale as Vesting
 
 import qualified Tokenomia.Node.Status as Node
 import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
@@ -171,6 +172,7 @@ runAction = \case
       AdaTransfer      -> Ada.transfer
       VestingVestFunds -> Vesting.vestFunds
       VestingRetrieveFunds -> Vesting.retrieveFunds
+      VestingVerifyPrivateSale -> Vesting.verifyPrivateSale
       NodeStatus           -> Node.displayStatus
       NodeTranslateSlotToTime    -> Node.translateSlotToTime
       NodeTranslateTimeToSlot    -> Node.translateTimeToSlot
@@ -199,6 +201,7 @@ actions = NonEmpty.fromList [
     AdaTransfer,
     VestingVestFunds,
     VestingRetrieveFunds,
+    VestingVerifyPrivateSale,
     NodeStatus,
     NodeTranslateSlotToTime,
     NodeTranslateTimeToSlot,
@@ -226,6 +229,7 @@ data Action
   | AdaTransfer
   | VestingVestFunds
   | VestingRetrieveFunds
+  | VestingVerifyPrivateSale
   | NodeStatus 
   | NodeTranslateSlotToTime
   | NodeTranslateTimeToSlot
@@ -255,6 +259,7 @@ instance DisplayMenuItem Action where
     AdaTransfer           ->  "[Ada]     - Transfer ADAs"
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
+    VestingVerifyPrivateSale -> "[Vesting] - Verify Private Sale"
     NodeStatus            ->  "[Node]    - Status"
     NodeTranslateSlotToTime -> "[Node]    - Translate Slot To Time"
     NodeTranslateTimeToSlot -> "[Node]    - Translate Time To Slot"

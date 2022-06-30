@@ -31,6 +31,8 @@ common lang
       -Wall -Wnoncanonical-monad-instances
       -Wincomplete-uni-patterns -Wincomplete-record-updates
       -Wredundant-constraints -Widentities -rtsopts
+      -Wcompat -Wmissing-export-lists
+      -Wmissing-deriving-strategies
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
@@ -67,6 +69,7 @@ library
       Tokenomia.Vesting.Repository
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
+      Tokenomia.Vesting.PrivateSale
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
@@ -190,8 +193,10 @@ library
       ordered-containers,
       nonempty-containers,
       streamly,
+      transformers,
       deepseq,
       hashable,
+      hex,
       hex-text
     hs-source-dirs: src 
 
