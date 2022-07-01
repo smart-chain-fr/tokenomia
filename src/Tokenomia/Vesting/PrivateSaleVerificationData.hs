@@ -156,7 +156,7 @@ verifyTxs ps =
       , MonadError TokenomiaError m
       , MonadReader Environment m
       ) =>
-      Map ->
+      Map TxHash Value ->
       TxHash ->
       m ()
     verifyTx invs txh = do
@@ -165,8 +165,8 @@ verifyTxs ps =
       let bfUtxoOutputs = bfTxUtxos ^. outputs -- :: [UtxoOutput]
           treasAddrOutputs =
             filter (\output -> output ^. address == psAddress ps) bfUtxoOutputs
-          bfAmts = concat (_utxoOutputAmount <$> treasAddrOutputs)
-          bfValues = amountToAssetValue <$> bfAmts
+          bfAmts = concat ((^. amount) <$> treasAddrOutputs) -- :: [Amount]
+          bfValues = amountToAssetValue <$> bfAmts -- [(AssetClass, Integer)]
           confirmedVals = confirmValues inv bfValues
           invValue = flattenValue (snd inv) -- :: [(CurrencySymbol, TokenName, Integer)]
           invAssetClass' = inv ^. invAssetClass -- need some fxn to extract AssetClass from Value
@@ -180,7 +180,7 @@ confirmValues :: (TxHash, Value) -> [(AssetClass, Integer)] -> Integer
 confirmValues inv = foldr (\val z -> if fst val == (,) <$> fstTriple flatValue <*> sndTriple flatValue then snd val + z else z) 0
   where
     --TODO: flattenValue returns a list with a tuple ... need to fold it?
-    flatValue :: (CurrencySymbol, TokenName, Integer)
+    flatValue :: [(CurrencySymbol, TokenName, Integer)]
     flatValue = flattenValue . snd $ inv
 
 getTxUtxosByTxHash ::
