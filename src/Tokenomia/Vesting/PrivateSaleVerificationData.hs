@@ -52,11 +52,11 @@ remove verification logic they shouldn't be necessary
 -}
 
 data Sendings = Sendings
-   { _sendingsRecipientAddress :: Address
-   , _sendingsTxValues  :: Map TxHash Value
+   { sendingsRecipientAddress :: Address
+   , sendingsTxValues  :: Map TxHash Value
    }
-deriving stock (Generic, Show)
-deriving anyclass (FromJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON)
 
 data PrivateSale = PrivateSale
   { psAddress :: Address
@@ -89,7 +89,7 @@ verifyPrivateSale' jsonFilePath = do
   ps <- jsonToPrivateSale jsonFilePath
   treasAddrTxs <- getTreasAddrTxs ps -- pulls addrTxhs from treasury address using blockfrost
   let treasTxhs = _addressTransactionTxHash <$> treasAddrTxs -- [TxHash]
-      invMap = psInvestments ps
+      invMap = psInvestments ps -- :: Map TxHash Value
       txhs = verifyTxHashList invMap treasTxhs
   if length txhs == length treasTxhs
     then verifyTxs ps txhs
@@ -146,42 +146,62 @@ verifyTxs ::
 verifyTxs ps =
   -- psInvestments ps :: Map TxHash Value
   --   mapM_ $ verifyTx $ getPsInvestments ps
-  mapM_ $ verifyTx $ psInvestments ps
+  mapM_ $ verifyTx $ toList $ psInvestments ps
   where
-    --TODO: verifyTx deals with [Investment] but that's inside the new PrivateSale type...so it can just take PrivateSale
-
     verifyTx ::
       forall (m :: Type -> Type).
       ( MonadIO m
       , MonadError TokenomiaError m
       , MonadReader Environment m
       ) =>
-      Map TxHash Value ->
+      [(TxHash, Value)]
       TxHash ->
       m ()
     verifyTx invs txh = do
       bfTxUtxos <- getTxUtxosByTxHash txh
-      inv <- liftEither $ getInvByTxHash txh invs -- :: (TxHash, Value)
+      inv <- liftEither $ getValueByTxHash txh invs -- :: Value
       let bfUtxoOutputs = bfTxUtxos ^. outputs -- :: [UtxoOutput]
           treasAddrOutputs =
-            filter (\output -> output ^. address == psAddress ps) bfUtxoOutputs
+            filter (\output -> output ^. address == psAddress ps) bfUtxoOutputs -- :: [UtxoOutput]
           bfAmts = concat ((^. amount) <$> treasAddrOutputs) -- :: [Amount]
-          bfValues = amountToAssetValue <$> bfAmts -- [(AssetClass, Integer)]
-          confirmedVals = confirmValues inv bfValues
-          invValue = flattenValue (snd inv) -- :: [(CurrencySymbol, TokenName, Integer)]
-          invAssetClass' = inv ^. invAssetClass -- need some fxn to extract AssetClass from Value
+          bfValues = amountToAssetValue <$> bfAmts -- [(AssetClass, Integer)], equivalent to [Investment]
+          totalAmount = sumRelevantValues inv bfValues -- :: Integer
+          invValue = (flattenValue inv) -- :: [(CurrencySymbol, TokenName, Integer)]
+        --   invAssetClass' = inv ^. invAssetClass -- need some fxn to extract AssetClass from Value
       unless (thrdTriple invValue == confirmedVals && invAssetClass' == inv ^. invAssetClass) $
         throwError . BlockFrostError . BlockfrostError $ "Values don't match"
 
+--   getValueByTxHash ::
+--   TxHash ->
+--   [(TxHash, Value)]
+--   Either TokenomiaError Value
+-- getValueByTxHash txh invs =
+--   maybeToRight
+--     ( BlockFrostError . BlockfrostError $
+--         "Investment list doesn't contain matching TxHash"
+--     )
+--     $ snd . find $ (\inv -> fst inv == txh) invs
+
+
+sumRelevantValues :: Investment -> [(AssetClass, Integer)] -> Integer
+sumRelevantValues inv = foldr (\(ac, amt) z -> if ac == inv ^. invAssetClass then amt + z else z) 0
         -- newtype Value = Value { getValue :: Map.Map CurrencySymbol (Map.Map TokenName Integer) }
         -- flattenValue :: Value -> [(CurrencySymbol, TokenName, Integer)]
 
-confirmValues :: (TxHash, Value) -> [(AssetClass, Integer)] -> Integer
-confirmValues inv = foldr (\val z -> if fst val == (,) <$> fstTriple flatValue <*> sndTriple flatValue then snd val + z else z) 0
-  where
-    --TODO: flattenValue returns a list with a tuple ... need to fold it?
-    flatValue :: [(CurrencySymbol, TokenName, Integer)]
-    flatValue = flattenValue . snd $ inv
+-- getAssetClassByInv :: (TxHash, Value) -> AssetClass
+-- getAssetClassByInv inv = flattenValue . snd $ inv
+
+-- mapToAssetClass :: Map TxHash Value -> AssetClass
+-- mapToAssetClass m = flattenValue <$> (snd <$> Map.toList $ m)
+
+-- confirmValues :: (TxHash, Value) -> [(AssetClass, Integer)] -> Integer
+-- confirmValues inv = foldr (\val z -> if fst val == (,) <$> fstTriple flatValue <*> sndTriple flatValue then snd val + z else z) 0
+--   where
+--     --TODO: flattenValue returns a list with a tuple ... need to fold it?
+--     flatValue :: [(CurrencySymbol, TokenName, Integer)]
+--     flatValue = (,) <$> (fstTriple <$> (flattenValue . snd $ inv)) <*> (sndTriple <$> (flattenValue . snd $ inv))
+
+--     foldr (\(cs,tn,i) d -> if cs == )
 
 getTxUtxosByTxHash ::
   forall (m :: Type -> Type).
@@ -198,24 +218,24 @@ getTxUtxosByTxHash txh = do
 
 --should search through a Map instead of [Investment]
 --actually shouldn't return a map because i want a single (TxHash, Value)
-getInvByTxHash ::
+getValueByTxHash ::
   TxHash ->
-  Map TxHash Value ->
-  Either TokenomiaError (TxHash, Value)
-getInvByTxHash txh invs =
+  [(TxHash, Value)]
+  Either TokenomiaError Value
+getValueByTxHash txh invs =
   maybeToRight
     ( BlockFrostError . BlockfrostError $
         "Investment list doesn't contain matching TxHash"
     )
-    $ find (\inv -> fst inv == txh) (Map.toList invs)
+    $ snd . find $ (\inv -> fst inv == txh) invs
 
-getPsInvestments ::
-  PrivateSale ->
-  [Investment]
-getPsInvestments ps = concat ((^. piInvestments) <$> investors)
-  where
-    investors :: [PrivateInvestor]
-    investors = ps ^. psInvestors
+-- getPsInvestments ::
+--   PrivateSale ->
+--   [Investment]
+-- getPsInvestments ps = concat ((^. piInvestments) <$> investors)
+--   where
+--     investors :: [PrivateInvestor]
+--     investors = ps ^. psInvestors
 
 --TODO: just pass it the whole Map and return a new Map after filtering by txhash?
 -- Map TxHash Value
