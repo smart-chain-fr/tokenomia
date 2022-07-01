@@ -6,13 +6,15 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Werror #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Tokenomia.Vesting.PrivateSale (verifyPrivateSale) where
 
@@ -29,10 +31,10 @@ import Blockfrost.Client qualified as Client
 import Blockfrost.Lens (address, amount, outputs, txHash)
 import Control.Lens (folded, makeLenses, toListOf, (^.))
 import Control.Monad (unless)
-import Control.Monad.Except (MonadError (catchError, throwError), liftEither)
+import Control.Monad.Except (MonadError (throwError), liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Identity (IdentityT (IdentityT))
-import Control.Monad.Reader (MonadReader (ask, local))
+import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, eitherDecodeFileStrict)
 import Data.Bifunctor (first)
 import Data.Either.Combinators (maybeToRight)
@@ -101,19 +103,16 @@ class Monad m => MonadRunBlockfrost m where
   getAddressTransactions :: Address -> m [AddressTransaction]
   getTxUtxos :: TxHash -> m TransactionUtxos
 
-newtype RealBlockfrost (m :: * -> *) (a :: *) = RealBlockfrost {runRealBlockfrost :: m a}
+newtype RealBlockfrost (m :: Type -> Type) (a :: Type) = RealBlockfrost {runRealBlockfrost :: m a}
   deriving (Functor, Applicative, Monad) via IdentityT m
 
-newtype FakeBlockfrost (m :: * -> *) (a :: *) = FakeBlockfrost {runFakeBlockfrost :: m a}
+newtype FakeBlockfrost (m :: Type -> Type) (a :: Type) = FakeBlockfrost {runFakeBlockfrost :: m a}
   deriving (Functor, Applicative, Monad) via IdentityT m
 
-instance (MonadReader Environment m) => MonadReader Environment (RealBlockfrost m) where
-  ask = RealBlockfrost ask
-  local f = RealBlockfrost . local f . runRealBlockfrost
+-- deriving (MonadReader Environment) via IdentityT m
 
-instance (MonadError TokenomiaError m) => MonadError TokenomiaError (RealBlockfrost m) where
-  throwError = RealBlockfrost . throwError
-  catchError (RealBlockfrost m) f = RealBlockfrost $ catchError m (runRealBlockfrost . f)
+deriving via (IdentityT m) instance (MonadReader Environment m) => MonadReader Environment (RealBlockfrost m)
+deriving via (IdentityT m) instance (MonadError TokenomiaError m) => MonadError TokenomiaError (RealBlockfrost m)
 
 instance (MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) => MonadRunBlockfrost (RealBlockfrost m) where
   getAddressTransactions ad = RealBlockfrost $ do
