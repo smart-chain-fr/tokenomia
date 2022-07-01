@@ -70,6 +70,7 @@ library
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
       Tokenomia.Vesting.PrivateSale
+      Tokenomia.Vesting.PrivateSaleVerificationData
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Common.Blockfrost
       Tokenomia.Common.Value
