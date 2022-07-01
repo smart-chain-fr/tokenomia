@@ -23,12 +23,14 @@ module Tokenomia.Common.Transacting
     , Metadata (..)
     , ValiditySlotRange (..)
     , MonetaryAction (..)
+    , calculateMinRequiredUTxO
     , createMetadataFile
     , build
     , buildAndSubmit
     , submitAndWait
     , waitConfirmation
     , submitWithoutWaitingConfimation
+    , mockBuild
     , BuiltTx (..)
     , Fees
     ) where
@@ -57,6 +59,9 @@ import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Environment
 
 
+import           Tokenomia.Common.Data.Convertible          ( convert )
+import           Tokenomia.Common.Parser                    ( unsafeParseOnly )
+import           Tokenomia.Common.Parser.MinRequiredUTxO    ( minRequiredUTxO )
 import           Tokenomia.Common.Serialise (toCLI, fromCLI)
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 
@@ -69,7 +74,7 @@ import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.CLI
 import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO
+import           Tokenomia.Wallet.WalletUTxO ( WalletUTxO(..) )
 import           Tokenomia.Common.Hash
 import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
@@ -79,7 +84,7 @@ import           Ledger.Ada as Ada
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
 type Fees = Ada
-load SearchPath ["echo","cardano-cli","md5sum","mv" ]
+load SearchPath ["echo","cardano-cli","md5sum","mv", "rm" ]
 
 
 buildAndSubmit
@@ -117,6 +122,20 @@ build txBalance collateralMaybe txBuild@TxBuild {..}  = do
             (toCardanoCLIOptions txBuild <> collateralOptions <> feesOptions)
 
     return BuiltTx {oneTxInput = firstInputTxOutRef,txSignedPath, txBuiltPath,estimatedFees }
+
+mockBuild
+    :: ( MonadIO m
+       , MonadReader Environment m
+       , MonadError TokenomiaError m)
+    => TxBalance
+    -> Maybe CollateralAddressRef
+    -> TxBuild
+    -> m Ada
+mockBuild txBalance collateralMaybe txBuild =
+    build txBalance collateralMaybe txBuild >>= \BuiltTx{..} -> do
+        liftIO $ rm txBuiltPath
+        liftIO $ rm txSignedPath
+        return estimatedFees
 
 getCollateralCardanoCLIOptions 
  :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) 
@@ -161,6 +180,21 @@ getBuildMode :: TxBalance -> String
 getBuildMode (Unbalanced _) = "build"
 getBuildMode Balanced {}  = "build-raw"   
 
+calculateMinRequiredUTxO ::
+    ( MonadIO m
+    , MonadReader Environment m
+    )
+    => TxOut -> m Value
+calculateMinRequiredUTxO txOut = do
+    protocolParametersPath <- register_protocol_parameters
+    result <- liftIO $
+        cardano_cli
+            "transaction"
+            "calculate-min-required-utxo"
+            "--protocol-params-file" protocolParametersPath
+            (toCardanoCLIOptions txOut)
+        |> capture
+    pure $ unsafeParseOnly minRequiredUTxO (convert result)
 
 build'
     :: ( ExecArg a

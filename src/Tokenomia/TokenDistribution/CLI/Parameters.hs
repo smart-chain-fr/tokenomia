@@ -12,6 +12,7 @@ data  Parameters
     , adaWallet :: WalletName
     , collateralWallet :: WalletName
     , minLovelacesPerUtxo :: Integer
+    , metadataFilePath :: Maybe FilePath
     , dryRun :: Bool
     , verbose :: Bool
     } deriving (Show)

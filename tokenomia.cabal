@@ -32,7 +32,7 @@ common lang
       -Wincomplete-uni-patterns -Wincomplete-record-updates
       -Wredundant-constraints -Widentities -rtsopts
       -Wcompat -Wmissing-export-lists
-      -Wmissing-deriving-strategies -Werror
+      -Wmissing-deriving-strategies
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
@@ -72,6 +72,7 @@ library
       Tokenomia.Vesting.PrivateSale
       Tokenomia.Vesting.PrivateSaleVerificationData
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
       Tokenomia.Common.Value
       Tokenomia.Common.Serialise
@@ -89,8 +90,14 @@ library
       Tokenomia.Common.PageNumber 
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
+      Tokenomia.Common.Data.List.NonEmpty
+      Tokenomia.Common.Parser
       Tokenomia.Common.Parser.AssetClass
+      Tokenomia.Common.Parser.MinRequiredUTxO
       Tokenomia.Common.Parser.Value
+      Tokenomia.Common.Parser.TxOutDatumHash
+      Tokenomia.Common.Parser.TxOutRef
+      Tokenomia.Common.Parser.Utxo
       Tokenomia.TokenDistribution.Main
       Tokenomia.TokenDistribution.CLI
       Tokenomia.TokenDistribution.CLI.Parameters
@@ -98,7 +105,12 @@ library
       Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Distribution
       Tokenomia.TokenDistribution.PreValidation
+      Tokenomia.TokenDistribution.Transfer
+      Tokenomia.TokenDistribution.Split.EstimateFees
       Tokenomia.TokenDistribution.Split.SplitDistribution
+      Tokenomia.TokenDistribution.Split.SplitAdaSource
+      Tokenomia.TokenDistribution.Split.SplitTokenSource
+      Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
       Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
       Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
       Tokenomia.ICO.Status
@@ -136,7 +148,9 @@ library
       async,
       attoparsec,
       composition,
+      composition-extra,
       either,
+      memory,
       text,
       time,
       mtl,
@@ -158,12 +172,14 @@ library
       cardano-api,
       cardano-cli,
       cardano-ledger-alonzo,
+      cardano-ledger-byron,
       plutus-ledger-api,
       serialise,
       freer-extras,
       playground-common,
       plutus-chain-index,
       plutus-contract,
+      plutus-core,
       plutus-tx-plugin,
       plutus-tx,
       plutus-ledger,

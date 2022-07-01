@@ -4,6 +4,7 @@
 module Tokenomia.TokenDistribution.Distribution
     ( Distribution(..)
     , Recipient(..)
+    , countRecipients
     , readDistributionFile
     ) where
 
@@ -66,6 +67,9 @@ instance FromJSON Distribution where
             Ledger.assetClass
                 <$> (fromString <$> o .: "currencySymbol")
                 <*> (fromString <$> o .: "tokenName")
+
+countRecipients :: Distribution -> Integer
+countRecipients = toInteger . length . recipients
 
 readDistributionFile :: Parameters -> IO (Either String Distribution)
 readDistributionFile parameters =
