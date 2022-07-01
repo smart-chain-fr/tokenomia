@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Werror #-}
 
 module Tokenomia.Vesting.PrivateSale (verifyPrivateSale) where
 
@@ -26,7 +27,7 @@ import Blockfrost.Client (
  )
 import Blockfrost.Client qualified as Client
 import Blockfrost.Lens (address, amount, outputs, txHash)
-import Control.Lens (makeLenses, (^.))
+import Control.Lens (folded, makeLenses, toListOf, (^.))
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError (catchError, throwError), liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
@@ -195,14 +196,14 @@ verifyTxs ps =
             filter (\output -> (output ^. address) == (ps ^. psAddress)) bfUtxoOutputs
           bfAmts = concat ((^. amount) <$> treasAddrOutputs)
           bfValues = amountToAssetValue <$> bfAmts
-          confirmedVals = confirmValues inv bfValues
+          totalAmount = sumRelevantValues inv bfValues
           invAmount' = inv ^. invAmount
           invAssetClass' = inv ^. invAssetClass
-      unless (invAmount' == confirmedVals && invAssetClass' == inv ^. invAssetClass) $
+      unless (invAmount' == totalAmount && invAssetClass' == inv ^. invAssetClass) $
         throwError . BlockFrostError . BlockfrostError $ "Values don't match"
 
-confirmValues :: Investment -> [(AssetClass, Integer)] -> Integer
-confirmValues inv = foldr (\val z -> if fst val == inv ^. invAssetClass then snd val + z else z) 0
+sumRelevantValues :: Investment -> [(AssetClass, Integer)] -> Integer
+sumRelevantValues inv = foldr (\(ac, amt) z -> if ac == inv ^. invAssetClass then amt + z else z) 0
 
 getInvByTxHash ::
   TxHash ->
@@ -218,10 +219,7 @@ getInvByTxHash txh invs =
 getPsInvestments ::
   PrivateSale ->
   [Investment]
-getPsInvestments ps = concat ((^. piInvestments) <$> investors)
-  where
-    investors :: [PrivateInvestor]
-    investors = ps ^. psInvestors
+getPsInvestments = toListOf $ psInvestors . traverse . piInvestments . folded
 
 verifyTxHashList ::
   [TxHash] ->

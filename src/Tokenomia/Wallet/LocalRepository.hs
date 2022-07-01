@@ -17,6 +17,7 @@
 module Tokenomia.Wallet.LocalRepository
     ( register
     , remove
+    , exists
     , restoreByMnemonics
     , fetchAll
     , fetchById
@@ -27,6 +28,7 @@ import           Data.String
 import qualified Data.ByteString.Lazy.Char8 as C
 import           Control.Monad.Reader
 import           Shh.Internal
+import           System.Directory ( doesDirectoryExist )
 
 
 import           Tokenomia.Common.Environment
@@ -138,4 +140,9 @@ remove ::
     -> m ()
 remove walletName = getWalletPath walletName >>= \path -> liftIO $ rm "-rf" path
 
-
+exists ::
+    ( MonadIO m
+    , MonadReader Environment m )
+    => WalletName
+    -> m Bool
+exists walletName = getWalletPath walletName >>= liftIO . doesDirectoryExist

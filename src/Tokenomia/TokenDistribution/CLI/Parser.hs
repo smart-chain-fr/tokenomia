@@ -8,6 +8,7 @@ module Tokenomia.TokenDistribution.CLI.Parser
     , adaWallet
     , collateralWallet
     , minLovelaces
+    , metadataFilePath
     , dryRun
     , verbose
     ) where
@@ -29,6 +30,7 @@ import Options.Applicative
     , long
     , metavar
     , option
+    , optional
     , short
     , showDefault
     , strOption
@@ -99,6 +101,13 @@ minLovelaces = option auto $
     <> showDefault
     <> value 1379280
     <> metavar "AMOUNT"
+
+metadataFilePath :: Parser (Maybe FilePath)
+metadataFilePath = optional . strOption $
+       short 'd'
+    <> long "metadata-file"
+    <> help "Metadata shared by all transactions"
+    <> metavar "FILENAME"
 
 dryRun :: Parser Bool
 dryRun = switch $
