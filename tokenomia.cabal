@@ -142,6 +142,7 @@ library
       Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
     build-depends:
       base >= 4.9 && < 5,
+      Cabal,
       base16-bytestring,
       lens,
       aeson,
