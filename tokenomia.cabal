@@ -33,6 +33,7 @@ common lang
       -Wredundant-constraints -Widentities -rtsopts
       -Wcompat -Wmissing-export-lists
       -Wmissing-deriving-strategies
+      -Wno-orphans
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
@@ -69,8 +70,7 @@ library
       Tokenomia.Vesting.Repository
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
-      Tokenomia.Vesting.PrivateSale
-      Tokenomia.Vesting.PrivateSaleVerificationData
+      Tokenomia.Vesting.Sendings
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
@@ -151,6 +151,7 @@ library
       composition,
       composition-extra,
       either,
+      extra,
       memory,
       text,
       time,
