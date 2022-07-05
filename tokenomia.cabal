@@ -68,6 +68,11 @@ library
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.Common.Arbitrary.AssetClass
+      Tokenomia.Common.Arbitrary.Builtins
+      Tokenomia.Common.Arbitrary.Modifiers
+      Tokenomia.Common.Arbitrary.MultiAsset
+      Tokenomia.Common.Arbitrary.Value
       Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
       Tokenomia.Common.Value
@@ -81,6 +86,7 @@ library
       Tokenomia.Common.Datum
       Tokenomia.Common.Address
       Tokenomia.Common.Asset
+      Tokenomia.Common.MultiAsset
       Tokenomia.Common.Hash
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
@@ -194,7 +200,9 @@ library
       streamly,
       deepseq,
       hashable,
-      hex-text
+      hex-text,
+      quickcheck-instances,
+      tasty-quickcheck
     hs-source-dirs: src 
 
 test-suite tokenomia-tests
@@ -215,6 +223,7 @@ test-suite tokenomia-tests
     Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
     Spec.Tokenomia.Common.Data.Function.Memoize
     Spec.Tokenomia.Common.Data.Sequence.IntegerPartitions
+    Spec.Tokenomia.Common.MultiAsset
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,
