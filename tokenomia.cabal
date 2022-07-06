@@ -28,10 +28,12 @@ flag defer-plugin-errors
 common lang
     default-language:   Haskell2010
     ghc-options:
-      -Wall -Wnoncanonical-monad-instances
-      -Wincomplete-uni-patterns -Wincomplete-record-updates
-      -Wredundant-constraints -Widentities -rtsopts
-      -- See Plutus Tx readme
+      -Wall -Wnoncanonical-monad-instances -Wcompat -Wincomplete-uni-patterns
+      -Wno-partial-type-signatures -Wmissing-export-lists -Wredundant-constraints
+      -Wincomplete-record-updates -Wmissing-deriving-strategies -Wno-unused-do-bind
+      -Wno-name-shadowing -Wunused-foralls -fprint-explicit-foralls
+      -fprint-explicit-kinds -fwarn-missing-import-lists -Werror -rtsopts
+          -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors

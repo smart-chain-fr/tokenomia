@@ -1,5 +1,6 @@
 {
   description = "tokenomia";
+  nixConfig.bash-prompt = "\\[\\e[0m\\][\\[\\e[0;2m\\]nix-develop \\[\\e[0;1m\\]tokenomia \\[\\e[0;93m\\]\\w\\[\\e[0m\\]]\\[\\e[0m\\]$ \\[\\e[0m\\]";
 
   inputs = {
     haskell-nix.url = "github:mlabs-haskell/haskell.nix";
@@ -15,6 +16,11 @@
     };
 
     # all inputs below here are for pinning with haskell.nix
+    blockfrost-haskell = {
+      url =
+        "github:smart-chain-fr/blockfrost-haskell/175cf5da3c173f89dbeec06c64d136be215d2439";
+      flake = false;
+    };
     cardano-addresses = {
       url =
         "github:input-output-hk/cardano-addresses/d2f86caa085402a953920c6714a0de6a50b655ec";
@@ -136,9 +142,23 @@
       nixpkgsFor' = system: import nixpkgs { inherit system; };
 
       cabalProjectLocal = ''
-        allow-newer: size-based:template-haskell
+        allow-newer:
+           -- Copied from plutus-core
+           size-based:template-haskell
+           , ouroboros-consensus-byron:formatting
+           , beam-core:aeson
+           , beam-sqlite:aeson
+           , beam-sqlite:dlist
+           , beam-migrate:aeson
 
-        constraints: hedgehog >= 1.0.4, hedgehog < 1.1
+        -- Copied from plutus-core
+        constraints:
+          -- big breaking change here, inline-r doens't have an upper bound
+          singletons < 3.0
+          -- bizarre issue: in earlier versions they define their own 'GEq', in newer
+          -- ones they reuse the one from 'some', but there isn't e.g. a proper version
+          -- constraint from dependent-sum-template (which is the library we actually use).
+          , dependent-sum > 0.6.2.0
       '';
 
       haskellModules = [
@@ -163,6 +183,15 @@
       ];
 
       extraSources = [
+        {
+          src = inputs.blockfrost-haskell;
+          subdirs = [
+            "blockfrost-client"
+            "blockfrost-api"
+            "blockfrost-client-core"
+            "blockfrost-pretty"
+          ];
+        }
         {
           src = inputs.cardano-addresses;
           subdirs = [ "core" "command-line" ];
@@ -235,7 +264,6 @@
             "cardano-api"
             "cardano-node"
             "cardano-cli"
-            "cardano-git-rev"
             "trace-resources"
             "trace-forward"
             "trace-dispatcher"
@@ -252,16 +280,11 @@
         {
           src = inputs.cardano-wallet;
           subdirs = [
-            "lib/cli"
-            "lib/core"
-            "lib/core-integration"
-            "lib/dbvar"
-            "lib/launcher"
-            "lib/numeric"
-            "lib/shelley"
-            "lib/strict-non-empty-containers"
-            "lib/test-utils"
             "lib/text-class"
+            "lib/strict-non-empty-containers"
+            "lib/core"
+            "lib/test-utils"
+            "lib/numeric"
           ];
         }
         {
@@ -296,23 +319,21 @@
         {
           src = inputs.ouroboros-network;
           subdirs = [
-            "io-classes"
-            "io-sim"
-            "strict-stm"
             "monoidal-synchronisation"
-            "network-mux"
-            "ntp-client"
-            "ouroboros-consensus"
-            "ouroboros-consensus-byron"
-            "ouroboros-consensus-cardano"
-            "ouroboros-consensus-protocol"
-            "ouroboros-consensus-shelley"
-            "ouroboros-network"
-            "ouroboros-network-framework"
-            "ouroboros-network-testing"
             "typed-protocols"
             "typed-protocols-cborg"
             "typed-protocols-examples"
+            "ouroboros-network"
+            "ouroboros-network-testing"
+            "ouroboros-network-framework"
+            "ouroboros-consensus"
+            "ouroboros-consensus-byron"
+            "ouroboros-consensus-cardano"
+            "ouroboros-consensus-shelley"
+            "io-sim"
+            "io-classes"
+            "network-mux"
+            "ntp-client"
           ];
         }
         {
@@ -370,6 +391,7 @@
           shell = {
             additional = ps: [
               ps.plutus-pab
+              ps.cardano-cli
             ];
             withHoogle = true;
             tools.haskell-language-server = { };
