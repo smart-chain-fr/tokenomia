@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Tokenomia.TokenDistribution.Main (
   main,
 ) where

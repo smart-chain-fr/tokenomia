@@ -1,8 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
-
 module Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy (tests) where
 
 import Control.Monad (void)

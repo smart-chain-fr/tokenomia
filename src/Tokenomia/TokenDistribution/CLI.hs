@@ -1,5 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-
 module Tokenomia.TokenDistribution.CLI (runCommand) where
 
 import Control.Applicative ((<**>))

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Tokenomia.Wallet.Collateral.Write (
   createCollateral,
   createCollateral',

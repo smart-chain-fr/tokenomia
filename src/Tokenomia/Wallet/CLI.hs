@@ -1,11 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Tokenomia.Wallet.CLI (
   askToChooseAmongGivenWallets,
@@ -63,7 +56,7 @@ askAmongAllWallets =
       . nonEmpty
 
 askToChooseAmongGivenWallets ::
-  (MonadIO m, MonadReader Environment m) =>
+  MonadIO m =>
   NonEmpty Wallet ->
   m Wallet
 askToChooseAmongGivenWallets = askMenu
@@ -128,7 +121,7 @@ fetchUTxOFilterBy ::
 fetchUTxOFilterBy predicate childAddressRef = nonEmpty <$> queryUTxOsFilterBy childAddressRef predicate
 
 askToChooseAmongGivenUTxOs ::
-  (MonadIO m, MonadReader Environment m) =>
+  MonadIO m =>
   NonEmpty WalletUTxO ->
   m WalletUTxO
 askToChooseAmongGivenUTxOs = askMenu

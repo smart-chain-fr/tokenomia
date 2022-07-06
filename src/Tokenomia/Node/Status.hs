@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
-
 module Tokenomia.Node.Status (displayStatus, translateSlotToTime, translateTimeToSlot) where
 
 import Data.Time.Clock.POSIX

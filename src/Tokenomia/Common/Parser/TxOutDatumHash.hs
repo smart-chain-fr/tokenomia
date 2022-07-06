@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Tokenomia.Common.Parser.TxOutDatumHash (
   txOutDatumHash,
 ) where

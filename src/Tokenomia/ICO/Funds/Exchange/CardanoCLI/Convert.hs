@@ -1,8 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert (convertToRoundSpecificPlan) where
 

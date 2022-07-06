@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex (
   fetchProvisionedUTxO,
 ) where

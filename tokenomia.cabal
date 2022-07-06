@@ -1,6 +1,6 @@
-cabal-version:      2.4
-name:               tokenomia
-version:            0.1.0.0
+cabal-version: 2.4
+name:          tokenomia
+version:       0.1.0.0
 
 -- A short (one-line) description of the package.
 -- synopsis:
@@ -11,7 +11,7 @@ version:            0.1.0.0
 -- A URL where users can report bugs.
 -- bug-reports:
 
-license: Apache-2.0
+license:       Apache-2.0
 license-files: LICENSE
 
 -- A copyright notice.
@@ -20,296 +20,302 @@ license-files: LICENSE
 -- extra-source-files: CHANGELOG.md
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
-    default: False
-    manual: True
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+  default:     False
+  manual:      True
 
 common lang
-    default-language:   Haskell2010
-    ghc-options:
-      -Wall -Wnoncanonical-monad-instances -Wcompat -Wincomplete-uni-patterns
-      -Wno-partial-type-signatures -Wmissing-export-lists -Wredundant-constraints
-      -Wincomplete-record-updates -Wmissing-deriving-strategies -Wno-unused-do-bind
-      -Wno-name-shadowing -Wunused-foralls -fprint-explicit-foralls
-      -fprint-explicit-kinds -Werror -rtsopts
-          -- See Plutus Tx readme
-      -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
-    default-extensions:
-      NoStarIsType
-      BangPatterns
-      BinaryLiterals
-      ConstrainedClassMethods
-      ConstraintKinds
-      DataKinds
-      DeriveAnyClass
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveGeneric
-      DeriveLift
-      DeriveTraversable
-      DerivingStrategies
-      DerivingVia
-      DoAndIfThenElse
-      EmptyCase
-      EmptyDataDecls
-      EmptyDataDeriving
-      ExistentialQuantification
-      ExplicitForAll
-      FlexibleContexts
-      FlexibleInstances
-      ForeignFunctionInterface
-      GADTSyntax
-      GeneralisedNewtypeDeriving
-      HexFloatLiterals
-      ImplicitPrelude
-      ImportQualifiedPost
-      InstanceSigs
-      KindSignatures
-      LambdaCase
-      MonomorphismRestriction
-      MultiParamTypeClasses
-      NamedFieldPuns
-      NamedWildCards
-      NumericUnderscores
-      OverloadedStrings
-      PartialTypeSignatures
-      PatternGuards
-      PolyKinds
-      PostfixOperators
-      RankNTypes
-      RelaxedPolyRec
-      ScopedTypeVariables
-      StandaloneDeriving
-      StandaloneKindSignatures
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-      TypeSynonymInstances
-      ViewPatterns
+  default-language:   Haskell2010
+  ghc-options:
+    -Wall -Wnoncanonical-monad-instances -Wcompat
+    -Wincomplete-uni-patterns -Wno-partial-type-signatures
+    -Wmissing-export-lists -Wredundant-constraints
+    -Wincomplete-record-updates -Wmissing-deriving-strategies
+    -Wno-unused-do-bind -Wno-name-shadowing -Wunused-foralls
+    -fprint-explicit-foralls -fprint-explicit-kinds -Werror -rtsopts
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
+
+  -- See Plutus Tx readme
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+
+  default-extensions:
+    NoStarIsType
+    BangPatterns
+    BinaryLiterals
+    ConstrainedClassMethods
+    ConstraintKinds
+    DataKinds
+    DeriveAnyClass
+    DeriveDataTypeable
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DoAndIfThenElse
+    EmptyCase
+    EmptyDataDecls
+    EmptyDataDeriving
+    ExistentialQuantification
+    ExplicitForAll
+    FlexibleContexts
+    FlexibleInstances
+    ForeignFunctionInterface
+    GADTSyntax
+    GeneralisedNewtypeDeriving
+    HexFloatLiterals
+    ImplicitPrelude
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MonomorphismRestriction
+    MultiParamTypeClasses
+    NamedFieldPuns
+    NamedWildCards
+    NumericUnderscores
+    OverloadedStrings
+    PartialTypeSignatures
+    PatternGuards
+    PolyKinds
+    PostfixOperators
+    RankNTypes
+    RelaxedPolyRec
+    ScopedTypeVariables
+    StandaloneDeriving
+    StandaloneKindSignatures
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    TypeSynonymInstances
+    ViewPatterns
 
 library
-    import: lang
-    exposed-modules:
-      Tokenomia.CLI
-      Tokenomia.Node.Status
-      Tokenomia.Token.CLAPStyle.Mint
-      Tokenomia.Token.CLAPStyle.Burn
-      Tokenomia.Token.CLAPStyle.MonetaryPolicy
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
-      Tokenomia.Script.LocalRepository
-      Tokenomia.Script.ChainIndex
-      Tokenomia.Script.UTxO
-      Tokenomia.Wallet.Type
-      Tokenomia.Common.TxOutRef
-      Tokenomia.Wallet.CLI
-      Tokenomia.Wallet.LocalRepository
-      Tokenomia.Wallet.LocalRepository.Folder
-      Tokenomia.Wallet.ChildAddress.ChainIndex
-      Tokenomia.Wallet.UTxO
-      Tokenomia.Wallet.WalletUTxO
-      Tokenomia.Wallet.Collateral.Write
-      Tokenomia.Wallet.Collateral.Read
-      Tokenomia.Wallet.ChildAddress.ChildAddressRef
-      Tokenomia.Wallet.ChildAddress.LocalRepository
-      Tokenomia.Ada.Transfer
-      Tokenomia.Common.Error
-      Tokenomia.Token.Transfer
-      Tokenomia.Vesting.Contract
-      Tokenomia.Vesting.Repository
-      Tokenomia.Vesting.Vest
-      Tokenomia.Vesting.Retrieve
-      Tokenomia.Tokenomic.CLAP.Simulation
-      Tokenomia.Common.AssetClass
-      Tokenomia.Common.Blockfrost
-      Tokenomia.Common.Value
-      Tokenomia.Common.Serialise
-      Tokenomia.Common.Node
-      Tokenomia.Common.Transacting
-      Tokenomia.Common.Folder
-      Tokenomia.Common.Shell.InteractiveMenu
-      Tokenomia.Common.Shell.Console
-      Tokenomia.Common.Environment
-      Tokenomia.Common.Datum
-      Tokenomia.Common.Address
-      Tokenomia.Common.Asset
-      Tokenomia.Common.Hash
-      Tokenomia.Common.Token 
-      Tokenomia.Common.PageNumber 
-      Tokenomia.Common.Data.ByteString
-      Tokenomia.Common.Data.Convertible
-      Tokenomia.Common.Data.List.NonEmpty
-      Tokenomia.Common.Parser
-      Tokenomia.Common.Parser.AssetClass
-      Tokenomia.Common.Parser.MinRequiredUTxO
-      Tokenomia.Common.Parser.Value
-      Tokenomia.Common.Parser.TxOutDatumHash
-      Tokenomia.Common.Parser.TxOutRef
-      Tokenomia.Common.Parser.Utxo
-      Tokenomia.TokenDistribution.Main
-      Tokenomia.TokenDistribution.CLI
-      Tokenomia.TokenDistribution.CLI.Parameters
-      Tokenomia.TokenDistribution.CLI.Parser
-      Tokenomia.TokenDistribution.Parser.Address
-      Tokenomia.TokenDistribution.Distribution
-      Tokenomia.TokenDistribution.PreValidation
-      Tokenomia.TokenDistribution.Transfer
-      Tokenomia.TokenDistribution.Split.EstimateFees
-      Tokenomia.TokenDistribution.Split.SplitDistribution
-      Tokenomia.TokenDistribution.Split.SplitAdaSource
-      Tokenomia.TokenDistribution.Split.SplitTokenSource
-      Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
-      Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-      Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-      Tokenomia.ICO.Status
-      Tokenomia.ICO.Round.Settings
-      Tokenomia.ICO.LocalRepository
-      Tokenomia.ICO.Balanceable
-      Tokenomia.ICO.Funds.Validation.Run
-      Tokenomia.ICO.Funds.Validation.Investor.Command
-      Tokenomia.ICO.Funds.Validation.Investor.Plan
-      Tokenomia.ICO.Funds.Validation.ChildAddress.State
-      Tokenomia.ICO.Funds.Validation.ChildAddress.Types
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
-      Tokenomia.ICO.Funds.Validation.Simulation.Transfer
-      Tokenomia.ICO.Funds.Exchange.Run
-      Tokenomia.ICO.Funds.Exchange.ReceivedFunds
-      Tokenomia.ICO.Funds.Exchange.Command
-      Tokenomia.ICO.Funds.Exchange.Plan
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
-      Tokenomia.ICO.Funds.WhiteListing.Repository
-      Tokenomia.ICO.Funds.WhiteListing.Types
-      Tokenomia.ICO.Funds.Exchange.Tokens
-      Tokenomia.ICO.Funds.Exchange.Plan.Settings
-      Tokenomia.ICO.Funds.Validation.Status
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
-      Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
-    build-depends:
-      base >= 4.9 && < 5,
-      base16-bytestring,
-      lens,
-      aeson,
-      async,
-      attoparsec,
-      composition,
-      composition-extra,
-      either,
-      memory,
-      text,
-      time,
-      mtl,
-      shh,
-      split,
-      directory,
-      random,
-      exceptions,
-      lifted-base,
-      utf8-string,
-      Unique,
-      freer-simple,
-      data-default,
-      iso8601-time,
-      unordered-containers,
-      ouroboros-consensus,
-      bytestring,
-      containers,
-      cardano-api,
-      cardano-cli,
-      cardano-ledger-alonzo,
-      cardano-ledger-byron,
-      plutus-ledger-api,
-      serialise,
-      freer-extras,
-      playground-common,
-      plutus-chain-index,
-      plutus-contract,
-      plutus-core,
-      plutus-tx-plugin,
-      plutus-tx,
-      plutus-ledger,
-      pretty-simple,
-      blockfrost-client,
-      blockfrost-api,
-      blockfrost-client-core,
-      blockfrost-pretty,
-      prettyprinter,
-      safe-money,
-      optparse-applicative,
-      ordered-containers,
-      nonempty-containers,
-      streamly,
-      deepseq,
-      hashable,
-      hex-text
-    hs-source-dirs: src 
+  import:          lang
+  exposed-modules:
+    Tokenomia.Ada.Transfer
+    Tokenomia.CLI
+    Tokenomia.Common.Address
+    Tokenomia.Common.Asset
+    Tokenomia.Common.AssetClass
+    Tokenomia.Common.Blockfrost
+    Tokenomia.Common.Data.ByteString
+    Tokenomia.Common.Data.Convertible
+    Tokenomia.Common.Data.List.NonEmpty
+    Tokenomia.Common.Datum
+    Tokenomia.Common.Environment
+    Tokenomia.Common.Error
+    Tokenomia.Common.Folder
+    Tokenomia.Common.Hash
+    Tokenomia.Common.Node
+    Tokenomia.Common.PageNumber
+    Tokenomia.Common.Parser
+    Tokenomia.Common.Parser.AssetClass
+    Tokenomia.Common.Parser.MinRequiredUTxO
+    Tokenomia.Common.Parser.TxOutDatumHash
+    Tokenomia.Common.Parser.TxOutRef
+    Tokenomia.Common.Parser.Utxo
+    Tokenomia.Common.Parser.Value
+    Tokenomia.Common.Serialise
+    Tokenomia.Common.Shell.Console
+    Tokenomia.Common.Shell.InteractiveMenu
+    Tokenomia.Common.Token
+    Tokenomia.Common.Transacting
+    Tokenomia.Common.TxOutRef
+    Tokenomia.Common.Value
+    Tokenomia.ICO.Balanceable
+    Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
+    Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
+    Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
+    Tokenomia.ICO.Funds.Exchange.Command
+    Tokenomia.ICO.Funds.Exchange.Plan
+    Tokenomia.ICO.Funds.Exchange.Plan.Settings
+    Tokenomia.ICO.Funds.Exchange.ReceivedFunds
+    Tokenomia.ICO.Funds.Exchange.Run
+    Tokenomia.ICO.Funds.Exchange.Tokens
+    Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
+    Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
+    Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
+    Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+    Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
+    Tokenomia.ICO.Funds.Validation.ChildAddress.State
+    Tokenomia.ICO.Funds.Validation.ChildAddress.Types
+    Tokenomia.ICO.Funds.Validation.Investor.Command
+    Tokenomia.ICO.Funds.Validation.Investor.Plan
+    Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
+    Tokenomia.ICO.Funds.Validation.Run
+    Tokenomia.ICO.Funds.Validation.Simulation.Transfer
+    Tokenomia.ICO.Funds.Validation.Status
+    Tokenomia.ICO.Funds.WhiteListing.Repository
+    Tokenomia.ICO.Funds.WhiteListing.Types
+    Tokenomia.ICO.LocalRepository
+    Tokenomia.ICO.Round.Settings
+    Tokenomia.ICO.Status
+    Tokenomia.Node.Status
+    Tokenomia.Script.ChainIndex
+    Tokenomia.Script.LocalRepository
+    Tokenomia.Script.UTxO
+    Tokenomia.Token.CLAPStyle.Burn
+    Tokenomia.Token.CLAPStyle.Mint
+    Tokenomia.Token.CLAPStyle.MonetaryPolicy
+    Tokenomia.Token.Transfer
+    Tokenomia.TokenDistribution.CLI
+    Tokenomia.TokenDistribution.CLI.Parameters
+    Tokenomia.TokenDistribution.CLI.Parser
+    Tokenomia.TokenDistribution.Distribution
+    Tokenomia.TokenDistribution.Main
+    Tokenomia.TokenDistribution.Parser.Address
+    Tokenomia.TokenDistribution.PreValidation
+    Tokenomia.TokenDistribution.Split.EstimateFees
+    Tokenomia.TokenDistribution.Split.SplitAdaSource
+    Tokenomia.TokenDistribution.Split.SplitDistribution
+    Tokenomia.TokenDistribution.Split.SplitTokenSource
+    Tokenomia.TokenDistribution.Transfer
+    Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
+    Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
+    Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
+    Tokenomia.Tokenomic.CLAP.Simulation
+    Tokenomia.Vesting.Contract
+    Tokenomia.Vesting.Repository
+    Tokenomia.Vesting.Retrieve
+    Tokenomia.Vesting.Vest
+    Tokenomia.Wallet.ChildAddress.ChainIndex
+    Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    Tokenomia.Wallet.ChildAddress.LocalRepository
+    Tokenomia.Wallet.CLI
+    Tokenomia.Wallet.Collateral.Read
+    Tokenomia.Wallet.Collateral.Write
+    Tokenomia.Wallet.LocalRepository
+    Tokenomia.Wallet.LocalRepository.Folder
+    Tokenomia.Wallet.Type
+    Tokenomia.Wallet.UTxO
+    Tokenomia.Wallet.WalletUTxO
+
+  build-depends:
+    , aeson
+    , async
+    , attoparsec
+    , base                    >=4.9 && <5
+    , base16-bytestring
+    , blockfrost-api
+    , blockfrost-client
+    , blockfrost-client-core
+    , blockfrost-pretty
+    , bytestring
+    , cardano-api
+    , cardano-cli
+    , cardano-ledger-alonzo
+    , cardano-ledger-byron
+    , composition
+    , composition-extra
+    , containers
+    , data-default
+    , deepseq
+    , directory
+    , either
+    , exceptions
+    , freer-extras
+    , freer-simple
+    , hashable
+    , hex-text
+    , iso8601-time
+    , lens
+    , lifted-base
+    , memory
+    , mtl
+    , nonempty-containers
+    , optparse-applicative
+    , ordered-containers
+    , ouroboros-consensus
+    , playground-common
+    , plutus-chain-index
+    , plutus-contract
+    , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+    , pretty-simple
+    , prettyprinter
+    , random
+    , safe-money
+    , serialise
+    , shh
+    , split
+    , streamly
+    , text
+    , time
+    , Unique
+    , unordered-containers
+    , utf8-string
+
+  hs-source-dirs:  src
 
 test-suite tokenomia-tests
-  import: lang
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
   hs-source-dirs: test
   other-modules:
+    Spec.Tokenomia.Common.Value
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
     Spec.Tokenomia.Wallet.UTxO
-    Spec.Tokenomia.Common.Value
-    -- Spec.Tokenomia.ICO.Funds.Exchange.Plan
-    -- Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
-    -- Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
-    -- Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
-    -- Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
-    -- Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
-  build-depends:
-    plutus-tx -any,
-    plutus-tx-plugin,
-    plutus-contract -any,
-    plutus-ledger -any,
-    plutus-ledger-api,
-    tokenomia -any
-  build-depends:
-    base >=4.9 && <5,
-    tasty -any,
-    tasty-hunit -any,
-    tasty-hedgehog >=0.2.0.0,
-    tasty-quickcheck,
-    quickcheck-instances,
-    QuickCheck,
-    random,
-    nonempty-containers,
-    freer-simple -any,
-    bytestring,
-    text,
-    ordered-containers,
-    interpolatedstring-perl6,
-    blockfrost-api,
-    safe-money,
-    data-default
 
+  -- Spec.Tokenomia.ICO.Funds.Exchange.Plan
+  -- Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
+  -- Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
+  -- Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
+  -- Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
+  -- Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+  build-depends:
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+    , tokenomia
 
-executable tokenomia-cli 
-  import: lang
-  main-is: Main.hs
+  build-depends:
+    , base                      >=4.9     && <5
+    , blockfrost-api
+    , bytestring
+    , data-default
+    , freer-simple
+    , interpolatedstring-perl6
+    , nonempty-containers
+    , ordered-containers
+    , QuickCheck
+    , quickcheck-instances
+    , random
+    , safe-money
+    , tasty
+    , tasty-hedgehog            >=0.2.0.0
+    , tasty-hunit
+    , tasty-quickcheck
+    , text
+
+executable tokenomia-cli
+  import:         lang
+  main-is:        Main.hs
   hs-source-dirs: app
-  ghc-options:
-    -threaded
+  ghc-options:    -threaded
   build-depends:
-    base >= 4.9 && < 5,
-    tokenomia
+    , base       >=4.9 && <5
+    , tokenomia
 
 executable token-distribution
-  import: lang
-  main-is: Main.hs
+  import:         lang
+  main-is:        Main.hs
   hs-source-dirs: app/TokenDistribution
-  ghc-options:
-    -threaded
+  ghc-options:    -threaded
   build-depends:
-    base >= 4.9 && < 5,
-    tokenomia
+    , base       >=4.9 && <5
+    , tokenomia

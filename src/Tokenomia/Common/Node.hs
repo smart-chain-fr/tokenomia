@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-
 module Tokenomia.Common.Node (
   getCurrentSlotSynced,
 ) where

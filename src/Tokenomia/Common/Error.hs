@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Tokenomia.Common.Error (
   TokenomiaError (..),
   whenNullThrow,

@@ -1,7 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Tokenomia.Wallet.Collateral.Read (
   fetchCollateral,
   fetchWalletsWithCollateral,

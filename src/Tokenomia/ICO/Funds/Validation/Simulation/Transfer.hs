@@ -1,7 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Tokenomia.ICO.Funds.Validation.Simulation.Transfer (dispatchAdasOnChildAdresses) where
 

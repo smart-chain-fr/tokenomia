@@ -1,8 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-
 module Tokenomia.TokenDistribution.Parser.Address (
   deserialiseCardanoAddress,
   serialiseCardanoAddress,

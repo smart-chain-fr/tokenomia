@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository (
   deriveMissingChildAddresses,
   fetchAddressesByWallet,

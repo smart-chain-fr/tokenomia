@@ -1,8 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications #-}
-
 module Tokenomia.Common.Data.Convertible (Convertible (..)) where
 
 import Data.Text qualified as TS (Text, pack, unpack)

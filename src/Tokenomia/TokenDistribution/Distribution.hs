@@ -1,6 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Tokenomia.TokenDistribution.Distribution (
   Distribution (..),
   Recipient (..),
