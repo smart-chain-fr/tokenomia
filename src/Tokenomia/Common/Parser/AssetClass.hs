@@ -1,31 +1,34 @@
-{-# LANGUAGE ImportQualifiedPost        #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Tokenomia.Common.Parser.AssetClass
-    ( assetClass
-    ) where
+module Tokenomia.Common.Parser.AssetClass (
+  assetClass,
+) where
 
-import Prelude           hiding ( take )
+import Prelude hiding (take)
 
-import Control.Applicative      ( (<|>) )
-import Data.Attoparsec.Text     ( Parser, take, takeWhile1 )
-import Data.Char                ( isSpace )
-import Data.String              ( fromString )
-import Data.Text                ( Text )
+import Control.Applicative ((<|>))
+import Data.Attoparsec.Text (Parser, take, takeWhile1)
+import Data.Char (isSpace)
+import Data.String (fromString)
+import Data.Text (Text)
 
-import Ledger.Value
-    ( AssetClass
-    , CurrencySymbol
-    , TokenName
-    )
-import Ledger.Value qualified as Ledger
-    ( assetClass, tokenName )
+import Ledger.Value (
+  AssetClass,
+  CurrencySymbol,
+  TokenName,
+ )
+import Ledger.Value qualified as Ledger (
+  assetClass,
+  tokenName,
+ )
 
-import Tokenomia.Common.AssetClass qualified as Ledger
-    ( adaAssetClass )
+import Tokenomia.Common.AssetClass qualified as Ledger (
+  adaAssetClass,
+ )
 
-import Tokenomia.Common.Data.ByteString     ( unsafeDecodeHex )
-import Tokenomia.Common.Data.Convertible    ( Convertible(convert) )
+import Tokenomia.Common.Data.ByteString (unsafeDecodeHex)
+import Tokenomia.Common.Data.Convertible (Convertible (convert))
 
 currencySymbol :: Parser CurrencySymbol
 currencySymbol = fromString . convert <$> take 56
@@ -38,18 +41,20 @@ tokenName = decodeTokenName <$> takeWhile1 (not . isSpace)
 
 assetClass :: Parser AssetClass
 assetClass =
-    adaAssetClass <|> tokenAssetClass <|> anonymousAssetClass
+  adaAssetClass <|> tokenAssetClass <|> anonymousAssetClass
   where
     adaAssetClass :: Parser AssetClass
     adaAssetClass = Ledger.adaAssetClass <$ "lovelace"
 
     tokenAssetClass :: Parser AssetClass
-    tokenAssetClass = Ledger.assetClass
+    tokenAssetClass =
+      Ledger.assetClass
         <$> currencySymbol
-        <*  "."
+        <* "."
         <*> tokenName
 
     anonymousAssetClass :: Parser AssetClass
-    anonymousAssetClass = Ledger.assetClass
+    anonymousAssetClass =
+      Ledger.assetClass
         <$> currencySymbol
         <*> pure (fromString "")

@@ -1,81 +1,84 @@
-{-# LANGUAGE ConstraintKinds    #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE NoImplicitPrelude  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
-{-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-specialise #-}
+
 module Tokenomia.Vesting.Contract (
-    -- $vesting
-    VestingParams(..),
-    VestingSchema,
-    VestingTranche(..),
-    VestingError(..),
-    AsVestingError(..),
-    totalAmount,
-    vestingContract,
-    validate,
-    vestingScript
-    ) where
+  -- $vesting
+  VestingParams (..),
+  VestingSchema,
+  VestingTranche (..),
+  VestingError (..),
+  AsVestingError (..),
+  totalAmount,
+  vestingContract,
+  validate,
+  vestingScript,
+) where
 
-import Control.Lens ( view, makeClassyPrisms, review )
-import           Control.Monad            (void, when)
-import           Data.Aeson               (FromJSON, ToJSON)
-import qualified Data.Map                 as Map
-import           Prelude                  (Semigroup (..),Show)
+import Control.Lens (makeClassyPrisms, review, view)
+import Control.Monad (void, when)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Map qualified as Map
+import Prelude (Semigroup (..), Show)
 
-import           GHC.Generics             (Generic)
-import           Ledger                   (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
-import           Ledger.Constraints       (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts          as Validation
-import qualified Ledger.Interval          as Interval
-import qualified Ledger.Tx                as Tx
-import           Ledger.Typed.Scripts     (ValidatorTypes (..))
-import qualified Ledger.Typed.Scripts     as Scripts
-import           Ledger.Value             (Value)
-import qualified Ledger.Value             as Value
-import Plutus.Contract
-    ( ContractError,
-      AsContractError(_ContractError),
-      type (.\/),
-      Endpoint,
-      Contract,
-      awaitTime,
-      endpoint,
-      submitTxConstraints,
-      submitTxConstraintsSpending,
-      utxosAt,
-      mapError,
-      selectList,
-      throwError,
-      Promise(awaitPromise) )
-import qualified Plutus.Contract.Typed.Tx as Typed
-import qualified PlutusTx
-import PlutusTx.Prelude
-    ( return,
-      Bool,
-      (.),
-      (&&),
-      ($),
-      Applicative(pure),
-      Foldable(foldMap),
-      Monoid(mempty),
-      AdditiveGroup((-)),
-      AdditiveMonoid(zero),
-      AdditiveSemigroup((+)),
-      Ord((>=)) )
-import qualified Prelude                  as Haskell
+import GHC.Generics (Generic)
+import Ledger (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
+import Ledger.Constraints (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
+import Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import Ledger.Contexts qualified as Validation
+import Ledger.Interval qualified as Interval
+import Ledger.Tx qualified as Tx
+import Ledger.Typed.Scripts (ValidatorTypes (..))
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value (Value)
+import Ledger.Value qualified as Value
+import Plutus.Contract (
+  AsContractError (_ContractError),
+  Contract,
+  ContractError,
+  Endpoint,
+  Promise (awaitPromise),
+  awaitTime,
+  endpoint,
+  mapError,
+  selectList,
+  submitTxConstraints,
+  submitTxConstraintsSpending,
+  throwError,
+  utxosAt,
+  type (.\/),
+ )
+import Plutus.Contract.Typed.Tx qualified as Typed
+import PlutusTx qualified
+import PlutusTx.Prelude (
+  AdditiveGroup ((-)),
+  AdditiveMonoid (zero),
+  AdditiveSemigroup ((+)),
+  Applicative (pure),
+  Bool,
+  Foldable (foldMap),
+  Monoid (mempty),
+  Ord ((>=)),
+  return,
+  ($),
+  (&&),
+  (.),
+ )
+import Prelude qualified as Haskell
 
 {- |
     A simple vesting scheme. Money is locked by a contract and may only be
@@ -92,164 +95,170 @@ import qualified Prelude                  as Haskell
     remaining funds stay locked and can be retrieved later.
 
     Let's start with the data types.
-
 -}
-
 type VestingSchema =
-        Endpoint "vest funds" ()
-        .\/ Endpoint "retrieve funds" Value
+  Endpoint "vest funds" ()
+    .\/ Endpoint "retrieve funds" Value
 
 data Vesting
 
 instance ValidatorTypes Vesting where
-    type instance RedeemerType Vesting = ()
-    type instance DatumType Vesting = ()
+  type RedeemerType Vesting = ()
+  type DatumType Vesting = ()
 
 -- | Tranche of a vesting scheme.
-data VestingTranche = VestingTranche {
-    vestingTrancheDate   :: POSIXTime,
-    vestingTrancheAmount :: Value
-    } deriving (Show, Generic,ToJSON,FromJSON,Haskell.Eq)
+data VestingTranche = VestingTranche
+  { vestingTrancheDate :: POSIXTime
+  , vestingTrancheAmount :: Value
+  }
+  deriving stock (Show, Generic, Haskell.Eq)
+  deriving anyclass (ToJSON, FromJSON)
 
 PlutusTx.makeLift ''VestingTranche
 
--- | A vesting scheme consisting of two tranches. Each tranche defines a date
---   (POSIX time) after which an additional amount can be spent.
-data VestingParams = VestingParams {
-    vestingTranche1 :: VestingTranche,
-    vestingTranche2 :: VestingTranche,
-    vestingOwner    :: PubKeyHash
-    } deriving (Show, Generic,ToJSON,FromJSON,Haskell.Eq)
+{- | A vesting scheme consisting of two tranches. Each tranche defines a date
+   (POSIX time) after which an additional amount can be spent.
+-}
+data VestingParams = VestingParams
+  { vestingTranche1 :: VestingTranche
+  , vestingTranche2 :: VestingTranche
+  , vestingOwner :: PubKeyHash
+  }
+  deriving stock (Show, Generic, Haskell.Eq)
+  deriving anyclass (ToJSON, FromJSON)
 
 PlutusTx.makeLift ''VestingParams
 
-{-# INLINABLE totalAmount #-}
+{-# INLINEABLE totalAmount #-}
+
 -- | The total amount vested
 totalAmount :: VestingParams -> Value
-totalAmount VestingParams{vestingTranche1,vestingTranche2} =
-    vestingTrancheAmount vestingTranche1 + vestingTrancheAmount vestingTranche2
+totalAmount VestingParams {vestingTranche1, vestingTranche2} =
+  vestingTrancheAmount vestingTranche1 + vestingTrancheAmount vestingTranche2
 
-{-# INLINABLE availableFrom #-}
+{-# INLINEABLE availableFrom #-}
+
 -- | The amount guaranteed to be available from a given tranche in a given time range.
 availableFrom :: VestingTranche -> POSIXTimeRange -> Value
 availableFrom (VestingTranche d v) range =
-    -- The valid range is an open-ended range starting from the tranche vesting date
-    let validRange = Interval.from d
-    -- If the valid range completely contains the argument range (meaning in particular
-    -- that the start time of the argument range is after the tranche vesting date), then
-    -- the money in the tranche is available, otherwise nothing is available.
-    in if validRange `Interval.contains` range then v else zero
+  -- The valid range is an open-ended range starting from the tranche vesting date
+  let validRange = Interval.from d
+   in -- If the valid range completely contains the argument range (meaning in particular
+      -- that the start time of the argument range is after the tranche vesting date), then
+      -- the money in the tranche is available, otherwise nothing is available.
+      if validRange `Interval.contains` range then v else zero
 
 availableAt :: VestingParams -> POSIXTime -> Value
-availableAt VestingParams{vestingTranche1, vestingTranche2} time =
-    let f VestingTranche{vestingTrancheDate, vestingTrancheAmount} =
-            if time >= vestingTrancheDate then vestingTrancheAmount else mempty
-    in foldMap f [vestingTranche1, vestingTranche2]
+availableAt VestingParams {vestingTranche1, vestingTranche2} time =
+  let f VestingTranche {vestingTrancheDate, vestingTrancheAmount} =
+        if time >= vestingTrancheDate then vestingTrancheAmount else mempty
+   in foldMap f [vestingTranche1, vestingTranche2]
 
-{-# INLINABLE remainingFrom #-}
+{-# INLINEABLE remainingFrom #-}
+
 -- | The amount that has not been released from this tranche yet
 remainingFrom :: VestingTranche -> POSIXTimeRange -> Value
-remainingFrom t@VestingTranche{vestingTrancheAmount} range =
-    vestingTrancheAmount - availableFrom t range
+remainingFrom t@VestingTranche {vestingTrancheAmount} range =
+  vestingTrancheAmount - availableFrom t range
 
-{-# INLINABLE validate #-}
+{-# INLINEABLE validate #-}
 validate :: VestingParams -> () -> () -> ScriptContext -> Bool
-validate VestingParams{vestingTranche1, vestingTranche2, vestingOwner} () () ctx@ScriptContext{scriptContextTxInfo=txInfo@TxInfo{txInfoValidRange}} =
-    let
-        remainingActual  = Validation.valueLockedBy txInfo (Validation.ownHash ctx)
+validate VestingParams {vestingTranche1, vestingTranche2, vestingOwner} () () ctx@ScriptContext {scriptContextTxInfo = txInfo@TxInfo {txInfoValidRange}} =
+  let remainingActual = Validation.valueLockedBy txInfo (Validation.ownHash ctx)
 
-        remainingExpected =
-            remainingFrom vestingTranche1 txInfoValidRange
-            + remainingFrom vestingTranche2 txInfoValidRange
+      remainingExpected =
+        remainingFrom vestingTranche1 txInfoValidRange
+          + remainingFrom vestingTranche2 txInfoValidRange
+   in remainingActual `Value.geq` remainingExpected
+        -- The policy encoded in this contract
+        -- is "vestingOwner can do with the funds what they want" (as opposed
+        -- to "the funds must be paid to vestingOwner"). This is enforcey by
+        -- the following condition:
+        && Validation.txSignedBy txInfo vestingOwner
 
-    in remainingActual `Value.geq` remainingExpected
-            -- The policy encoded in this contract
-            -- is "vestingOwner can do with the funds what they want" (as opposed
-            -- to "the funds must be paid to vestingOwner"). This is enforcey by
-            -- the following condition:
-            && Validation.txSignedBy txInfo vestingOwner
-            -- That way the recipient of the funds can pay them to whatever address they
-            -- please, potentially saving one transaction.
+-- That way the recipient of the funds can pay them to whatever address they
+-- please, potentially saving one transaction.
 
 vestingScript :: VestingParams -> Validator
 vestingScript = Scripts.validatorScript . typedValidator
 
 typedValidator :: VestingParams -> Scripts.TypedValidator Vesting
-typedValidator = Scripts.mkTypedValidatorParam @Vesting
-    $$(PlutusTx.compile [|| validate ||])
-    $$(PlutusTx.compile [|| wrap ||])
-    where
-        wrap = Scripts.wrapValidator
+typedValidator =
+  Scripts.mkTypedValidatorParam @Vesting
+    $$(PlutusTx.compile [||validate||])
+    $$(PlutusTx.compile [||wrap||])
+  where
+    wrap = Scripts.wrapValidator
 
 contractAddress :: VestingParams -> Address
 contractAddress = Scripts.validatorAddress . typedValidator
 
-data VestingError =
-    VContractError ContractError
-    | InsufficientFundsError Value Value Value
-    deriving stock (Haskell.Eq, Haskell.Show, Generic)
-    deriving anyclass (ToJSON, FromJSON)
+data VestingError
+  = VContractError ContractError
+  | InsufficientFundsError Value Value Value
+  deriving stock (Haskell.Eq, Haskell.Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
 
 makeClassyPrisms ''VestingError
 
 instance AsContractError VestingError where
-    _ContractError = _VContractError
+  _ContractError = _VContractError
 
 vestingContract :: VestingParams -> Contract () VestingSchema VestingError ()
 vestingContract vesting = selectList [vest, retrieve]
   where
     vest = endpoint @"vest funds" $ \() -> vestFundsC vesting
     retrieve = endpoint @"retrieve funds" $ \payment -> do
-        liveness <- retrieveFundsC vesting payment
-        case liveness of
-            Alive -> awaitPromise retrieve
-            Dead  -> pure ()
+      liveness <- retrieveFundsC vesting payment
+      case liveness of
+        Alive -> awaitPromise retrieve
+        Dead -> pure ()
 
 payIntoContract :: Value -> TxConstraints () ()
 payIntoContract = mustPayToTheScript ()
 
-vestFundsC
-    :: ( AsVestingError e
-       )
-    => VestingParams
-    -> Contract w s e ()
+vestFundsC ::
+  ( AsVestingError e
+  ) =>
+  VestingParams ->
+  Contract w s e ()
 vestFundsC vesting = mapError (review _VestingError) $ do
-    let tx = payIntoContract (totalAmount vesting)
-    void $ submitTxConstraints (typedValidator vesting) tx
+  let tx = payIntoContract (totalAmount vesting)
+  void $ submitTxConstraints (typedValidator vesting) tx
 
 data Liveness = Alive | Dead
 
-retrieveFundsC
-    :: ( AsVestingError e
-       )
-    => VestingParams
-    -> Value
-    -> Contract w s e Liveness
+retrieveFundsC ::
+  ( AsVestingError e
+  ) =>
+  VestingParams ->
+  Value ->
+  Contract w s e Liveness
 retrieveFundsC vesting payment = mapError (review _VestingError) $ do
-    let inst = typedValidator vesting
-        addr = Scripts.validatorAddress inst
-    nextTime <- awaitTime 0
-    unspentOutputs <- utxosAt addr
-    let
-        currentlyLocked = foldMap (view Tx.ciTxOutValue) (Map.elems unspentOutputs)
-        remainingValue = currentlyLocked - payment
-        mustRemainLocked = totalAmount vesting - availableAt vesting nextTime
-        maxPayment = currentlyLocked - mustRemainLocked
+  let inst = typedValidator vesting
+      addr = Scripts.validatorAddress inst
+  nextTime <- awaitTime 0
+  unspentOutputs <- utxosAt addr
+  let currentlyLocked = foldMap (view Tx.ciTxOutValue) (Map.elems unspentOutputs)
+      remainingValue = currentlyLocked - payment
+      mustRemainLocked = totalAmount vesting - availableAt vesting nextTime
+      maxPayment = currentlyLocked - mustRemainLocked
 
-    when (remainingValue `Value.lt` mustRemainLocked)
-        $ throwError
-        $ InsufficientFundsError payment maxPayment mustRemainLocked
+  when (remainingValue `Value.lt` mustRemainLocked) $
+    throwError $
+      InsufficientFundsError payment maxPayment mustRemainLocked
 
-    let liveness = if remainingValue `Value.gt` mempty then Alive else Dead
-        remainingOutputs = case liveness of
-                            Alive -> payIntoContract remainingValue
-                            Dead  -> mempty
-        tx = Typed.collectFromScript unspentOutputs ()
-                <> remainingOutputs
-                <> mustValidateIn (Interval.from nextTime)
-                <> mustBeSignedBy (vestingOwner vesting)
-                -- we don't need to add a pubkey output for 'vestingOwner' here
-                -- because this will be done by the wallet when it balances the
-                -- transaction.
-    void $ submitTxConstraintsSpending inst unspentOutputs tx
-    return liveness
+  let liveness = if remainingValue `Value.gt` mempty then Alive else Dead
+      remainingOutputs = case liveness of
+        Alive -> payIntoContract remainingValue
+        Dead -> mempty
+      tx =
+        Typed.collectFromScript unspentOutputs ()
+          <> remainingOutputs
+          <> mustValidateIn (Interval.from nextTime)
+          <> mustBeSignedBy (vestingOwner vesting)
+  -- we don't need to add a pubkey output for 'vestingOwner' here
+  -- because this will be done by the wallet when it balances the
+  -- transaction.
+  void $ submitTxConstraintsSpending inst unspentOutputs tx
+  return liveness

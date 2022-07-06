@@ -1,30 +1,23 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
-    ( mkPlanSettings, PlanSettings (..) ) where
-import           Prelude hiding (round,print)
+module Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings (mkPlanSettings, PlanSettings (..)) where
 
+import Prelude hiding (print, round)
 
-import           Tokenomia.ICO.Round.Settings
-import           Plutus.V1.Ledger.Ada
-import           Ledger ( Slot(..) )
-import           Plutus.V1.Ledger.Interval
+import Ledger (Slot (..))
+import Plutus.V1.Ledger.Ada
+import Plutus.V1.Ledger.Interval
+import Tokenomia.ICO.Round.Settings
 
+mkPlanSettings :: RoundSettings -> PlanSettings
+mkPlanSettings RoundSettings {..} = Settings {..}
 
-mkPlanSettings :: RoundSettings  -> PlanSettings
-mkPlanSettings RoundSettings { ..} = Settings {..}
-
-
-data PlanSettings 
-    = Settings 
-       { timeRange :: Interval Slot
-       , minimumAdaPerFund :: Ada
-       , maximumAdaPerAddress :: Ada} deriving (Show,Eq)
+data PlanSettings = Settings
+  { timeRange :: Interval Slot
+  , minimumAdaPerFund :: Ada
+  , maximumAdaPerAddress :: Ada
+  }
+  deriving stock (Show, Eq)

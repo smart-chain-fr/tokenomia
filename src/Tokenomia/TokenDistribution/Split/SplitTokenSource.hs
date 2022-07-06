@@ -1,53 +1,54 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards #-}
 
-module Tokenomia.TokenDistribution.Split.SplitTokenSource
-    ( splitTokenSource
-    ) where
+module Tokenomia.TokenDistribution.Split.SplitTokenSource (
+  splitTokenSource,
+) where
 
-import Prelude           hiding ( repeat, zipWith3 )
+import Prelude hiding (repeat, zipWith3)
 
-import Control.Monad.Reader     ( MonadIO, MonadReader )
-import Control.Monad.Except     ( MonadError )
+import Control.Monad.Except (MonadError)
+import Control.Monad.Reader (MonadIO, MonadReader)
 
-import Data.List.NonEmpty       ( NonEmpty((:|)), fromList, repeat )
-import Data.Maybe               ( fromJust )
+import Data.List.NonEmpty (NonEmpty ((:|)), fromList, repeat)
+import Data.Maybe (fromJust)
 
-import Ledger.Ada               ( lovelaceValueOf )
-import Ledger.Value
-    ( AssetClass
-    , Value
-    , assetClassValue
-    , assetClassValueOf
-    )
+import Ledger.Ada (lovelaceValueOf)
+import Ledger.Value (
+  AssetClass,
+  Value,
+  assetClassValue,
+  assetClassValueOf,
+ )
 
-import Tokenomia.Common.AssetClass  ( adaAssetClass )
-import Tokenomia.Common.Error       ( TokenomiaError )
-import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO, value )
+import Tokenomia.Common.AssetClass (adaAssetClass)
+import Tokenomia.Common.Environment (Environment)
+import Tokenomia.Common.Error (TokenomiaError)
+import Tokenomia.Wallet.WalletUTxO (WalletUTxO, value)
 
-import Tokenomia.Common.Transacting
-    ( TxInFromWallet(..)
-    , TxOut(ToWallet)
-    , TxBuild(..)
-    , TxBalance(..)
-    , Metadata(..)
-    , buildAndSubmit
-    )
+import Tokenomia.Common.Transacting (
+  Metadata (..),
+  TxBalance (..),
+  TxBuild (..),
+  TxInFromWallet (..),
+  TxOut (ToWallet),
+  buildAndSubmit,
+ )
 
-import Tokenomia.Common.Data.List.NonEmpty          ( prependMaybe, singleton, zipWith3 )
+import Tokenomia.Common.Data.List.NonEmpty (prependMaybe, singleton, zipWith3)
 
-import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), Recipient(..) )
+import Tokenomia.TokenDistribution.CLI.Parameters (Parameters (..))
+import Tokenomia.TokenDistribution.Distribution (Distribution (..), Recipient (..))
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-    ( fetchAddressByWalletAtIndex
-    , fetchAddressesByWalletWithNonZeroIndex
-    )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository (
+  fetchAddressByWalletAtIndex,
+  fetchAddressesByWalletWithNonZeroIndex,
+ )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( defaultFeeAddressRef, defaultCollateralAddressRef )
-
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef (
+  defaultCollateralAddressRef,
+  defaultFeeAddressRef,
+ )
 
 -- Let ε be the value corresponding to the minimum ada needed to create an UTxO.
 --
@@ -69,86 +70,95 @@ import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
 -- due to the lack of ada to cover fees.
 
 splitTokenSource ::
-    ( MonadIO m
-    , MonadReader Environment m
-    , MonadError  TokenomiaError m
-    )
-    => WalletUTxO -> Parameters -> NonEmpty Distribution -> m ()
+  ( MonadIO m
+  , MonadReader Environment m
+  , MonadError TokenomiaError m
+  ) =>
+  WalletUTxO ->
+  Parameters ->
+  NonEmpty Distribution ->
+  m ()
 splitTokenSource source parameters distributions = do
-    let assetClass = getAssetClass distributions
+  let assetClass = getAssetClass distributions
 
-    splitTokenSourceTxBuild source parameters distributions assetClass >>=
-        buildAndSubmit
-            (Unbalanced $ defaultFeeAddressRef $ adaWallet parameters)
-            (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
+  splitTokenSourceTxBuild source parameters distributions assetClass
+    >>= buildAndSubmit
+      (Unbalanced $ defaultFeeAddressRef $ adaWallet parameters)
+      (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
   where
     getAssetClass :: NonEmpty Distribution -> AssetClass
-    getAssetClass (Distribution{..} :| _) = assetClass
+    getAssetClass (Distribution {..} :| _) = assetClass
 
 splitTokenSourceTxBuild ::
-    ( MonadIO m
-    , MonadReader Environment m
-    , MonadError  TokenomiaError m
-    )
-    => WalletUTxO -> Parameters -> NonEmpty Distribution -> AssetClass -> m TxBuild
-splitTokenSourceTxBuild source Parameters{..} distributions assetClass = do
-    change  <- splitTokenSourceChange
-    outputs <- splitTokenSourceOutputs
-    return TxBuild
-        { inputsFromScript          = Nothing
-        , inputsFromWallet          = singleton $ FromWallet source
-        , outputs                   = prependMaybe change outputs
-        , validitySlotRangeMaybe    = Nothing
-        , metadataMaybe             = Metadata <$> metadataFilePath
-        , tokenSupplyChangesMaybe   = Nothing
-        }
+  ( MonadIO m
+  , MonadReader Environment m
+  , MonadError TokenomiaError m
+  ) =>
+  WalletUTxO ->
+  Parameters ->
+  NonEmpty Distribution ->
+  AssetClass ->
+  m TxBuild
+splitTokenSourceTxBuild source Parameters {..} distributions assetClass = do
+  change <- splitTokenSourceChange
+  outputs <- splitTokenSourceOutputs
+  return
+    TxBuild
+      { inputsFromScript = Nothing
+      , inputsFromWallet = singleton $ FromWallet source
+      , outputs = prependMaybe change outputs
+      , validitySlotRangeMaybe = Nothing
+      , metadataMaybe = Metadata <$> metadataFilePath
+      , tokenSupplyChangesMaybe = Nothing
+      }
   where
     splitTokenSourceChange ::
-        ( MonadIO m
-        , MonadReader Environment m
-        )
-        => m (Maybe TxOut)
+      ( MonadIO m
+      , MonadReader Environment m
+      ) =>
+      m (Maybe TxOut)
     splitTokenSourceChange = do
-        changeAddress <- fromJust <$> fetchAddressByWalletAtIndex 0 tokenWallet
+      changeAddress <- fromJust <$> fetchAddressByWalletAtIndex 0 tokenWallet
 
-        let provisionnedToken   = assetClassValueOf (value source) assetClass
-            requiredToken       = sum $ amountSum <$> distributions
-            remainingToken      = provisionnedToken - requiredToken
+      let provisionnedToken = assetClassValueOf (value source) assetClass
+          requiredToken = sum $ amountSum <$> distributions
+          remainingToken = provisionnedToken - requiredToken
 
-        pure $ if remainingToken <= 0
-            then Nothing
-            else Just $ ToWallet changeAddress (tokenValue remainingToken) Nothing
+      pure $
+        if remainingToken <= 0
+          then Nothing
+          else Just $ ToWallet changeAddress (tokenValue remainingToken) Nothing
 
     splitTokenSourceOutputs ::
-        ( MonadIO m
-        , MonadReader Environment m
-        , MonadError  TokenomiaError m
-        )
-        => m (NonEmpty TxOut)
+      ( MonadIO m
+      , MonadReader Environment m
+      , MonadError TokenomiaError m
+      ) =>
+      m (NonEmpty TxOut)
     splitTokenSourceOutputs = do
-        addresses <- fromList <$> fetchAddressesByWalletWithNonZeroIndex tokenWallet
-        let values = tokenSum <$> distributions
-        return $ zipWith3 ToWallet addresses values (repeat Nothing)
+      addresses <- fromList <$> fetchAddressesByWalletWithNonZeroIndex tokenWallet
+      let values = tokenSum <$> distributions
+      return $ zipWith3 ToWallet addresses values (repeat Nothing)
 
     ε :: Value
     ε = lovelaceValueOf minLovelacesPerUtxo
 
     addε :: Value -> Value
     addε
-        | distributeAda = id
-        | otherwise     = (ε <>)
+      | distributeAda = id
+      | otherwise = (ε <>)
 
     distributeAda :: Bool
     distributeAda =
-        assetClass == adaAssetClass
+      assetClass == adaAssetClass
 
     amountSum :: Distribution -> Integer
     amountSum distribution = sum $ amount <$> recipients distribution
 
     tokenSum :: Distribution -> Value
     tokenSum distribution =
-        tokenValue $ amountSum distribution
+      tokenValue $ amountSum distribution
 
     tokenValue :: Integer -> Value
     tokenValue amount =
-        addε $ assetClassValue assetClass amount
+      addε $ assetClassValue assetClass amount

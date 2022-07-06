@@ -1,57 +1,49 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
-
-{-# LANGUAGE QuasiQuotes, ExtendedDefaultRules #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE QuasiQuotes, ExtendedDefaultRules #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan (tests) where
 
 import Test.Tasty
-import qualified Test.Tasty.QuickCheck as QC
+import Test.Tasty.QuickCheck qualified as QC
 
-
-
-import Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
 import Tokenomia.ICO.Funds.Validation.CardanoCLI.Command as C
+import Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
 
-import Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs ()
 import Debug.Trace
+import Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs ()
 
-import           Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs ()
-import           Tokenomia.ICO.Balanceable
-
+import Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs ()
+import Tokenomia.ICO.Balanceable
 
 tests :: TestTree
 tests = testGroup "ICO" [properties]
 
-
 properties :: TestTree
-properties = testGroup "Planning Validated Funds"
+properties =
+  testGroup
+    "Planning Validated Funds"
     [ QC.testProperty "Plan is Balanced with given fees" $
         \fees unbalancedFees ->
-            let (state,plan) = mkPlan' fees unbalancedFees
-            in traceIfFalse (showAdaBalanceDetails state plan ) (adaBalance plan == 0)
+          let (state, plan) = mkPlan' fees unbalancedFees
+           in traceIfFalse (showAdaBalanceDetails state plan) (adaBalance plan == 0)
     ]
 
-showAdaBalanceDetails ::  State -> Plan Command -> String 
-showAdaBalanceDetails  state plan@Plan{..} 
-    =  "\n|| Test Failed |" 
-    <> "\n|  Plan Balance = " <> show (adaBalance plan)
-    <> "\n|  Commands Balance = " <> show (adaBalance commands )
-    <> "\n|  Fees  = " <> show (adaBalance feesMaybe)
-    <> "\n|  " <> show state 
+showAdaBalanceDetails :: State -> Plan Command -> String
+showAdaBalanceDetails state plan@Plan {..} =
+  "\n|| Test Failed |"
+    <> "\n|  Plan Balance = "
+    <> show (adaBalance plan)
+    <> "\n|  Commands Balance = "
+    <> show (adaBalance commands)
+    <> "\n|  Fees  = "
+    <> show (adaBalance feesMaybe)
+    <> "\n|  "
+    <> show state
 
 traceIfFalse :: String -> Bool -> Bool
 traceIfFalse msg False = trace msg False

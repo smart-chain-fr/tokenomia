@@ -1,36 +1,38 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
-module Tokenomia.Wallet.ChildAddress.ChildAddressRef 
-    ( ChildAddressIndex (..)
-    , ChildAddressRef (..)
-    , IndexedAddress (..)
-    , CollateralAddressRef (..)
-    , FeeAddressRef (..)) where
 
-import Tokenomia.Wallet.Type ( WalletName )
-import Tokenomia.Common.Address ( Address(..) )
+module Tokenomia.Wallet.ChildAddress.ChildAddressRef (
+  ChildAddressIndex (..),
+  ChildAddressRef (..),
+  IndexedAddress (..),
+  CollateralAddressRef (..),
+  FeeAddressRef (..),
+) where
 
-newtype ChildAddressIndex = ChildAddressIndex Integer deriving (Eq,Ord,Num,Real,Integral,Enum,Read,Show)
+import Tokenomia.Common.Address (Address (..))
+import Tokenomia.Wallet.Type (WalletName)
 
-data ChildAddressRef = ChildAddressRef {name :: WalletName, index :: ChildAddressIndex } deriving (Eq,Show)
+newtype ChildAddressIndex = ChildAddressIndex Integer
+  deriving newtype (Eq, Ord, Num, Real, Integral, Enum)
+  deriving stock (Read, Show)
+
+data ChildAddressRef = ChildAddressRef {name :: WalletName, index :: ChildAddressIndex} deriving stock (Eq, Show)
 
 instance Ord ChildAddressRef where
-    compare ChildAddressRef {index = x} ChildAddressRef {index = y} = compare x y
+  compare ChildAddressRef {index = x} ChildAddressRef {index = y} = compare x y
 
-
-data IndexedAddress
-        = IndexedAddress
-          { address         :: Address
-          , childAddressRef :: ChildAddressRef} deriving (Eq)
+data IndexedAddress = IndexedAddress
+  { address :: Address
+  , childAddressRef :: ChildAddressRef
+  }
+  deriving stock (Eq)
 
 instance Show IndexedAddress where
-    show IndexedAddress 
-         { address = Address address
-         , childAddressRef = ChildAddressRef {index = ChildAddressIndex index, name = name}}
-        =  name <> " | " <> show index <> " | " <> address
-       
+  show
+    IndexedAddress
+      { address = Address address
+      , childAddressRef = ChildAddressRef {index = ChildAddressIndex index, name = name}
+      } =
+      name <> " | " <> show index <> " | " <> address
 
 newtype CollateralAddressRef = CollateralAddressRef ChildAddressRef
-newtype FeeAddressRef = FeeAddressRef ChildAddressRef 
-
-
+newtype FeeAddressRef = FeeAddressRef ChildAddressRef

@@ -1,74 +1,85 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards #-}
 
-module Tokenomia.TokenDistribution.Split.SplitAdaSource
-    ( splitAdaSource
-    ) where
+module Tokenomia.TokenDistribution.Split.SplitAdaSource (
+  splitAdaSource,
+) where
 
-import Prelude           hiding ( repeat, head, zipWith3 )
+import Prelude hiding (head, repeat, zipWith3)
 
-import Control.Monad.Reader     ( MonadIO, MonadReader )
-import Control.Monad.Except     ( MonadError )
+import Control.Monad.Except (MonadError)
+import Control.Monad.Reader (MonadIO, MonadReader)
 
-import Data.List.NonEmpty       ( NonEmpty((:|)), fromList, repeat )
+import Data.List.NonEmpty (NonEmpty ((:|)), fromList, repeat)
 
-import Ledger.Ada               ( Ada, lovelaceValueOf, toValue )
-import Ledger.Value             ( Value )
+import Ledger.Ada (Ada, lovelaceValueOf, toValue)
+import Ledger.Value (Value)
 
-import Tokenomia.Common.AssetClass  ( adaAssetClass )
-import Tokenomia.Common.Error       ( TokenomiaError )
-import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO )
+import Tokenomia.Common.AssetClass (adaAssetClass)
+import Tokenomia.Common.Environment (Environment)
+import Tokenomia.Common.Error (TokenomiaError)
+import Tokenomia.Wallet.WalletUTxO (WalletUTxO)
 
-import Tokenomia.Common.Transacting
-    ( TxInFromWallet(..)
-    , TxOut(..)
-    , TxBuild(..)
-    , TxBalance(..)
-    , Metadata(..)
-    , buildAndSubmit
-    )
+import Tokenomia.Common.Transacting (
+  Metadata (..),
+  TxBalance (..),
+  TxBuild (..),
+  TxInFromWallet (..),
+  TxOut (..),
+  buildAndSubmit,
+ )
 
-import Tokenomia.Common.Data.List.NonEmpty          ( singleton, zipWith3 )
+import Tokenomia.Common.Data.List.NonEmpty (singleton, zipWith3)
 
-import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), countRecipients )
+import Tokenomia.TokenDistribution.CLI.Parameters (Parameters (..))
+import Tokenomia.TokenDistribution.Distribution (Distribution (..), countRecipients)
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-    ( fetchAddressesByWalletWithIndexInRange )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository (
+  fetchAddressesByWalletWithIndexInRange,
+ )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( defaultFeeAddressRef, defaultCollateralAddressRef )
-
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef (
+  defaultCollateralAddressRef,
+  defaultFeeAddressRef,
+ )
 
 splitAdaSource ::
-    ( MonadIO m
-    , MonadReader Environment m
-    , MonadError  TokenomiaError m
-    )
-    => WalletUTxO -> Ada -> Parameters -> NonEmpty Distribution -> m ()
+  ( MonadIO m
+  , MonadReader Environment m
+  , MonadError TokenomiaError m
+  ) =>
+  WalletUTxO ->
+  Ada ->
+  Parameters ->
+  NonEmpty Distribution ->
+  m ()
 splitAdaSource source fees parameters distributions = do
-    splitAdaSourceTxBuild source fees parameters distributions >>=
-        buildAndSubmit
-            (Unbalanced $ defaultFeeAddressRef $ adaWallet parameters)
-            (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
+  splitAdaSourceTxBuild source fees parameters distributions
+    >>= buildAndSubmit
+      (Unbalanced $ defaultFeeAddressRef $ adaWallet parameters)
+      (Just $ defaultCollateralAddressRef $ collateralWallet parameters)
 
 splitAdaSourceTxBuild ::
-    ( MonadIO m
-    , MonadReader Environment m
-    , MonadError  TokenomiaError m
-    )
-    => WalletUTxO -> Ada -> Parameters -> NonEmpty Distribution -> m TxBuild
+  ( MonadIO m
+  , MonadReader Environment m
+  , MonadError TokenomiaError m
+  ) =>
+  WalletUTxO ->
+  Ada ->
+  Parameters ->
+  NonEmpty Distribution ->
+  m TxBuild
 splitAdaSourceTxBuild source fees parameters distributions = do
-    outputs <- splitAdaSourceOutputs fees parameters distributions
-    return TxBuild
-        { inputsFromScript          = Nothing
-        , inputsFromWallet          = singleton $ FromWallet source
-        , outputs                   = outputs
-        , validitySlotRangeMaybe    = Nothing
-        , metadataMaybe             = Metadata <$> metadataFilePath parameters
-        , tokenSupplyChangesMaybe   = Nothing
-        }
+  outputs <- splitAdaSourceOutputs fees parameters distributions
+  return
+    TxBuild
+      { inputsFromScript = Nothing
+      , inputsFromWallet = singleton $ FromWallet source
+      , outputs = outputs
+      , validitySlotRangeMaybe = Nothing
+      , metadataMaybe = Metadata <$> metadataFilePath parameters
+      , tokenSupplyChangesMaybe = Nothing
+      }
 
 -- Let ε be the value corresponding to the minimum ada needed to create an UTxO.
 --
@@ -90,16 +101,19 @@ splitAdaSourceTxBuild source fees parameters distributions = do
 -- that requires splitting input sources.
 
 splitAdaSourceOutputs ::
-    ( MonadIO m
-    , MonadReader Environment m
-    , MonadError  TokenomiaError m
-    )
-    => Ada -> Parameters -> NonEmpty Distribution -> m (NonEmpty TxOut)
-splitAdaSourceOutputs fees Parameters{..} distributions = do
-    let range = [1..(length distributions)]
-    addresses <- fromList <$> fetchAddressesByWalletWithIndexInRange range adaWallet
+  ( MonadIO m
+  , MonadReader Environment m
+  , MonadError TokenomiaError m
+  ) =>
+  Ada ->
+  Parameters ->
+  NonEmpty Distribution ->
+  m (NonEmpty TxOut)
+splitAdaSourceOutputs fees Parameters {..} distributions = do
+  let range = [1 .. (length distributions)]
+  addresses <- fromList <$> fetchAddressesByWalletWithIndexInRange range adaWallet
 
-    return $ zipWith3 ToWallet addresses values (repeat Nothing)
+  return $ zipWith3 ToWallet addresses values (repeat Nothing)
   where
     ε :: Value
     ε = nε 1
@@ -109,14 +123,14 @@ splitAdaSourceOutputs fees Parameters{..} distributions = do
 
     distributeAda :: Bool
     distributeAda = case distributions of
-        Distribution{..} :| _ -> assetClass == adaAssetClass
+      Distribution {..} :| _ -> assetClass == adaAssetClass
 
     value :: Integer -> Value
     value n
-        | n <= 1 || distributeAda   = toValue fees <> ε
-        | otherwise                 = toValue fees <> nε (n - 1)
+      | n <= 1 || distributeAda = toValue fees <> ε
+      | otherwise = toValue fees <> nε (n - 1)
 
     values :: NonEmpty Value
     values =
-        let ns = countRecipients <$> distributions
-        in  value <$> ns
+      let ns = countRecipients <$> distributions
+       in value <$> ns

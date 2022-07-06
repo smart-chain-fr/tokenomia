@@ -1,7 +1,6 @@
 module Main (main) where
 
-import  qualified Tokenomia.CLI as Tokenomia
+import Tokenomia.CLI qualified as Tokenomia
 
 main :: IO ()
 main = Tokenomia.main
-

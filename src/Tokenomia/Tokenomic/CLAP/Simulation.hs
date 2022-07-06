@@ -1,16 +1,12 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 
+module Tokenomia.Tokenomic.CLAP.Simulation () where
 
-module Tokenomia.Tokenomic.CLAP.Simulation  where
-
--- import Control.Monad (void)                   
+-- import Control.Monad (void)
 -- import           Control.Monad.Freer.Error         (throwError)
 -- import qualified Data.Semigroup                    as Semigroup
 -- import           Ledger ( TokenName , pubKeyHash, POSIXTime, CurrencySymbol, Value, txId )
@@ -19,7 +15,7 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --     ( singleton )
 -- import Plutus.Contract
 --     ( EmptySchema,
---       awaitTxConfirmed, 
+--       awaitTxConfirmed,
 --       submitTx,
 --       Contract,
 --       tell)
@@ -31,15 +27,15 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 -- import Data.Time.Clock.POSIX ()
 -- import Ledger.TimeSlot ()
 -- import Data.Text ( Text )
--- import Plutus.Trace.Effects.EmulatedWalletAPI () 
+-- import Plutus.Trace.Effects.EmulatedWalletAPI ()
 
 -- import Control.Monad.Freer.Reader ( ask, Reader,runReader )
 -- import Control.Monad.Freer ( Eff, Members )
 -- import Plutus.Trace.Effects.RunContract ( RunContract )
 -- import qualified Plutus.Trace.Effects.Waiting as EffectsW
--- import qualified Ledger.TimeSlot          as TimeSlot  
+-- import qualified Ledger.TimeSlot          as TimeSlot
 -- import           Data.Default             (Default (def))
--- import           Data.Semigroup         (Last (..))     
+-- import           Data.Semigroup         (Last (..))
 -- import Tokenomia.Token.CLAPStyle.MonetaryPolicy
 --     ( mintContract, CLAPMonetaryPolicyError )
 
@@ -61,16 +57,15 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --             clapSupplyAmount :: TokenSupplyAmount = 10^(12 :: Integer)
 --         let minterWallet = getSCWallet Minter
 
-
---         -- Minting CLAPs    
+--         -- Minting CLAPs
 --         policyHash <- mintTokenS minterWallet clapTokenName clapSupplyAmount
 --         -- Distributing CLAPs to Wallets
 --         runReader (policyHash,clapTokenName)
 --             . runReader minterWallet
 --             . runReader clapSupplyAmount $ do
 
---             moveBudgetDirectlyTo PrivateSale     
---             moveBudgetDirectlyTo PublicSale 
+--             moveBudgetDirectlyTo PrivateSale
+--             moveBudgetDirectlyTo PublicSale
 
 --             vestBudgetS  Team Lock24MonthsThenRelease25PercentQuartlyTwice
 --             vestBudgetS  Team Lock30MonthsThenRelease25PercentQuartlyTwice
@@ -78,7 +73,6 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --             vestBudgetS  Partnerships Lock50Percent6Months50Percent12Months
 --             vestBudgetS  Ambassadors Lock50Percent6Months50Percent12Months
 --             vestBudgetS  Communication Lock50Percent6Months50Percent12Months
-
 
 --             retrieveBudgetS Treasury Lock50Percent6Months50Percent12Months
 --             retrieveBudgetS Partnerships Lock50Percent6Months50Percent12Months
@@ -88,10 +82,7 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --             retrieveBudgetS Team Lock30MonthsThenRelease25PercentQuartlyTwice
 --             retrieveBudgetS Team Lock24MonthsThenRelease25PercentQuartlyTwice
 
-
-
 --     print @String "End of the Simulator"
-
 
 -- moveBudgetDirectlyTo
 --     :: (Members '[EffectsW.Waiting,RunContract,Reader Wallet,Reader TokenId,Reader TokenSupplyAmount] effs)
@@ -101,7 +92,7 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --     let pkh = pubKeyHash $ walletPubKey (getSCWallet account)
 --     tokenCreatorWallet <- ask @Wallet
 --     budget <- getBudget account >>= valueOfCLAP
---     _ <- Emulator.activateContractWallet tokenCreatorWallet  
+--     _ <- Emulator.activateContractWallet tokenCreatorWallet
 --         ((submitTx @() @EmptySchema @Text $ mustPayToPubKey pkh budget) >>=  awaitTxConfirmed . txId)
 --     _ <- Emulator.waitNSlots 10
 --     pure ()
@@ -121,7 +112,6 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --    | Lock24MonthsThenRelease25PercentQuartlyTwice
 --    | Lock30MonthsThenRelease25PercentQuartlyTwice
 --    | LockSixMonths
-
 
 -- getSCWallet :: Account -> Wallet
 -- getSCWallet = \case
@@ -150,8 +140,6 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --             Partnerships -> 0.045
 --             Ambassadors -> 0.04
 --             Communication -> 0.001
-
-
 
 -- getVestingParams
 --     :: (Members '[RunContract,Reader TokenId,Reader TokenSupplyAmount] effs)
@@ -191,7 +179,6 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --                 _0_month
 --                 _0_percent_budget
 
-
 -- vestBudgetS :: (Members '[EffectsW.Waiting,RunContract,Reader Wallet,Reader TokenId,Reader TokenSupplyAmount] effs)
 --     => Account
 --     -> VestingScheme
@@ -202,11 +189,10 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --         let  contract :: Contract () VestingSchema Vesting.VestingError () = Vesting.vestingContract vestingsParams
 --         cid1 <- Emulator.activateContractWallet tokenCreatorWallet contract
 --         _ <- Emulator.callEndpoint @"vest funds" cid1 ()
---         _ <- Emulator.waitNSlots 5 
+--         _ <- Emulator.waitNSlots 5
 --         pure ()
 
-
--- retrieveBudgetS :: (Members '[EffectsW.Waiting, RunContract,Reader Wallet,Reader TokenId,Reader TokenSupplyAmount] effs) 
+-- retrieveBudgetS :: (Members '[EffectsW.Waiting, RunContract,Reader Wallet,Reader TokenId,Reader TokenSupplyAmount] effs)
 --     => Account
 --     -> VestingScheme
 --     -> Eff effs ()
@@ -222,23 +208,21 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --         Emulator.callEndpoint @"retrieve funds" cid2 tranche2
 --         void $ Emulator.waitNSlots 5
 
-
 -- mintTokenS :: Wallet -> TokenName -> TokenSupplyAmount ->  EmulatorTrace CurrencySymbol
 -- mintTokenS tokenCreator tokenName tokenSupplyAmount =  do
---     mintByOwnerHandle <- Emulator.activateContract tokenCreator (mintCLAPContract' tokenCreator tokenName tokenSupplyAmount) "Minting Claps" 
+--     mintByOwnerHandle <- Emulator.activateContract tokenCreator (mintCLAPContract' tokenCreator tokenName tokenSupplyAmount) "Minting Claps"
 --     _ <- Emulator.waitNSlots 2
 --     r <- Emulator.observableState mintByOwnerHandle >>= \case
 --                 Just (Semigroup.Last monetaryPolicyId) -> pure monetaryPolicyId
 --                 _                                      -> throwError $ GenericError "failed to create currency"
 --     _ <- Emulator.waitNSlots 2
---     pure r            
+--     pure r
 
 -- mintCLAPContract' :: Wallet -> TokenName -> TokenSupplyAmount -> Contract (Maybe (Semigroup.Last CurrencySymbol)) EmptySchema CLAPMonetaryPolicyError CurrencySymbol
--- mintCLAPContract' w tokenName tokenSupplyAmount = do 
+-- mintCLAPContract' w tokenName tokenSupplyAmount = do
 --     result <- fst <$> mintContract (Ledger.pubKeyHash $ walletPubKey w) tokenName tokenSupplyAmount
 --     (tell . Just . Last) result
 --     pure result
-
 
 -- mkVestingScheme :: Wallet -> POSIXTime-> Value -> POSIXTime -> Value ->  Vesting.VestingParams
 -- mkVestingScheme wallet slot1 amount1 slot2 amount2
@@ -247,7 +231,6 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 --         , vestingTranche2 = VestingTranche {vestingTrancheDate = slot2, vestingTrancheAmount = amount2 }
 --         , vestingOwner = (pubKeyHash . walletPubKey)  wallet }
 
-
 -- valueOfCLAP
 --     :: (Members '[Reader TokenId] effs)
 --     => Integer
@@ -255,4 +238,3 @@ module Tokenomia.Tokenomic.CLAP.Simulation  where
 -- valueOfCLAP amount = do
 --     (policyHash,tokenName) <- ask @(CurrencySymbol,TokenName)
 --     return $ Value.singleton policyHash tokenName amount
-

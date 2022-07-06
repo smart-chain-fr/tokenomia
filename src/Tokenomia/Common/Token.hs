@@ -1,30 +1,28 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Tokenomia.Common.Token 
-  ( Token (..)
-  , getMinimumUTxOAdaRequired) where
+module Tokenomia.Common.Token (
+  Token (..),
+  getMinimumUTxOAdaRequired,
+) where
 
-import Plutus.V1.Ledger.Value hiding (assetClass)
 import Plutus.V1.Ledger.Ada
+import Plutus.V1.Ledger.Value hiding (assetClass)
 import Tokenomia.ICO.Balanceable
 
-data Token 
-    = Token 
-      { assetClass :: AssetClass
-      , amount     :: Integer
-      , minimumAdaRequired :: Ada} deriving (Eq,Ord,Show)
+data Token = Token
+  { assetClass :: AssetClass
+  , amount :: Integer
+  , minimumAdaRequired :: Ada
+  }
+  deriving stock (Eq, Ord, Show)
 
+instance AdaBalanceable Token where
+  adaBalance Token {..} = minimumAdaRequired
 
-instance AdaBalanceable Token where 
-    adaBalance Token {..} = minimumAdaRequired
+instance TokenBalanceable Token where
+  tokenBalance Token {..} = amount
 
-instance TokenBalanceable Token where 
-    tokenBalance Token {..} =  amount 
-
-getMinimumUTxOAdaRequired :: Ada 
-getMinimumUTxOAdaRequired =  1379280
-                              
+getMinimumUTxOAdaRequired :: Ada
+getMinimumUTxOAdaRequired = 1379280

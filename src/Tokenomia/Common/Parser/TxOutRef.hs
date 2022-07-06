@@ -1,29 +1,30 @@
-module Tokenomia.Common.Parser.TxOutRef
-    ( txOutRef
-    ) where
+module Tokenomia.Common.Parser.TxOutRef (
+  txOutRef,
+) where
 
-import Tokenomia.Common.Data.Convertible
-    ( convert )
+import Tokenomia.Common.Data.Convertible (
+  convert,
+ )
 
-import Data.Attoparsec.Text
-    ( Parser
-    , decimal
-    , skipSpace
-    , takeWhile1
-    )
+import Data.Attoparsec.Text (
+  Parser,
+  decimal,
+  skipSpace,
+  takeWhile1,
+ )
 
-import Prelude           hiding ( take )
-import Data.Char                ( isSpace )
-import Data.String              ( fromString )
+import Data.Char (isSpace)
+import Data.String (fromString)
+import Prelude hiding (take)
 
-import Ledger                   ( TxOutRef(TxOutRef) )
-import Ledger.TxId              ( TxId )
-
+import Ledger (TxOutRef (TxOutRef))
+import Ledger.TxId (TxId)
 
 txOutRef :: Parser TxOutRef
-txOutRef = TxOutRef
+txOutRef =
+  TxOutRef
     <$> txOutRefId
-    <*  skipSpace
+    <* skipSpace
     <*> txOutRefIx
   where
     txOutRefId :: Parser TxId
