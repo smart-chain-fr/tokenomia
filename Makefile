@@ -86,9 +86,11 @@ nixpkgsfmt: requires_nix_shell
 nixpkgsfmt_check: requires_nix_shell
 	nixpkgs-fmt --check $(NIX_SOURCES)
 
-# Check with hlint, currently I couldn't get --refactor to work
 lint: requires_nix_shell
 	hlint $(FORMAT_SOURCES)
+
+lint_fix: requires_nix_shell
+	echo $(FORMAT_SOURCES) | xargs -t -n1 hlint --refactor --refactor-options="--inplace"
 
 readme_contents:
 	echo "this command is not nix-ified, you may receive an error from npx"

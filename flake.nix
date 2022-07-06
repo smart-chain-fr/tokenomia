@@ -392,6 +392,10 @@
             additional = ps: [
               ps.plutus-pab
               ps.cardano-cli
+              ps.blockfrost-pretty
+              ps.blockfrost-client
+              ps.blockfrost-api
+              ps.blockfrost-client-core
             ];
             withHoogle = true;
             tools.haskell-language-server = { };
@@ -401,6 +405,7 @@
               haskellPackages.cabal-fmt
               haskellPackages.implicit-hie
               haskellPackages.fourmolu
+              haskellPackages.apply-refact
               hlint
               jq
               websocat

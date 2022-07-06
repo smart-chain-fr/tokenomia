@@ -32,11 +32,65 @@ common lang
       -Wno-partial-type-signatures -Wmissing-export-lists -Wredundant-constraints
       -Wincomplete-record-updates -Wmissing-deriving-strategies -Wno-unused-do-bind
       -Wno-name-shadowing -Wunused-foralls -fprint-explicit-foralls
-      -fprint-explicit-kinds -fwarn-missing-import-lists -Werror -rtsopts
+      -fprint-explicit-kinds -Werror -rtsopts
           -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+    default-extensions:
+      NoStarIsType
+      BangPatterns
+      BinaryLiterals
+      ConstrainedClassMethods
+      ConstraintKinds
+      DataKinds
+      DeriveAnyClass
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      DerivingVia
+      DoAndIfThenElse
+      EmptyCase
+      EmptyDataDecls
+      EmptyDataDeriving
+      ExistentialQuantification
+      ExplicitForAll
+      FlexibleContexts
+      FlexibleInstances
+      ForeignFunctionInterface
+      GADTSyntax
+      GeneralisedNewtypeDeriving
+      HexFloatLiterals
+      ImplicitPrelude
+      ImportQualifiedPost
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MonomorphismRestriction
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NamedWildCards
+      NumericUnderscores
+      OverloadedStrings
+      PartialTypeSignatures
+      PatternGuards
+      PolyKinds
+      PostfixOperators
+      RankNTypes
+      RelaxedPolyRec
+      ScopedTypeVariables
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      TypeSynonymInstances
+      ViewPatterns
 
 library
     import: lang
@@ -207,12 +261,12 @@ test-suite tokenomia-tests
     Spec.Tokenomia.Vesting.Contract
     Spec.Tokenomia.Wallet.UTxO
     Spec.Tokenomia.Common.Value
-    Spec.Tokenomia.ICO.Funds.Exchange.Plan
-    Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+    -- Spec.Tokenomia.ICO.Funds.Exchange.Plan
+    -- Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
+    -- Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
+    -- Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
+    -- Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
+    -- Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
   build-depends:
     plutus-tx -any,
     plutus-tx-plugin,
