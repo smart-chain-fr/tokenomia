@@ -158,7 +158,7 @@ verifyTxs sendings =
       unless (sendingsAmount == totalAmount) $
         throwError . BlockFrostError . BlockfrostError $ "Values don't match"
 
-safeHeadToRight :: forall a. [a] -> Either TokenomiaError a
+safeHeadToRight :: forall (a :: Type). [a] -> Either TokenomiaError a
 safeHeadToRight xs =
   maybeToRight
     ( BlockFrostError . BlockfrostError $
