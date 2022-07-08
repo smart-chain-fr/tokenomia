@@ -93,6 +93,7 @@ library
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
       Tokenomia.Common.Data.Function.Memoize
+      Tokenomia.Common.Data.MonoTraversable.Instance
       Tokenomia.Common.Data.Sequence.IntegerPartitions
       Tokenomia.Common.Data.List.NonEmpty
       Tokenomia.Common.Parser
@@ -155,6 +156,7 @@ library
       composition-extra,
       either,
       memory,
+      mono-traversable,
       text,
       time,
       mtl,
