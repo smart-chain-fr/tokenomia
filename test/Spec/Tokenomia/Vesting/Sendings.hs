@@ -15,20 +15,7 @@
 {-# OPTIONS_GHC -Werror #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Spec.Tokenomia.Vesting.Sendings (tests, mySendings, main) where
-
-import Data.ByteString.Lazy qualified as ByteString
-
-import Test.Tasty (TestTree, defaultMain, testGroup)
-import Tokenomia.Common.Error (TokenomiaError)
-import Tokenomia.Vesting.Sendings (MonadRunBlockfrost (getAddressTransactions, getTxUtxos), Sendings, jsonToSendings, verifySendings')
-
-import Data.Kind (Type)
-
-import Control.Monad.Except (MonadError, runExceptT)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Identity (IdentityT (IdentityT))
-import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), asks)
+module Spec.Tokenomia.Vesting.Sendings (tests, main) where
 
 import Blockfrost.Types (
   Address (Address),
@@ -38,25 +25,28 @@ import Blockfrost.Types (
   TxHash (TxHash),
   UtxoOutput (UtxoOutput),
  )
+import Control.Monad.Except (MonadError, runExceptT)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Identity (IdentityT (IdentityT))
+import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), asks)
+import Data.ByteString.Lazy qualified as ByteString
 import Data.Either (isLeft)
+import Data.Kind (Type)
 import PlutusTx.Either (isRight)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (assertBool, testCaseSteps)
+import Tokenomia.Common.Error (TokenomiaError)
+import Tokenomia.Vesting.Sendings (
+  MonadRunBlockfrost (getAddressTransactions, getTxUtxos),
+  Sendings,
+  jsonToSendings,
+  verifySendings',
+ )
 
 data BlockfrostMockData = BlockfrostMockData
   { addressTransactions :: [AddressTransaction]
   , transactionUtxos :: TransactionUtxos
   }
-
-testBlockfrostMockData :: BlockfrostMockData
-testBlockfrostMockData =
-  BlockfrostMockData
-    { addressTransactions = []
-    , transactionUtxos = TransactionUtxos txHash input output
-    }
-  where
-    output = undefined
-    input = []
-    txHash = TxHash "75d39ec2fd731ea9ef284eac3ceaa8191cc70f97b95194c5ab5a4985792047fd"
 
 newtype FakeBlockfrost (m :: Type -> Type) (a :: Type) = FakeBlockfrost {runFakeBlockfrost :: m a}
   deriving (Functor, Applicative, Monad) via IdentityT m
