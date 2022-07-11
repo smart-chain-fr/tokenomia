@@ -382,39 +382,56 @@
         let
           pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
-        in
-        pkgs.haskell-nix.cabalProject' {
-          src = ./.;
-          inherit cabalProjectLocal extraSources;
-          name = "tokenomia";
-          compiler-nix-name = "ghc8107";
-          shell = {
-            additional = ps: [
-              ps.plutus-pab
-              ps.cardano-cli
-              ps.blockfrost-pretty
-              ps.blockfrost-client
-              ps.blockfrost-api
-              ps.blockfrost-client-core
-            ];
-            withHoogle = true;
-            tools.haskell-language-server = { };
-            exactDeps = true;
-            nativeBuildInputs = with pkgs'; [
-              cabal-install
-              haskellPackages.cabal-fmt
-              haskellPackages.implicit-hie
-              haskellPackages.fourmolu
-              haskellPackages.apply-refact
-              hlint
-              jq
-              websocat
-              fd
-              nixpkgs-fmt
+          cardanoInputs = [
+            project.hsPkgs.cardano-cli.components.exes.cardano-cli
+            project.hsPkgs.cardano-node.components.exes.cardano-node
+            project.hsPkgs.cardano-addresses-cli.components.exes.cardano-address
+          ];
+          project = pkgs.haskell-nix.cabalProject' {
+            src = ./.;
+            inherit cabalProjectLocal extraSources;
+            name = "tokenomia";
+            compiler-nix-name = "ghc8107";
+            shell = {
+              additional = ps: [
+                ps.plutus-pab
+                ps.cardano-cli
+                ps.blockfrost-pretty
+                ps.blockfrost-client
+                ps.blockfrost-api
+                ps.blockfrost-client-core
+              ];
+              withHoogle = true;
+              tools.haskell-language-server = { };
+              exactDeps = true;
+              nativeBuildInputs = with pkgs'; [
+                cabal-install
+                haskellPackages.cabal-fmt
+                haskellPackages.implicit-hie
+                haskellPackages.fourmolu
+                haskellPackages.apply-refact
+                hlint
+                jq
+                websocat
+                fd
+                nixpkgs-fmt
+                curl
+              ] ++ cardanoInputs;
+              shellHook = '' export PATH="'' + builtins.concatStringsSep ":" (map (inp: inp.outPath + "/bin") cardanoInputs) + '':$PATH" '';
+            };
+            modules = haskellModules ++ [
+              ({ config, pkgs, ... }: {
+                packages.tokenomia.components.library.build-tools = [
+                  config.hsPkgs.cardano-cli.components.exes.cardano-cli
+                  config.hsPkgs.cardano-node.components.exes.cardano-node
+                  config.hsPkgs.cardano-addresses-cli.components.exes.cardano-address
+                  pkgs.curl
+                ];
+              })
             ];
           };
-          modules = haskellModules;
-        };
+        in
+        project;
 
       formatCheckFor = system:
         let
