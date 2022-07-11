@@ -19,7 +19,7 @@ module Spec.Tokenomia.Vesting.Sendings (tests, mySendings, main) where
 
 import Data.ByteString.Lazy qualified as ByteString
 
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Tokenomia.Common.Error (TokenomiaError)
 import Tokenomia.Vesting.Sendings (MonadRunBlockfrost (getAddressTransactions, getTxUtxos), Sendings, jsonToSendings, verifySendings')
 
@@ -38,6 +38,9 @@ import Blockfrost.Types (
   TxHash (TxHash),
   UtxoOutput (UtxoOutput),
  )
+import Data.Either (isLeft)
+import PlutusTx.Either (isRight)
+import Test.Tasty.HUnit (assertBool, testCaseSteps)
 
 data BlockfrostMockData = BlockfrostMockData
   { addressTransactions :: [AddressTransaction]
@@ -64,12 +67,6 @@ deriving via (IdentityT m) instance (MonadError TokenomiaError m) => MonadError 
 instance (Monad m, MonadReader BlockfrostMockData m, MonadError TokenomiaError m) => MonadRunBlockfrost (FakeBlockfrost m) where
   getAddressTransactions _ = asks addressTransactions
   getTxUtxos _ = asks transactionUtxos
-
-main :: IO ()
-main = either print (const $ print @String "pass") =<< sendingsTestCase
-  where
-    {- sendingsTestCase = sendingsPass -}
-    sendingsTestCase = sendingsFail
 
 testSendings :: MonadIO m => BlockfrostMockData -> Sendings -> m (Either TokenomiaError ())
 testSendings bfmd s =
@@ -114,11 +111,34 @@ sendingsPass = runExceptT mySendings >>= either (return . Left) (testSendings pa
         input = []
         txHash = TxHash "75d39ec2fd731ea9ef284eac3ceaa8191cc70f97b95194c5ab5a4985792047fd"
 
-tests :: Sendings -> TestTree
-tests _ =
+failCase :: TestTree
+failCase = testCaseSteps "Failing test" $ \step -> do
+  _ <- step "Read and parse sample sendings.json file"
+  x <- runExceptT mySendings
+  assertBool "Failed to parse json" (isRight x)
+
+  step "Verify sendings"
+  y <- sendingsFail
+  assertBool "Verified invalid sendings" (isLeft y)
+
+passCase :: TestTree
+passCase = testCaseSteps "Failing test" $ \step -> do
+  _ <- step "Read and parse sample sendings.json file"
+  x <- runExceptT mySendings
+  assertBool "Failed to parse json" (isRight x)
+
+  step "Verify sendings"
+  y <- sendingsPass
+  assertBool "Failed to verify valid sendings" (isRight y)
+
+main :: IO ()
+main = defaultMain tests
+
+tests :: TestTree
+tests =
   testGroup
     "Vesting Sendings"
-    []
+    [failCase, passCase]
 
 mySendings ::
   forall (m :: Type -> Type).
