@@ -1,18 +1,20 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Werror #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Tokenomia.Vesting.Sendings (verifySendings) where
+module Tokenomia.Vesting.Sendings (Sendings, MonadRunBlockfrost (getAddressTransactions, getTxUtxos), jsonToSendings, verifySendings, verifySendings') where
 
 import Blockfrost.Client (
   Address,
@@ -29,8 +31,9 @@ import Control.Monad (unless)
 import Control.Monad.Except (MonadError (throwError), liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Reader (MonadReader)
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey, eitherDecodeFileStrict)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey, eitherDecode)
 import Data.Bifunctor (first)
+import Data.ByteString.Lazy qualified as ByteString
 import Data.Either.Combinators (maybeToRight)
 import Data.Foldable (find)
 import Data.Hex (unhex)
@@ -59,6 +62,26 @@ deriving stock instance Ord TxHash
 deriving newtype instance ToJSONKey TxHash
 deriving newtype instance FromJSONKey TxHash
 
+class Monad m => MonadRunBlockfrost m where
+  getAddressTransactions :: Address -> m [AddressTransaction]
+  getTxUtxos :: TxHash -> m TransactionUtxos
+
+newtype RealBlockfrost (m :: Type -> Type) (a :: Type) = RealBlockfrost {runRealBlockfrost :: m a}
+  deriving (Functor, Applicative, Monad) via IdentityT m
+
+deriving via (IdentityT m) instance (MonadReader Environment m) => MonadReader Environment (RealBlockfrost m)
+deriving via (IdentityT m) instance (MonadError TokenomiaError m) => MonadError TokenomiaError (RealBlockfrost m)
+
+instance (MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) => MonadRunBlockfrost (RealBlockfrost m) where
+  getAddressTransactions ad = RealBlockfrost $ do
+    prj <- projectFromEnv''
+    eitherErrAddrTxs <- liftIO $ Client.runBlockfrost prj (Client.getAddressTransactions ad)
+    liftEither $ first BlockFrostError eitherErrAddrTxs
+  getTxUtxos txh = RealBlockfrost $ do
+    prj <- projectFromEnv''
+    eitherErrTxUtxos <- liftIO $ Client.runBlockfrost prj (Client.getTxUtxos txh)
+    liftEither $ first BlockFrostError eitherErrTxUtxos
+
 verifySendings ::
   forall (m :: Type -> Type).
   ( MonadIO m
@@ -69,7 +92,9 @@ verifySendings ::
 verifySendings = do
   liftIO . putStrLn $ "Please enter a filepath with JSON data"
   jsonFilePath <- liftIO getLine
-  verifySendings' jsonFilePath
+  jsonContents <- liftIO $ ByteString.readFile jsonFilePath
+  sendings <- jsonToSendings jsonContents
+  runRealBlockfrost $ verifySendings' sendings
 
 verifySendings' ::
   forall (m :: Type -> Type).
@@ -77,11 +102,10 @@ verifySendings' ::
   , MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
-  FilePath ->
+  Sendings ->
   m ()
-verifySendings' jsonFilePath = do
-  sendings <- jsonToSendings jsonFilePath
-  treasAddrTxs <- getTreasAddrTxs sendings
+verifySendings' sendings = do
+  treasAddrTxs <- getAddressTransactions (sendingsRecipientAddress sendings)
   let treasTxhs = (^. txHash) <$> treasAddrTxs
       flatSendingsTxValues = Map.toList . sendingsTxValues $ sendings
       txhs = verifyTxHashList flatSendingsTxValues treasTxhs
@@ -93,28 +117,13 @@ verifySendings' jsonFilePath = do
 
 jsonToSendings ::
   forall (m :: Type -> Type).
-  ( MonadIO m
-  , MonadError TokenomiaError m
+  ( MonadError TokenomiaError m
   ) =>
-  FilePath ->
+  ByteString.ByteString ->
   m Sendings
-jsonToSendings jsonFilePath = do
-  eitherErrSendings <- liftIO . eitherDecodeFileStrict $ jsonFilePath
+jsonToSendings jsonByteString = do
+  let eitherErrSendings = eitherDecode jsonByteString
   liftEither $ first (BlockFrostError . BlockfrostError . pack) eitherErrSendings
-
-getTreasAddrTxs ::
-  forall (m :: Type -> Type).
-  ( MonadIO m
-  , MonadError TokenomiaError m
-  , MonadReader Environment m
-  ) =>
-  Sendings ->
-  m [AddressTransaction]
-getTreasAddrTxs sendings = do
-  prj <- projectFromEnv''
-  eitherErrAddrTxs <-
-    liftIO $ Client.runBlockfrost prj (Client.getAddressTransactions (sendingsRecipientAddress sendings))
-  liftEither $ first BlockFrostError eitherErrAddrTxs
 
 verifyTxHashList ::
   [(TxHash, Value)] ->
@@ -145,7 +154,7 @@ verifyTxs sendings =
       TxHash ->
       m ()
     verifyTx flatTxVals txh = do
-      bfTxUtxos <- getTxUtxosByTxHash txh
+      bfTxUtxos <- getTxUtxos txh
       txValue <- liftEither (getTxValueByTxHash txh flatTxVals)
       flatVal <- liftEither $ safeHeadToRight . flattenValue . snd $ txValue
       let bfUtxoOutputs = bfTxUtxos ^. outputs
@@ -172,19 +181,6 @@ flatValToAssetClass (cs, tn, _) = assetClass cs tn
 sumRelevantValues :: (CurrencySymbol, TokenName, Integer) -> [(AssetClass, Integer)] -> Integer
 sumRelevantValues flatVal = foldr (\(ac, amt) z -> if ac == flatValToAssetClass flatVal then amt + z else z) 0
 
-getTxUtxosByTxHash ::
-  forall (m :: Type -> Type).
-  ( MonadIO m
-  , MonadError TokenomiaError m
-  , MonadReader Environment m
-  ) =>
-  TxHash ->
-  m TransactionUtxos
-getTxUtxosByTxHash txh = do
-  prj <- projectFromEnv''
-  eitherErrTxUtxos <- liftIO $ Client.runBlockfrost prj (Client.getTxUtxos txh)
-  liftEither $ first BlockFrostError eitherErrTxUtxos
-
 getTxValueByTxHash ::
   TxHash ->
   [(TxHash, Value)] ->
@@ -202,7 +198,6 @@ getTxValueByTxHash txh invs =
   form: "CurrencysymbolName" :: Text, where we have to manually extract the currency symbol
   embedded in the first half using take, and extract the token name in the second half
   using drop.
-
   Also note that amountToAssetValue is partial, but the error case of it implies that blockfrost
   is broken, i.e. an unrecoverable error.
 -}
