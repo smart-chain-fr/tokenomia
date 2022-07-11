@@ -35,6 +35,7 @@ import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey, eitherDecode)
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as ByteString
+import Data.Default (def)
 import Data.Either.Combinators (maybeToRight)
 import Data.Foldable (find)
 import Data.Hex (unhex)
@@ -73,10 +74,25 @@ newtype RealBlockfrost (m :: Type -> Type) (a :: Type) = RealBlockfrost {runReal
 deriving via (IdentityT m) instance (MonadReader Environment m) => MonadReader Environment (RealBlockfrost m)
 deriving via (IdentityT m) instance (MonadError TokenomiaError m) => MonadError TokenomiaError (RealBlockfrost m)
 
+-- Starting page number is 1
+getAddressTransactionsPaged :: Address -> Int -> Client.BlockfrostClient [AddressTransaction]
+getAddressTransactionsPaged ad pageNo = Client.getAddressTransactions' ad (Client.Paged 100 pageNo) def Nothing Nothing
+
+getAllAddressTransactions :: Address -> Client.BlockfrostClient [AddressTransaction]
+getAllAddressTransactions ad = foldr aux (pure []) [1..] -- This seems like it could be done cleaner
+  where
+    aux :: Int -> Client.BlockfrostClient [AddressTransaction] -> Client.BlockfrostClient [AddressTransaction]
+    aux n rest = do
+      txs <- getAddressTransactionsPaged ad n
+      if null txs then
+        pure []
+      else
+        (txs ++) <$> rest
+
 instance (MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) => MonadRunBlockfrost (RealBlockfrost m) where
   getAddressTransactions ad = RealBlockfrost $ do
     prj <- projectFromEnv''
-    eitherErrAddrTxs <- liftIO $ Client.runBlockfrost prj (Client.getAddressTransactions ad)
+    eitherErrAddrTxs <- liftIO $ Client.runBlockfrost prj (getAllAddressTransactions ad)
     liftEither $ first BlockFrostError eitherErrAddrTxs
   getTxUtxos txh = RealBlockfrost $ do
     prj <- projectFromEnv''
