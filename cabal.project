@@ -4,3 +4,21 @@ packages: ./.
 
 tests: true
 benchmarks: true
+
+allow-newer:
+    -- Copied from plutus-core
+    size-based:template-haskell
+    , ouroboros-consensus-byron:formatting
+    , beam-core:aeson
+    , beam-sqlite:aeson
+    , beam-sqlite:dlist
+    , beam-migrate:aeson
+
+-- Copied from plutus-core
+constraints:
+    -- big breaking change here, inline-r doens't have an upper bound
+    singletons < 3.0
+    -- bizarre issue: in earlier versions they define their own 'GEq', in newer
+    -- ones they reuse the one from 'some', but there isn't e.g. a proper version
+    -- constraint from dependent-sum-template (which is the library we actually use).
+    , dependent-sum > 0.6.2.0

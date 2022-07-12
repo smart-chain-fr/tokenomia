@@ -227,14 +227,12 @@ library
     , hex-text
     , iso8601-time
     , lens
-    , lifted-base
     , memory
     , mtl
     , nonempty-containers
     , optparse-applicative
     , ordered-containers
     , ouroboros-consensus
-    , playground-common
     , plutus-chain-index
     , plutus-contract
     , plutus-core

@@ -25,13 +25,6 @@ usage:
 	@echo "  readme_contents     -- Add table of contents to README"
 	@echo "  clear_build         -- Deletes the build files for this specific project"
 
-# Need to use --no-nix and --system-ghc from inside nix-shell
-# on NixOS since stack doesn't support nixos, and ghc8103 isnt in any nixpkgs version
-# maybe we could support this via stack's nix integration using a separate stack_shell.nix
-ifdef NIXOS
-STACK_FLAGS = --no-nix --system-ghc
-endif
-
 hoogle: requires_nix_shell
 	hoogle server --local --port=8070 > /dev/null &
 
@@ -62,11 +55,11 @@ FORMAT_EXTENSIONS := -o -XTemplateHaskell -o -XTypeApplications -o -XImportQuali
 
 # Run fourmolu formatter
 format: requires_nix_shell
-	fourmolu --mode inplace --check-idempotence $(FORMAT_EXTENSIONS) $(FORMAT_SOURCES)
+	@fourmolu --mode inplace --check-idempotence $(FORMAT_EXTENSIONS) $(FORMAT_SOURCES)
 
 # Check formatting (without making changes)
 format_check: requires_nix_shell
-	fourmolu --mode check --check-idempotence $(FORMAT_EXTENSIONS) $(FORMAT_SOURCES)
+	@fourmolu --mode check --check-idempotence $(FORMAT_EXTENSIONS) $(FORMAT_SOURCES)
 
 # Cabal package definitions
 CABAL_SOURCES := $(shell fd -e cabal)
@@ -87,7 +80,7 @@ nixpkgsfmt_check: requires_nix_shell
 	nixpkgs-fmt --check $(NIX_SOURCES)
 
 lint: requires_nix_shell
-	hlint $(FORMAT_SOURCES)
+	@hlint $(FORMAT_SOURCES)
 
 lint_fix: requires_nix_shell
 	echo $(FORMAT_SOURCES) | xargs -t -n1 hlint --refactor --refactor-options="--inplace"

@@ -8,7 +8,6 @@
     nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
 
     iohk-nix.url = "github:input-output-hk/iohk-nix";
-    iohk-nix.flake = false; # Bad Nix code
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -129,58 +128,25 @@
 
   outputs = { self, nixpkgs, haskell-nix, iohk-nix, ... }@inputs:
     let
-      defaultSystems = [ "x86_64-linux" "x86_64-darwin" ];
+      defaultSystems = [
+        "x86_64-linux"
+        "x86_64-darwin"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
 
       perSystem = nixpkgs.lib.genAttrs defaultSystems;
 
       nixpkgsFor = system:
         import nixpkgs {
-          overlays = [ haskell-nix.overlay (import "${iohk-nix}/overlays/crypto") ];
+          overlays = [
+            haskell-nix.overlay
+            iohk-nix.overlays.crypto
+          ];
           inherit (haskell-nix) config;
           inherit system;
         };
       nixpkgsFor' = system: import nixpkgs { inherit system; };
-
-      cabalProjectLocal = ''
-        allow-newer:
-           -- Copied from plutus-core
-           size-based:template-haskell
-           , ouroboros-consensus-byron:formatting
-           , beam-core:aeson
-           , beam-sqlite:aeson
-           , beam-sqlite:dlist
-           , beam-migrate:aeson
-
-        -- Copied from plutus-core
-        constraints:
-          -- big breaking change here, inline-r doens't have an upper bound
-          singletons < 3.0
-          -- bizarre issue: in earlier versions they define their own 'GEq', in newer
-          -- ones they reuse the one from 'some', but there isn't e.g. a proper version
-          -- constraint from dependent-sum-template (which is the library we actually use).
-          , dependent-sum > 0.6.2.0
-      '';
-
-      haskellModules = [
-        ({ pkgs, ... }:
-          {
-            packages = {
-              marlowe.flags.defer-plugin-errors = true;
-              plutus-use-cases.flags.defer-plugin-errors = true;
-              plutus-ledger.flags.defer-plugin-errors = true;
-              plutus-contract.flags.defer-plugin-errors = true;
-              cardano-crypto-praos.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
-              cardano-crypto-class.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
-              cardano-wallet-core.components.library.build-tools = [
-                pkgs.buildPackages.buildPackages.gitMinimal
-              ];
-              cardano-config.components.library.build-tools = [
-                pkgs.buildPackages.buildPackages.gitMinimal
-              ];
-            };
-          }
-        )
-      ];
 
       extraSources = [
         {
@@ -378,13 +344,41 @@
         }
       ];
 
+      haskellModules = [
+        ({ config, pkgs, ... }: {
+          packages = {
+            plutus-use-cases.flags.defer-plugin-errors = true;
+            plutus-ledger.flags.defer-plugin-errors = true;
+            plutus-contract.flags.defer-plugin-errors = true;
+            cardano-crypto-praos.components.library.pkgconfig =
+              pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
+            cardano-crypto-class.components.library.pkgconfig =
+              pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
+            cardano-wallet-core.components.library.build-tools = [
+              pkgs.buildPackages.buildPackages.gitMinimal
+            ];
+            cardano-config.components.library.build-tools = [
+              pkgs.buildPackages.buildPackages.gitMinimal
+            ];
+
+            tokenomia.components.library.build-tools =
+              with config.hsPkgs; [
+                cardano-cli.components.exes.cardano-cli
+                cardano-node.components.exes.cardano-node
+                cardano-addresses-cli.components.exes.cardano-address
+                pkgs.curl
+              ];
+          };
+        })
+      ];
+
       projectFor = system:
         let
           pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
           project = pkgs.haskell-nix.cabalProject' {
             src = ./.;
-            inherit cabalProjectLocal extraSources;
+            inherit extraSources;
             name = "tokenomia";
             compiler-nix-name = "ghc8107";
             shell = {
@@ -416,16 +410,7 @@
                 project.hsPkgs.cardano-addresses-cli.components.exes.cardano-address
               ];
             };
-            modules = haskellModules ++ [
-              ({ config, pkgs, ... }: {
-                packages.tokenomia.components.library.build-tools = [
-                  config.hsPkgs.cardano-cli.components.exes.cardano-cli
-                  config.hsPkgs.cardano-node.components.exes.cardano-node
-                  config.hsPkgs.cardano-addresses-cli.components.exes.cardano-address
-                  pkgs.curl
-                ];
-              })
-            ];
+            modules = haskellModules;
           };
         in
         project;
@@ -449,14 +434,13 @@
 
     in
     {
-      inherit cabalProjectLocal extraSources haskellModules;
-
       project = perSystem projectFor;
+
       flake = perSystem (system: (projectFor system).flake { });
 
       defaultPackage = perSystem (system:
-        let lib = "tokenomia:lib:tokenomia";
-        in self.flake.${system}.packages.${lib});
+        self.flake.${system}.packages."tokenomia:exe:tokenomia-cli"
+      );
 
       packages = perSystem (system: self.flake.${system}.packages);
 
@@ -471,9 +455,10 @@
             nativeBuildInputs = builtins.attrValues self.checks.${system}
               ++ builtins.attrValues self.flake.${system}.packages
               ++ [ self.devShell.${system}.inputDerivation ];
-          } "touch $out");
-      # NOTE `nix flake check` will not work at the moment due to use of
-      # IFD in haskell.nix
+          }
+          ''touch $out''
+      );
+
       checks = perSystem (system: self.flake.${system}.checks // {
         formatCheck = formatCheckFor system;
       });
