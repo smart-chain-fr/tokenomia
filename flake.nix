@@ -382,11 +382,6 @@
         let
           pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
-          cardanoInputs = [
-            project.hsPkgs.cardano-cli.components.exes.cardano-cli
-            project.hsPkgs.cardano-node.components.exes.cardano-node
-            project.hsPkgs.cardano-addresses-cli.components.exes.cardano-address
-          ];
           project = pkgs.haskell-nix.cabalProject' {
             src = ./.;
             inherit cabalProjectLocal extraSources;
@@ -416,8 +411,10 @@
                 fd
                 nixpkgs-fmt
                 curl
-              ] ++ cardanoInputs;
-              shellHook = '' export PATH="'' + builtins.concatStringsSep ":" (map (inp: inp.outPath + "/bin") cardanoInputs) + '':$PATH" '';
+                project.hsPkgs.cardano-cli.components.exes.cardano-cli
+                project.hsPkgs.cardano-node.components.exes.cardano-node
+                project.hsPkgs.cardano-addresses-cli.components.exes.cardano-address
+              ];
             };
             modules = haskellModules ++ [
               ({ config, pkgs, ... }: {
@@ -438,7 +435,9 @@
           pkgs = nixpkgsFor system;
         in
         pkgs.runCommand "format-check"
-          { nativeBuildInputs = [ self.devShell.${system}.nativeBuildInputs ]; } ''
+          {
+            nativeBuildInputs = [ self.devShell.${system}.nativeBuildInputs ];
+          } ''
           cd ${self}
           export LC_CTYPE=C.UTF-8
           export LC_ALL=C.UTF-8
