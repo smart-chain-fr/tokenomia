@@ -5,12 +5,16 @@ module Tokenomia.TokenDistribution.Distribution (
   readDistributionFile,
 ) where
 
+import Cardano.Api (NetworkId)
 import Data.Aeson (
   FromJSON,
+  ToJSON (toJSON),
   Value,
   eitherDecode,
+  object,
   withObject,
   (.:),
+  (.=),
  )
 import Data.Aeson.Types (Parser, parseJSON)
 import Data.ByteString.Lazy (readFile)
@@ -22,12 +26,14 @@ import Prelude hiding (lines, readFile)
 import Ledger.Address (Address (..))
 import Ledger.Value (AssetClass)
 import Ledger.Value qualified as Ledger (assetClass)
+import Plutus.V1.Ledger.Value qualified as Value
 
 import Tokenomia.TokenDistribution.CLI.Parameters (
   Parameters (..),
  )
 import Tokenomia.TokenDistribution.Parser.Address (
   deserialiseCardanoAddress,
+  serialiseCardanoAddress,
  )
 
 data Recipient = Recipient
@@ -42,6 +48,10 @@ data Distribution = Distribution
   }
   deriving stock (Show)
 
+-- Unfortunately, address serialisation requires a network Id. As such, one cannot correctly ToJSON a Distribution.
+-- Instead, we use a proxy type that allows us to provide this information
+data WithNetworkId a = WithNetworkId a NetworkId
+
 instance FromJSON Recipient where
   parseJSON = withObject "Recipient" $ \o ->
     Recipient
@@ -55,6 +65,13 @@ instance FromJSON Recipient where
           pure
           (deserialiseCardanoAddress . pack $ s)
 
+instance ToJSON (WithNetworkId Recipient) where
+  toJSON (Recipient addr amt `WithNetworkId` netId) =
+    object
+      [ "address" .= serialiseCardanoAddress netId addr
+      , "amount" .= amt
+      ]
+
 instance FromJSON Distribution where
   parseJSON = withObject "Distribution" $ \o ->
     Distribution
@@ -66,6 +83,13 @@ instance FromJSON Distribution where
         Ledger.assetClass
           <$> (fromString <$> o .: "currencySymbol")
           <*> (fromString <$> o .: "tokenName")
+
+instance ToJSON (WithNetworkId Distribution) where
+  toJSON (Distribution (Value.AssetClass (cs, tn)) recips `WithNetworkId` netId) =
+    object
+      [ "assetClass" .= object ["currencySymbol" .= show cs, "tokenName" .= show tn]
+      , "recipients" .= toJSON (flip WithNetworkId netId <$> recips)
+      ]
 
 countRecipients :: Distribution -> Integer
 countRecipients = toInteger . length . recipients
