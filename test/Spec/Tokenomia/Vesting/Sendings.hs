@@ -29,6 +29,7 @@ import Blockfrost.Types (
 import Control.Monad.Except (MonadError, runExceptT)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Identity (IdentityT (IdentityT))
+import Control.Monad.State (MonadState, evalStateT, gets, modify)
 import Data.ByteString.Lazy qualified as ByteString
 import Data.Either (isLeft)
 import Data.Kind (Type)
@@ -42,7 +43,6 @@ import Tokenomia.Vesting.Sendings (
   jsonToSendings,
   verifySendings',
  )
-import Control.Monad.State (MonadState, modify, gets, evalStateT)
 
 data BlockfrostMockData = BlockfrostMockData
   { addressTransactions :: [AddressTransaction]
@@ -58,15 +58,14 @@ deriving via (IdentityT m) instance (MonadState a m) => MonadState a (FakeBlockf
 deriving via (IdentityT m) instance (MonadError e m) => MonadError e (FakeBlockfrost m)
 
 instance (Monad m, MonadState TestState m, MonadError TokenomiaError m) => MonadRunBlockfrost (FakeBlockfrost m) where
-  getAddressTransactions _ =  do
+  getAddressTransactions _ = do
     at <- gets (head . fst)
-    modify $ \(a,u) -> (tail a, u)
+    modify $ \(a, u) -> (tail a, u)
     pure at
   getTxUtxos _ = do
     us <- gets (head . snd)
-    modify $ \(a,u) -> (a, tail u)
+    modify $ \(a, u) -> (a, tail u)
     pure us
-
 
 testSendings :: MonadIO m => BlockfrostMockData -> Sendings -> m (Either TokenomiaError ())
 testSendings bfmd s =

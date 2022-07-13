@@ -80,15 +80,15 @@ getAddressTransactionsPaged :: Address -> Int -> Client.BlockfrostClient [Addres
 getAddressTransactionsPaged ad pageNo = Client.getAddressTransactions' ad (Client.Paged 100 pageNo) def Nothing Nothing
 
 getAllAddressTransactions :: Address -> Client.BlockfrostClient [AddressTransaction]
-getAllAddressTransactions ad = concat <$> sequenceWhile (not . null) (getAddressTransactionsPaged ad <$> [1..])
+getAllAddressTransactions ad = concat <$> sequenceWhile (not . null) (getAddressTransactionsPaged ad <$> [1 ..])
 
 -- Takes IO actions and calls them until the return value does not satisfy the predicate. Does not include the result of the first failing action.
 sequenceWhile :: forall (m :: Type -> Type) (a :: Type). Monad m => (a -> Bool) -> [m a] -> m [a]
 sequenceWhile _ [] = pure []
-sequenceWhile p (m:ms) = do
+sequenceWhile p (m : ms) = do
   a <- m
   if p a
-    then (a:) <$> sequenceWhile p ms
+    then (a :) <$> sequenceWhile p ms
     else pure []
 
 instance (MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) => MonadRunBlockfrost (RealBlockfrost m) where
