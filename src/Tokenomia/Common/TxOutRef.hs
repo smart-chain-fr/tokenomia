@@ -1,16 +1,16 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Tokenomia.Common.TxOutRef 
-    ( showTxOutRef
-    , TxOutRef (..)
-    ) where
 
-import qualified Data.Text as T
+module Tokenomia.Common.TxOutRef (
+  showTxOutRef,
+  TxOutRef (..),
+) where
 
-import Ledger ( TxOutRef (..) )
+import Data.Text qualified as T
+
+import Ledger (TxOutRef (..))
 
 import Tokenomia.Common.Serialise
-
 
 instance ToCLI TxOutRef where
   toCLI = T.pack . showTxOutRef
