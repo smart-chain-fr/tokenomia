@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE KindSignatures #-}
@@ -30,10 +31,12 @@ import Control.Lens ((^.))
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError (throwError), liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Identity (IdentityT (IdentityT))
 import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey, eitherDecode)
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as ByteString
+import Data.Default (def)
 import Data.Either.Combinators (maybeToRight)
 import Data.Foldable (find)
 import Data.Hex (unhex)
@@ -69,13 +72,29 @@ class Monad m => MonadRunBlockfrost m where
 newtype RealBlockfrost (m :: Type -> Type) (a :: Type) = RealBlockfrost {runRealBlockfrost :: m a}
   deriving (Functor, Applicative, Monad) via IdentityT m
 
-deriving via (IdentityT m) instance (MonadReader Environment m) => MonadReader Environment (RealBlockfrost m)
-deriving via (IdentityT m) instance (MonadError TokenomiaError m) => MonadError TokenomiaError (RealBlockfrost m)
+deriving via (IdentityT m) instance (MonadReader r m) => MonadReader r (RealBlockfrost m)
+deriving via (IdentityT m) instance (MonadError e m) => MonadError e (RealBlockfrost m)
+
+-- Starting page number is 1
+getAddressTransactionsPaged :: Address -> Int -> Client.BlockfrostClient [AddressTransaction]
+getAddressTransactionsPaged ad pageNo = Client.getAddressTransactions' ad (Client.Paged 100 pageNo) def Nothing Nothing
+
+getAllAddressTransactions :: Address -> Client.BlockfrostClient [AddressTransaction]
+getAllAddressTransactions ad = concat <$> sequenceWhile (not . null) (getAddressTransactionsPaged ad <$> [1..])
+
+-- Takes IO actions and calls them until the return value does not satisfy the predicate. Does not include the result of the first failing action.
+sequenceWhile :: forall (m :: Type -> Type) (a :: Type). Monad m => (a -> Bool) -> [m a] -> m [a]
+sequenceWhile _ [] = pure []
+sequenceWhile p (m:ms) = do
+  a <- m
+  if p a
+    then (a:) <$> sequenceWhile p ms
+    else pure []
 
 instance (MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) => MonadRunBlockfrost (RealBlockfrost m) where
   getAddressTransactions ad = RealBlockfrost $ do
     prj <- projectFromEnv''
-    eitherErrAddrTxs <- liftIO $ Client.runBlockfrost prj (Client.getAddressTransactions ad)
+    eitherErrAddrTxs <- liftIO $ Client.runBlockfrost prj (getAllAddressTransactions ad)
     liftEither $ first BlockFrostError eitherErrAddrTxs
   getTxUtxos txh = RealBlockfrost $ do
     prj <- projectFromEnv''
@@ -98,9 +117,8 @@ verifySendings = do
 
 verifySendings' ::
   forall (m :: Type -> Type).
-  ( MonadIO m
+  ( MonadRunBlockfrost m
   , MonadError TokenomiaError m
-  , MonadReader Environment m
   ) =>
   Sendings ->
   m ()
@@ -134,9 +152,8 @@ verifyTxHashList flatSendingsTxValues treasTxhs =
 
 verifyTxs ::
   forall (m :: Type -> Type).
-  ( MonadIO m
+  ( MonadRunBlockfrost m
   , MonadError TokenomiaError m
-  , MonadReader Environment m
   ) =>
   Sendings ->
   [TxHash] ->
@@ -146,9 +163,8 @@ verifyTxs sendings =
   where
     verifyTx ::
       forall (m :: Type -> Type).
-      ( MonadIO m
+      ( MonadRunBlockfrost m
       , MonadError TokenomiaError m
-      , MonadReader Environment m
       ) =>
       [(TxHash, Value)] ->
       TxHash ->

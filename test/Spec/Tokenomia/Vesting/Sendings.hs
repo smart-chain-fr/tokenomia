@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE KindSignatures #-}
@@ -28,7 +29,6 @@ import Blockfrost.Types (
 import Control.Monad.Except (MonadError, runExceptT)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Identity (IdentityT (IdentityT))
-import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), asks)
 import Data.ByteString.Lazy qualified as ByteString
 import Data.Either (isLeft)
 import Data.Kind (Type)
@@ -42,25 +42,35 @@ import Tokenomia.Vesting.Sendings (
   jsonToSendings,
   verifySendings',
  )
+import Control.Monad.State (MonadState, modify, gets, evalStateT)
 
 data BlockfrostMockData = BlockfrostMockData
   { addressTransactions :: [AddressTransaction]
   , transactionUtxos :: TransactionUtxos
   }
 
+type TestState = ([[AddressTransaction]], [TransactionUtxos])
+
 newtype FakeBlockfrost (m :: Type -> Type) (a :: Type) = FakeBlockfrost {runFakeBlockfrost :: m a}
   deriving (Functor, Applicative, Monad) via IdentityT m
 
-deriving via (IdentityT m) instance (MonadReader BlockfrostMockData m) => MonadReader BlockfrostMockData (FakeBlockfrost m)
-deriving via (IdentityT m) instance (MonadError TokenomiaError m) => MonadError TokenomiaError (FakeBlockfrost m)
+deriving via (IdentityT m) instance (MonadState a m) => MonadState a (FakeBlockfrost m)
+deriving via (IdentityT m) instance (MonadError e m) => MonadError e (FakeBlockfrost m)
 
-instance (Monad m, MonadReader BlockfrostMockData m, MonadError TokenomiaError m) => MonadRunBlockfrost (FakeBlockfrost m) where
-  getAddressTransactions _ = asks addressTransactions
-  getTxUtxos _ = asks transactionUtxos
+instance (Monad m, MonadState TestState m, MonadError TokenomiaError m) => MonadRunBlockfrost (FakeBlockfrost m) where
+  getAddressTransactions _ =  do
+    at <- gets (head . fst)
+    modify $ \(a,u) -> (tail a, u)
+    pure at
+  getTxUtxos _ = do
+    us <- gets (head . snd)
+    modify $ \(a,u) -> (a, tail u)
+    pure us
+
 
 testSendings :: MonadIO m => BlockfrostMockData -> Sendings -> m (Either TokenomiaError ())
 testSendings bfmd s =
-  runExceptT $ runReaderT (runFakeBlockfrost $ verifySendings' s) bfmd
+  runExceptT $ evalStateT (runFakeBlockfrost $ verifySendings' s) ([addressTransactions bfmd], [transactionUtxos bfmd])
 
 sendingsFail :: IO (Either TokenomiaError ())
 sendingsFail =
@@ -102,7 +112,7 @@ sendingsPass = runExceptT mySendings >>= either (return . Left) (testSendings pa
         txHash = TxHash "75d39ec2fd731ea9ef284eac3ceaa8191cc70f97b95194c5ab5a4985792047fd"
 
 failCase :: TestTree
-failCase = testCaseSteps "Failing test" $ \step -> do
+failCase = testCaseSteps "Missing transacions at address" $ \step -> do
   _ <- step "Read and parse sample sendings.json file"
   x <- runExceptT mySendings
   assertBool "Failed to parse json" (isRight x)
@@ -112,7 +122,7 @@ failCase = testCaseSteps "Failing test" $ \step -> do
   assertBool "Verified invalid sendings" (isLeft y)
 
 passCase :: TestTree
-passCase = testCaseSteps "Failing test" $ \step -> do
+passCase = testCaseSteps "Pass case with single sendings Tx" $ \step -> do
   _ <- step "Read and parse sample sendings.json file"
   x <- runExceptT mySendings
   assertBool "Failed to parse json" (isRight x)
