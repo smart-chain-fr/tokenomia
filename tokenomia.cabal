@@ -246,6 +246,7 @@ test-suite tokenomia-tests
     interpolatedstring-perl6,
     blockfrost-api,
     safe-money,
+    containers,
     data-default
 
 

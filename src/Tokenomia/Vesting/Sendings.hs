@@ -15,7 +15,7 @@
 {-# OPTIONS_GHC -Werror #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Tokenomia.Vesting.Sendings (Sendings, MonadRunBlockfrost (getAddressTransactions, getTxUtxos), jsonToSendings, verifySendings, verifySendings') where
+module Tokenomia.Vesting.Sendings (Sendings (Sendings), MonadRunBlockfrost (getAddressTransactions, getTxUtxos), jsonToSendings, verifySendings, verifySendings') where
 
 import Blockfrost.Client (
   Address,
@@ -55,7 +55,7 @@ import Tokenomia.Common.Environment (Environment)
 import Tokenomia.Common.Error (TokenomiaError (BlockFrostError))
 
 data Sendings = Sendings
-  { sendingsRecipientAddress :: Address
+    { sendingsRecipientAddress :: Address
   , sendingsTxValues :: Map TxHash Value
   }
   deriving stock (Generic, Show)
@@ -123,12 +123,13 @@ verifySendings' ::
   Sendings ->
   m ()
 verifySendings' sendings = do
+  -- TODO: maybe check if sendins is empty early to prevent unnecessary calls to Blockfrost
   treasAddrTxs <- getAddressTransactions (sendingsRecipientAddress sendings)
   let treasTxhs = (^. txHash) <$> treasAddrTxs
       flatSendingsTxValues = Map.toList . sendingsTxValues $ sendings
       txhs = verifyTxHashList flatSendingsTxValues treasTxhs
   if length txhs == length flatSendingsTxValues
-    then verifyTxs sendings txhs
+    then verifyTxs sendings txhs -- this can be refactored to be called with 'sendings' only, as the above line ensures that all tx hashes in `sendings` are equivalent to tx hashes in `txhs`
     else
       throwError . BlockFrostError . BlockfrostError $
         "Missing Transactions"
@@ -170,9 +171,9 @@ verifyTxs sendings =
       TxHash ->
       m ()
     verifyTx flatTxVals txh = do
-      bfTxUtxos <- getTxUtxos txh
       txValue <- liftEither (getTxValueByTxHash txh flatTxVals)
       flatVal <- liftEither $ safeHeadToRight . flattenValue . snd $ txValue
+      bfTxUtxos <- getTxUtxos txh
       let bfUtxoOutputs = bfTxUtxos ^. outputs
           treasAddrOutputs =
             filter (\output -> output ^. address == sendingsRecipientAddress sendings) bfUtxoOutputs
@@ -181,8 +182,41 @@ verifyTxs sendings =
           totalAmount = sumRelevantValues flatVal bfVals
           sendingsAmount = thd3 flatVal
       unless (sendingsAmount == totalAmount) $
-        throwError . BlockFrostError . BlockfrostError $ "Values don't match"
+        throwError . BlockFrostError . BlockfrostError $ "Values don't match "
 
+-- Alternative simpler implementation. Assumes Sendings has been validated against block frost results for included recipientAddress
+verifyTxs' ::
+  forall (m :: Type -> Type).
+  ( MonadRunBlockfrost m
+  , MonadError TokenomiaError m
+  ) =>
+  Sendings ->
+  m ()
+verifyTxs' sendings =
+  mapM_ verifyTx $ Map.toList $ sendingsTxValues sendings
+  where
+    verifyTx ::
+      forall (m :: Type -> Type).
+      ( MonadRunBlockfrost m
+      , MonadError TokenomiaError m
+      ) =>
+      (TxHash, Value) ->
+      m ()
+    verifyTx txValue = do
+      flatVal <- liftEither $ safeHeadToRight . flattenValue . snd $ txValue
+      bfTxUtxos <- getTxUtxos $ fst txValue
+      let bfUtxoOutputs = bfTxUtxos ^. outputs
+          treasAddrOutputs =
+            filter (\output -> output ^. address == sendingsRecipientAddress sendings) bfUtxoOutputs
+          bfAmts = concat ((^. amount) <$> treasAddrOutputs)
+          bfVals = amountToAssetValue <$> bfAmts
+          totalAmount = sumRelevantValues flatVal bfVals
+          sendingsAmount = thd3 flatVal
+      unless (sendingsAmount == totalAmount) $
+        throwError . BlockFrostError . BlockfrostError $ "Values don't match "
+
+-- This can't happen since if tx hash list is empty verifyTx in mapM_ will not
+-- be called
 safeHeadToRight :: forall (a :: Type). [a] -> Either TokenomiaError a
 safeHeadToRight xs =
   maybeToRight
