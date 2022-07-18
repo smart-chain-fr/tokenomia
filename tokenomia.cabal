@@ -247,6 +247,7 @@ test-suite tokenomia-tests
     blockfrost-api,
     safe-money,
     containers,
+    hex,
     data-default
 
 
@@ -256,7 +257,7 @@ executable tokenomia-cli
   hs-source-dirs: app
   ghc-options:
     -threaded
-    build-depends:
+  build-depends:
     base >= 4.9 && < 5,
     tokenomia
 
