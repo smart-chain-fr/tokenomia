@@ -5,32 +5,40 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module Tokenomia.Vesting.GenerateNative () where
+module Tokenomia.Vesting.GenerateNative (generatePrivateSaleFiles) where
 
+import qualified Cardano.Api as Api
 import Control.Monad.Except (MonadError (throwError), liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (MonadReader)
+import Control.Monad.Reader (MonadReader, asks)
 import Data.Aeson (eitherDecodeFileStrict)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Bifunctor (first)
 import Data.Either (lefts)
-import Data.Foldable (foldl')
+import Data.Foldable (foldl', traverse_)
+import Data.Foldable.Extra (sumOn')
 import Data.Kind (Type)
-import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty (NonEmpty, nonEmpty, (<|))
 import qualified Data.List.NonEmpty as List.NonEmpty
 import qualified Data.Map.NonEmpty as Map.NonEmpty
+import Data.Text (Text, unpack)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Numeric.Natural
 
-import Ledger (Address, POSIXTime (POSIXTime))
+import Ledger (Address, POSIXTime (POSIXTime), Slot (Slot, getSlot))
 import Ledger.Value (AssetClass)
 
-import Tokenomia.Common.Environment (Environment)
-import Tokenomia.Common.Error (TokenomiaError)
+import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
+import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale))
+import Tokenomia.TokenDistribution.Parser.Address (serialiseCardanoAddress)
 
 type Amount = Natural
 
 data Tranche = Tranche
-  { percentage :: Integer -- out of 10,000
+  { percentage :: Natural -- out of 10,000
   , duration :: Integer -- number of slots
   }
   deriving stock (Show)
@@ -43,9 +51,14 @@ $(deriveJSON defaultOptions ''Tranche)
 newtype Tranches = Tranches (NonEmpty Tranche)
   deriving stock (Show)
 
+-- Separate to keep the derived json instance clean
+unTranches :: Tranches -> NonEmpty Tranche
+unTranches (Tranches x) = x
+
 $(deriveJSON defaultOptions ''Tranches)
 
 data PrivateInvestor = PrivateInvestor
+  -- TODO: Verify the from json instance for this is the longform string addr1..., and not just its raw constructors. If it isn't, use blockfrost's Address and convert
   { address :: Address
   , allocation :: Amount
   }
@@ -63,98 +76,136 @@ data PrivateSale = PrivateSale
 
 $(deriveJSON defaultOptions ''PrivateSale)
 
--- TODO : Change the signature to reflect the return of PrivateSale
+data NativeScript = NativeScript 
+  { pkh :: String 
+  , unlockTime :: Integer 
+  }
+  deriving stock (Show)
+
+$(deriveJSON defaultOptions ''NativeScript)
+
+data LockedFund = LockedFund 
+  { nativeScript :: NativeScript 
+  , asset :: AssetClassSimple
+  }
+  deriving stock (Show)
+
+$(deriveJSON defaultOptions ''LockedFund)
+
+-- | Simplified AssetClass that serialises to JSON without newtypes over currency symbol and token name
+data AssetClassSimple = AssetClassSimple 
+  { currencySymbol :: String -- As hex
+  , tokenName :: String -- As hex 
+  }
+  deriving stock (Show)
+
+$(deriveJSON defaultOptions ''AssetClassSimple)
+
+-- Map AddressAsText [LockedFund]
+type DatabaseOutput = Map Text [LockedFund]
+
+getNetworkId :: forall (m :: Type -> Type). MonadReader Environment m => m Api.NetworkId
+getNetworkId = asks readNetworkId
+  where
+    readNetworkId :: Environment -> Api.NetworkId
+    readNetworkId Mainnet {} = Api.Mainnet
+    readNetworkId Testnet {magicNumber} = Api.Testnet . Api.NetworkMagic $ fromInteger magicNumber
+
 parsePrivateSale ::
+  forall (m :: Type -> Type).
+  ( MonadIO m
+  , MonadError TokenomiaError m
+  ) =>
+  String ->
+  m PrivateSale
+parsePrivateSale path = do
+  eitherErrPriv <- liftIO . (eitherDecodeFileStrict @PrivateSale) $ path
+  liftEither $ do
+    prvSale <- first InvalidPrivateSale eitherErrPriv
+    validateTranches $ tranches prvSale
+    pure prvSale
+
+generatePrivateSaleFiles ::
   forall (m :: Type -> Type).
   ( MonadIO m
   , MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
-  String ->
   m ()
-parsePrivateSale path = do
-  eitherErrPriv <- liftIO . (eitherDecodeFileStrict @PrivateSale) $ path
-  liftIO $ print eitherErrPriv
+generatePrivateSaleFiles = do
+  liftIO . putStrLn $ "Please enter a filepath with JSON data"
+  path <- liftIO getLine
 
--- TODO : Fin the right error to use here or register a new one.
---  liftEither $ first (CustomError) eitherErrPriv
---  liftEither $ first (do
---    saleTranches <- tranches <$> eitherErrPriv
---    validateTranches saleTranches)
---  TODO : Sort Tranches by duration.
+  prvSale <- parsePrivateSale path
+  nativeData <- splitInTranches prvSale
+  -- Generate DatabaseOutput as `path` with filename as database.json
+  -- Generate Distribution as `path` with filename as distribution.json
+  -- AMIR, start here :)
+  pure ()
 
-validateTranches :: Tranches -> Either String ()
-validateTranches (Tranches tranchesNE) = do
-  checkSum tranchesList
-  case lefts (checkDuration <$> tranchesList) of
-    [] -> Right ()
-    (x : _) -> Left x
+assertErr :: String -> Bool -> Either TokenomiaError ()
+assertErr _ True = Right ()
+assertErr err _ = Left $ InvalidPrivateSale err
+
+validateTranches :: Tranches -> Either TokenomiaError ()
+validateTranches tranches = do
+    assertErr
+      ("The sum of all the tranches must be 10000, but we got: " <> show tranchesSum)
+      $ tranchesSum == 10000
   where
-    tranchesList :: [Tranche]
-    tranchesList = List.NonEmpty.toList tranchesNE
+    tranchesSum = sumOn' percentage $ unTranches tranches
 
-    checkDuration :: Tranche -> Either String ()
-    checkDuration tranche =
-      if duration tranche >= 0
-        then Right ()
-        else Left $ "Duration must be positive in: " <> show tranche
-
-    checkSum :: [Tranche] -> Either String ()
-    checkSum input =
-      let tranchesSum =
-            foldl' (\acc x -> percentage x + acc) 0 input
-       in if tranchesSum == 10000
-            then Right ()
-            else
-              Left $
-                "The sum of all the tranches must be 10000, but we got: "
-                  <> show tranchesSum
-
-mergeInverstors :: NonEmpty PrivateInvestor -> Map.NonEmpty.NEMap Address Amount
-mergeInverstors = Map.NonEmpty.fromListWith (+) . (toTuple <$>)
+mergeInvestors :: NonEmpty PrivateInvestor -> Map.NonEmpty.NEMap Address Amount
+mergeInvestors = Map.NonEmpty.fromListWith (+) . (toTuple <$>)
   where
     toTuple :: PrivateInvestor -> (Address, Amount)
     toTuple (PrivateInvestor x y) = (x, y)
 
-splitAmountInTranches ::
-  POSIXTime -> Amount -> Tranches -> [(POSIXTime, Amount)] -> NonEmpty (POSIXTime, Amount)
-
--- TODO : Refactor and ask about the rounding behaviour
-
 {- | We are taking the floor of the corresponding percentage in all items
  except in the last one where we do the corrections to sum the right amount.
 -}
-splitAmountInTranches startTime total trs acc =
-  case (List.NonEmpty.uncons . unwrap) trs of
-    (lastTranche, Nothing) -> pure ((slot2POSIX . duration) lastTranche + startTime, total - sumValues acc)
-    (tipTranche, Just remainTranches) ->
+splitAmountInTranches ::
+  Slot ->
+  Amount ->
+  Tranches ->
+  Amount ->
+  NonEmpty (Slot, Amount)
+splitAmountInTranches startSlot total trs acc =
+  case nonEmpty . List.NonEmpty.tail $ unTranches trs of
+    Nothing -> pure (nextSlot, total - acc)
+    Just remainTranches ->
       let takenAmount :: Amount
-          takenAmount = div (total * percentage tipTranche) 10000
-          newAcc :: [(POSIXTime, Amount)]
-          newAcc = ((slot2POSIX . duration) tipTranche + startTime, takenAmount) : acc
-       in splitAmountInTranches startTime total (Tranches remainTranches) newAcc
+          takenAmount = div (total * percentage tranche) 10000
+       in (nextSlot, takenAmount) <| splitAmountInTranches nextSlot total (Tranches remainTranches) (acc + takenAmount)
   where
-    -- TODO : Find the right way to convert them
-    slot2POSIX :: Integer -> POSIXTime
-    slot2POSIX = error "uninplemented yet"
+    tranche :: Tranche
+    tranche = List.NonEmpty.head $ unTranches trs
+    nextSlot :: Slot
+    nextSlot = Slot (duration tranche) + startSlot
 
-    unwrap :: Tranches -> NonEmpty Tranche
-    unwrap (Tranches x) = x
+splitInTranches ::
+  forall (m :: Type -> Type).
+  ( MonadIO m
+  , MonadError TokenomiaError m
+  , MonadReader Environment m
+  ) =>
+  PrivateSale ->
+  m (Map.NonEmpty.NEMap Address (NonEmpty (NativeScript, Amount)))
+splitInTranches PrivateSale {..} = do
+  networkId <- getNetworkId
+  startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix start -- change undefined for posix -> utc
+  let f :: Address -> Amount -> m (NonEmpty (NativeScript, Amount))
+      f addr x = traverse (toNative addr) $ splitAmountInTranches startSlot x tranches 0
 
-    sumValues :: [(POSIXTime, Amount)] -> Amount
-    sumValues = foldl' (\accu (_, x) -> accu + x) 0
+      toNative :: Address -> (Slot, Amount) -> m (NativeScript, Amount)
+      toNative addr (slot, amt) = do
+        addrStr <- liftEither $ first toAddressError $ serialiseCardanoAddress networkId addr
+        pure $ (NativeScript (unpack addrStr) $ getSlot slot, amt)
 
---generateNativeScripts :: NonEmpty (POSIXTime, Amount) -> NonEmpty NativeScript
---generateNativeScripts = (generateScript <$>)
---  where
---    generateScript :: (POSIXTime, Amount) -> NativeScript
---    generateScript = error "uninplemented yet"
+      toAddressError :: Text -> TokenomiaError
+      toAddressError err = InvalidPrivateSale $ "Failed to serialise address " <> unpack err
 
-splitInTranches :: PrivateSale -> Map.NonEmpty.NEMap Address (NonEmpty (POSIXTime, Amount))
-splitInTranches PrivateSale {..} = Map.NonEmpty.map f investorsMap
-  where
-    f :: Amount -> NonEmpty (POSIXTime, Amount)
-    f x = splitAmountInTranches start x tranches []
+      investorsMap :: Map.NonEmpty.NEMap Address Amount
+      investorsMap = mergeInvestors investors
 
-    investorsMap :: Map.NonEmpty.NEMap Address Amount
-    investorsMap = mergeInverstors investors
+  Map.NonEmpty.traverseWithKey f investorsMap

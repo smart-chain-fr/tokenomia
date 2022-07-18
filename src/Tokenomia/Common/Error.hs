@@ -47,6 +47,7 @@ data TokenomiaError
     | SendingsJSONDecodingFailure String
     | SendingsValueMismatch (Value, Value)
     | SendingsMalformedAddress
+    | InvalidPrivateSale String
     deriving Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)

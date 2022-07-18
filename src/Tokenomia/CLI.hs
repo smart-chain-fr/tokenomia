@@ -143,6 +143,7 @@ recursiveMenu = do
         ICOWhitelistingNotValid index indexRetrieved -> 
                                   printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved  
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
+        InvalidPrivateSale e -> printLn $ "Invalid Private sale input : " <> e
         ChildAddressNotIndexed w address 
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately"
         SendingsContainsZeroValue           -> printLn $ "Sendings - Input file contains entry with zero value"
