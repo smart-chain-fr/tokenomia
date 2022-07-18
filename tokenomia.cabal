@@ -247,6 +247,7 @@ test-suite tokenomia-tests
     blockfrost-api,
     safe-money,
     containers,
+    either,
     hex,
     data-default
 

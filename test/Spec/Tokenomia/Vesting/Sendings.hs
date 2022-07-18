@@ -28,12 +28,13 @@ import Blockfrost.Types (
   TxHash (TxHash),
   UtxoOutput (UtxoOutput),
  )
-import Control.Monad.Except (MonadError (throwError), runExceptT)
+import Control.Monad.Except (MonadError, liftEither, runExceptT)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Identity (Identity (runIdentity), IdentityT (IdentityT))
 import Control.Monad.State (MonadState, evalStateT, gets)
 import Data.ByteString.Lazy qualified as ByteString
 import Data.Either (isLeft, isRight)
+import Data.Either.Combinators (maybeToRight)
 import Data.Hex (hex)
 import Data.Kind (Type)
 import Data.Map (Map)
@@ -78,10 +79,10 @@ deriving newtype instance Ord Address
 instance (Monad m, MonadState TestState m, MonadError TokenomiaError m) => MonadRunBlockfrost (FakeBlockfrost m) where
   getAddressTransactions addr = do
     atsMap <- gets fst
-    maybe (throwError $ BlockFrostError BlockfrostNotFound) pure (atsMap Map.!? addr)
+    liftEither $ maybeToRight (BlockFrostError BlockfrostNotFound) (atsMap Map.!? addr)
   getTxUtxos txh = do
     txMap <- gets snd
-    maybe (throwError $ BlockFrostError BlockfrostNotFound) pure (txMap Map.!? txh)
+    liftEither $ maybeToRight (BlockFrostError BlockfrostNotFound) $ txMap Map.!? txh
 
 main :: IO ()
 main = defaultMain tests
