@@ -127,7 +127,7 @@ verifySendings' sendings = do
       flatSendingsTxValues = Map.toList . sendingsTxValues $ sendings
       txhs = verifyTxHashList flatSendingsTxValues treasTxhs
   if length txhs == length flatSendingsTxValues
-    then verifyTxs' sendings
+    then verifyTxs sendings
     else
       throwError . BlockFrostError . BlockfrostError $
         "Missing Transactions"
@@ -149,14 +149,14 @@ verifyTxHashList ::
 verifyTxHashList flatSendingsTxValues treasTxhs =
   filter (`elem` treasTxhs) (fst <$> flatSendingsTxValues)
 
-verifyTxs' ::
+verifyTxs ::
   forall (m :: Type -> Type).
   ( MonadRunBlockfrost m
   , MonadError TokenomiaError m
   ) =>
   Sendings ->
   m ()
-verifyTxs' sendings =
+verifyTxs sendings =
   mapM_ verifyTx $ Map.toList $ sendingsTxValues sendings
   where
     verifyTx ::
