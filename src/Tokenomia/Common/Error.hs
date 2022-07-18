@@ -40,6 +40,7 @@ data TokenomiaError
     | ICOWhitelistingNotValid Integer Integer
     | ICONoValidTxs String
     | InvalidTransaction String
+    | InvalidPrivateSale String
     deriving Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)
