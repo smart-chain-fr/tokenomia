@@ -167,7 +167,6 @@ verifyTxs sendings =
       (TxHash, Value) ->
       m ()
     verifyTx txValue = do
-      -- Is there always a single Asset per txhash? if not then use of safeHeadToRight is not necessary
       bfTxUtxos <- getTxUtxos $ fst txValue
       let treasAddrOutputs =
             filter
@@ -211,7 +210,6 @@ amountToAssetValue (AssetAmount sd) =
     currencySymbol :: String
     currencySymbol = take currencySymbolLength encodedName
 
-    -- is error necessary here?
     name :: String
     name = either error id $ unhex $ drop currencySymbolLength encodedName
 
