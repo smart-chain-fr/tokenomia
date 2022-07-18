@@ -37,14 +37,17 @@ import Data.Either (isLeft, isRight)
 import Data.Either.Combinators (maybeToRight)
 import Data.Hex (hex)
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Map.NonEmpty qualified as NEMap
 import Data.Maybe (fromJust)
 import Data.String (IsString (fromString))
 import Data.Text (Text, pack)
 import Ledger (Value)
 import Ledger.Ada (lovelaceValueOf)
-import Ledger.Value (CurrencySymbol (CurrencySymbol), TokenName (TokenName), assetClass, assetClassValue)
+import Ledger.Value (assetClass, assetClassValue)
 import Money (mkSomeDiscrete, scaleFromRational)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase)
@@ -91,7 +94,7 @@ tests :: TestTree
 tests =
   testGroup
     "Vesting Sendings"
-    [validTxHashTests, valueCheckTests]
+    [invalidInputTests, validTxHashTests, valueCheckTests]
 
 mySendings ::
   forall (m :: Type -> Type).
@@ -104,6 +107,48 @@ mySendings = liftIO (ByteString.readFile "./test/Spec/Tokenomia/Vesting/sendings
 testBuilder :: TestData -> Either TokenomiaError ()
 testBuilder (sendings, testState) =
   runIdentity . runExceptT $ evalStateT (runFakeBlockfrost $ verifySendings' sendings) testState
+
+invalidInputTests :: TestTree
+invalidInputTests =
+  testGroup
+    "Invalid Input Tests"
+    [ testCase
+        "Test whether malformed address fails verification"
+        (assertBool ("Failed Left assertion on " <> show failTest) (isLeft failTest))
+    , testCase
+        "Empty value list fails verification"
+        (assertBool ("Failed Left assertion on " <> show valueTest) (isLeft valueTest))
+    ]
+  where
+    -- malformed address case
+    failTest = testBuilder $ testDataBuilder "bad_address" sendingsTxs bfAddrTxMap bfUtxos
+
+    -- has zero value tx case
+    valueTest = testBuilder $ testDataBuilder sendingsAddress emptyValueSendingsTxs bfAddrTxMap bfUtxos
+
+    sendingsAddress = testAddress
+    bfAddr = [AddressTransaction (TxHash "abcd") 0 0, AddressTransaction (TxHash "wxyz") 0 0]
+    sendingsTxs =
+      NonEmpty.fromList
+        [ (TxHash "abcd", lovelaceValueOf 10000000)
+        , (TxHash "wxyz", lovelaceValueOf 10000000)
+        ]
+    emptyValueSendingsTxs =
+      NonEmpty.fromList
+        [ (TxHash "abcd", mempty)
+        , (TxHash "wxyz", lovelaceValueOf 10000000)
+        ]
+    bfAddrTxMap = [(Address sendingsAddress, bfAddr)]
+    bfUtxos = [(TxHash "abcd", abcdUtxos), (TxHash "wxyz", wxyzUtxos), (TxHash "ffff", abcdUtxos)]
+    abcdUtxos = TransactionUtxos "abcd" [] outUtxos
+    wxyzUtxos = TransactionUtxos "wxyz" [] outUtxos
+    outUtxos =
+      [ UtxoOutput
+          (Address sendingsAddress)
+          [AdaAmount 10000000]
+          Nothing
+          0
+      ]
 
 -- Missing Tx hash tests
 validTxHashTests :: TestTree
@@ -126,11 +171,12 @@ validTxHashTests =
     failTest = testBuilder $ testDataBuilder sendingsAddress sendingsTxs (bfAddrTxMap badBfAddr) bfUtxos
     badBfAddr = tail goodBfAddr
 
-    sendingsAddress = "test_address"
+    sendingsAddress = testAddress
     sendingsTxs =
-      [ (TxHash "abcd", lovelaceValueOf 10000000)
-      , (TxHash "wxyz", lovelaceValueOf 10000000)
-      ]
+      NonEmpty.fromList
+        [ (TxHash "abcd", lovelaceValueOf 10000000)
+        , (TxHash "wxyz", lovelaceValueOf 10000000)
+        ]
     bfAddrTxMap ba = [(Address sendingsAddress, ba)]
     bfUtxos = [(TxHash "abcd", abcdUtxos), (TxHash "wxyz", wxyzUtxos), (TxHash "ffff", abcdUtxos)]
     abcdUtxos = TransactionUtxos "abcd" [] outUtxos
@@ -142,6 +188,8 @@ validTxHashTests =
           Nothing
           0
       ]
+
+-- Malformed address
 
 -- Value check tests
 valueCheckTests :: TestTree
@@ -164,21 +212,23 @@ valueCheckTests =
     failTest = testBuilder $ testDataBuilder sendingsAddress sendingsTxs bfAddrTxMap badBfUtxos
     badBfUtxos = [(TxHash "abcd", abcdUtxos), (TxHash "wxyz", abcdUtxos)]
 
-    sendingsAddress = "test_address"
-    cs = replicate 28 'a' -- 28 because hex will turn it into 56 chars
+    sendingsAddress = testAddress
+    cs = replicate 56 'a' -- 28 because hex will turn it into 56 chars
     tk = "TOK"
     testToken =
       assetClassValue
         ( assetClass
-            (CurrencySymbol $ fromString cs)
-            (TokenName $ fromString tk)
+            {- (CurrencySymbol $ fromString cs) -}
+            (fromString cs)
+            (fromString tk)
         )
         50
 
     sendingsTxs =
-      [ (TxHash "abcd", lovelaceValueOf 15000000 <> testToken)
-      , (TxHash "wxyz", lovelaceValueOf 10000000)
-      ]
+      NonEmpty.fromList
+        [ (TxHash "abcd", lovelaceValueOf 15000000 <> testToken)
+        , (TxHash "wxyz", lovelaceValueOf 10000000)
+        ]
     bfAddrTxMap =
       [
         ( Address sendingsAddress
@@ -195,7 +245,7 @@ valueCheckTests =
           (Address sendingsAddress)
           [ AdaAmount 15000000
           , AssetAmount $
-              mkSomeDiscrete (pack (hex cs) <> pack (hex tk)) (fromJust $ scaleFromRational 1) 50
+              mkSomeDiscrete (pack cs <> pack (hex tk)) (fromJust $ scaleFromRational 1) 50
           ]
           Nothing
           0
@@ -208,9 +258,12 @@ valueCheckTests =
           0
       ]
 
+testAddress :: Text
+testAddress = "addr_test1qzu80eg7jesd2tryfk3z2ww7fz2s40wcmxxcd43ylh7efunflufrxedaepnz8zsfadnt5h92j6k673ue9rj5mzcwvp4saxlckq"
+
 testDataBuilder ::
   Text ->
-  [(TxHash, Value)] ->
+  NonEmpty (TxHash, Value) ->
   [(Address, [AddressTransaction])] ->
   [(TxHash, TransactionUtxos)] ->
   TestData
@@ -219,6 +272,6 @@ testDataBuilder sendingsAddress sendingsTxs bfAddrTxMap bfUtxos = testData
     testData = (sendings, testState) :: TestData
     sendings = Sendings address txhValueMap
     address = Address sendingsAddress
-    txhValueMap = Map.fromList sendingsTxs
+    txhValueMap = NEMap.fromList sendingsTxs
     -- Stuff Blockfrost will "return"
     testState = (Map.fromList bfAddrTxMap, Map.fromList bfUtxos)

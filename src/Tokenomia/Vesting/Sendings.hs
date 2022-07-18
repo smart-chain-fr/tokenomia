@@ -21,12 +21,12 @@ import Blockfrost.Client (
   Address,
   AddressTransaction,
   Amount (AdaAmount, AssetAmount),
-  BlockfrostError (BlockfrostError),
   TransactionUtxos,
   TxHash,
  )
 import Blockfrost.Client qualified as Client
 import Blockfrost.Lens (address, amount, outputs, txHash)
+import Blockfrost.Types (unAddress)
 import Control.Lens ((^.))
 import Control.Monad (unless, when)
 import Control.Monad.Except (MonadError (throwError), liftEither)
@@ -39,20 +39,23 @@ import Data.ByteString.Lazy qualified as ByteString
 import Data.Default (def)
 import Data.Hex (unhex)
 import Data.Kind (Type)
-import Data.Map (Map)
-import Data.Map qualified as Map
+import Data.List (partition)
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.NonEmpty (NEMap)
+import Data.Map.NonEmpty qualified as NEMap
 import Data.String (fromString)
-import Data.Text (pack, unpack)
+import Data.Text (unpack)
 import GHC.Generics (Generic)
-import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value, assetClass, assetClassValue, flattenValue)
+import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value, assetClass, assetClassValue, flattenValue, isZero)
 import Money qualified
 import Tokenomia.Common.Blockfrost (projectFromEnv'')
 import Tokenomia.Common.Environment (Environment)
-import Tokenomia.Common.Error (TokenomiaError (BlockFrostError))
+import Tokenomia.Common.Error (TokenomiaError (BlockFrostError, SendingsContainsZeroValue, SendingsJSONDecodingFailure, SendingsMalformedAddress, SendingsNoSuchTransactions, SendingsValueMismatch))
+import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress)
 
 data Sendings = Sendings
   { sendingsRecipientAddress :: Address
-  , sendingsTxValues :: Map TxHash Value
+  , sendingsTxValues :: NEMap TxHash Value
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON)
@@ -119,18 +122,27 @@ verifySendings' ::
   Sendings ->
   m ()
 verifySendings' sendings = do
-  -- TODO: Create new error for sendings verification to avoid using block frost error everywhere
-  when (Map.null $ sendingsTxValues sendings) $
-    throwError . BlockFrostError . BlockfrostError $ "No sendings found"
-  treasAddrTxs <- getAddressTransactions (sendingsRecipientAddress sendings)
+  when (any isZero (sendingsTxValues sendings)) $
+    throwError SendingsContainsZeroValue
+
+  checkedAddr <- checkMalformedAddr $ sendingsRecipientAddress sendings
+
+  treasAddrTxs <- getAddressTransactions checkedAddr
   let treasTxhs = (^. txHash) <$> treasAddrTxs
-      flatSendingsTxValues = Map.toList . sendingsTxValues $ sendings
-      txhs = verifyTxHashList flatSendingsTxValues treasTxhs
+      flatSendingsTxValues = NonEmpty.toList . NEMap.toList . sendingsTxValues $ sendings
+      (txhs, missingTxhs) = verifyTxHashList flatSendingsTxValues treasTxhs
   if length txhs == length flatSendingsTxValues
     then verifyTxs sendings
-    else
-      throwError . BlockFrostError . BlockfrostError $
-        "Missing Transactions"
+    else throwError . SendingsNoSuchTransactions $ missingTxhs
+
+checkMalformedAddr ::
+  forall (m :: Type -> Type).
+  ( MonadError TokenomiaError m
+  ) =>
+  Address ->
+  m Address
+checkMalformedAddr addr =
+  addr <$ (liftEither . first (const SendingsMalformedAddress) $ deserialiseCardanoAddress (unAddress addr))
 
 jsonToSendings ::
   forall (m :: Type -> Type).
@@ -140,14 +152,14 @@ jsonToSendings ::
   m Sendings
 jsonToSendings jsonByteString = do
   let eitherErrSendings = eitherDecode jsonByteString
-  liftEither $ first (BlockFrostError . BlockfrostError . pack) eitherErrSendings
+  liftEither $ first SendingsJSONDecodingFailure eitherErrSendings
 
 verifyTxHashList ::
   [(TxHash, Value)] ->
   [TxHash] ->
-  [TxHash]
+  ([TxHash], [TxHash])
 verifyTxHashList flatSendingsTxValues treasTxhs =
-  filter (`elem` treasTxhs) (fst <$> flatSendingsTxValues)
+  partition (`elem` treasTxhs) (fst <$> flatSendingsTxValues)
 
 verifyTxs ::
   forall (m :: Type -> Type).
@@ -157,7 +169,7 @@ verifyTxs ::
   Sendings ->
   m ()
 verifyTxs sendings =
-  mapM_ verifyTx $ Map.toList $ sendingsTxValues sendings
+  mapM_ verifyTx $ NEMap.toList $ sendingsTxValues sendings
   where
     verifyTx ::
       forall (m :: Type -> Type).
@@ -183,7 +195,7 @@ verifyTxs sendings =
           sendingsTotal = foldMap (uncurry assetClassValue) flatVal
           bfValsTotal = foldMap (uncurry assetClassValue) bfValsFiltered
       unless (sendingsTotal == bfValsTotal) $
-        throwError . BlockFrostError . BlockfrostError $ "Values don't match"
+        throwError . SendingsValueMismatch $ (sendingsTotal, bfValsTotal)
 
 flatValToAssetClass :: (CurrencySymbol, TokenName, Integer) -> AssetClass
 flatValToAssetClass (cs, tn, _) = assetClass cs tn
