@@ -218,7 +218,6 @@ valueCheckTests =
     testToken =
       assetClassValue
         ( assetClass
-            {- (CurrencySymbol $ fromString cs) -}
             (fromString cs)
             (fromString tk)
         )

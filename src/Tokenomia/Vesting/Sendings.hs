@@ -178,8 +178,8 @@ verifyTxs sendings =
       ) =>
       (TxHash, Value) ->
       m ()
-    verifyTx txValue = do
-      bfTxUtxos <- getTxUtxos $ fst txValue
+    verifyTx (txh, txValue) = do
+      bfTxUtxos <- getTxUtxos txh
       let treasAddrOutputs =
             filter
               ((== sendingsRecipientAddress sendings) . (^. address))
@@ -187,7 +187,7 @@ verifyTxs sendings =
           bfAmts = concat ((^. amount) <$> treasAddrOutputs)
           bfVals = amountToAssetValue <$> bfAmts
 
-          flatVal = fmap (\(c, t, i) -> (assetClass c t, i)) . flattenValue . snd $ txValue
+          flatVal = fmap (\(c, t, i) -> (assetClass c t, i)) . flattenValue $ txValue
           -- Keep only relevant assets
           bfValsFiltered = filter ((`elem` map fst flatVal) . fst) bfVals
 
