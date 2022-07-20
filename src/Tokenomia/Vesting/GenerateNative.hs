@@ -12,6 +12,7 @@
 module Tokenomia.Vesting.GenerateNative (generatePrivateSaleFiles) where
 
 import qualified Cardano.Api as Api
+import Control.Applicative (ZipList (ZipList, getZipList))
 import Control.Monad.Except (MonadError (throwError), liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Reader (MonadReader, asks)
@@ -29,14 +30,16 @@ import Data.Map.NonEmpty (NEMap, mapWithKey, toMap)
 import qualified Data.Map.NonEmpty as Map.NonEmpty
 import Data.Text (Text, unpack)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Tuple.Extra (firstM)
+import Data.Tuple.Extra (firstM, second)
 import Ledger (Address, POSIXTime (POSIXTime), Slot (Slot, getSlot))
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
 import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale))
+import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient))
 import Tokenomia.TokenDistribution.Parser.Address (serialiseCardanoAddress)
-import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution))
+import Cardano.Api (SimpleScript(RequireAllOf, RequireTimeAfter, RequireSignature), TimeLocksSupported (TimeLocksInSimpleScriptV2), PaymentKey, Hash, SlotNo, hashScript)
+import Data.String (IsString(fromString))
 
 type Amount = Natural
 
@@ -83,7 +86,7 @@ data NativeScript = NativeScript
   { pkh :: String
   , unlockTime :: Integer
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq)
 
 $(deriveJSON defaultOptions ''NativeScript)
 
@@ -123,6 +126,7 @@ parsePrivateSale ::
   m PrivateSale
 parsePrivateSale path = do
   eitherErrPriv <- liftIO . (eitherDecodeFileStrict @PrivateSale) $ path
+  -- TODO: validate address here
   liftEither $ do
     prvSale <- first InvalidPrivateSale eitherErrPriv
     validateTranches $ tranches prvSale
@@ -161,12 +165,43 @@ toDistribution ::
   PrivateSale ->
   NEMap Address (NonEmpty (NativeScript, Amount)) ->
   m Distribution
-toDistribution prvSale nativeData = Distribution (assetClass prvSale) recipients
-  where recipients = []
+toDistribution prvSale nativeData = Distribution (assetClass prvSale) <$> recipients
+  where
+    elemsList =
+      ZipList . List.NonEmpty.toList <$> Map.NonEmpty.elems nativeData
 
-        nativeScriptToAddr :: NativeScript -> m Address
-        nativeScriptToAddr = undefined
+    mergedNativeScriptAmts :: [(NativeScript, Integer)]
+    mergedNativeScriptAmts =
+       fmap (second toInteger)
+        . getZipList
+        . foldr (\nsAmt acc -> combineNs <$> nsAmt <*> acc) (List.NonEmpty.head elemsList)
+        $ List.NonEmpty.tail elemsList
 
+    combineNs (ns, a1) (_, a2) = (ns, a1 + a2)
+
+    recipients :: m [Recipient]
+    recipients = traverse (fmap (uncurry Recipient) . firstM nativeScriptToAddr) mergedNativeScriptAmts
+
+
+nativeScriptToAddr ::
+  forall (m :: Type -> Type).
+  ( MonadError TokenomiaError m
+  , MonadReader Environment m
+  ) =>
+  NativeScript -> m Address
+nativeScriptToAddr ns = undefined
+  where -- scriptHash = hashScript cardanNs
+        cardanNs = 
+          RequireAllOf [
+            RequireSignature pkHash,
+            RequireTimeAfter TimeLocksInSimpleScriptV2 unlockAfterSlot
+          ]
+
+        pkHash :: Hash PaymentKey
+        pkHash =  fromString (pkh ns)
+
+        unlockAfterSlot :: SlotNo
+        unlockAfterSlot = fromInteger (unlockTime ns)
 
 
 toDbOutput ::
