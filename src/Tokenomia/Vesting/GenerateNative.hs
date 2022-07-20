@@ -11,6 +11,24 @@
 
 module Tokenomia.Vesting.GenerateNative (generatePrivateSaleFiles) where
 
+import Cardano.Api (
+  Hash,
+  PaymentCredential (PaymentCredentialByScript),
+  PaymentKey,
+  Script (SimpleScript),
+  SimpleScript (
+    RequireAllOf,
+    RequireSignature,
+    RequireTimeAfter
+  ),
+  SimpleScriptVersion (SimpleScriptV2),
+  SlotNo,
+  StakeAddressReference (NoStakeAddress),
+  TimeLocksSupported (TimeLocksInSimpleScriptV2),
+  hashScript,
+  makeShelleyAddress,
+  serialiseToBech32,
+ )
 import qualified Cardano.Api as Api
 import Control.Applicative (ZipList (ZipList, getZipList))
 import Control.Monad.Except (MonadError (throwError), liftEither)
@@ -28,18 +46,17 @@ import qualified Data.List.NonEmpty as List.NonEmpty
 import Data.Map (Map, mapKeys)
 import Data.Map.NonEmpty (NEMap, mapWithKey, toMap)
 import qualified Data.Map.NonEmpty as Map.NonEmpty
+import Data.String (IsString (fromString))
 import Data.Text (Text, unpack)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Tuple.Extra (firstM, second)
-import Ledger (Address, POSIXTime (POSIXTime), Slot (Slot, getSlot))
+import Ledger (Address (Address), POSIXTime (POSIXTime), Slot (Slot, getSlot))
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
 import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale))
 import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient))
 import Tokenomia.TokenDistribution.Parser.Address (serialiseCardanoAddress)
-import Cardano.Api (SimpleScript(RequireAllOf, RequireTimeAfter, RequireSignature), TimeLocksSupported (TimeLocksInSimpleScriptV2), PaymentKey, Hash, SlotNo, hashScript)
-import Data.String (IsString(fromString))
 
 type Amount = Natural
 
@@ -172,7 +189,7 @@ toDistribution prvSale nativeData = Distribution (assetClass prvSale) <$> recipi
 
     mergedNativeScriptAmts :: [(NativeScript, Integer)]
     mergedNativeScriptAmts =
-       fmap (second toInteger)
+      fmap (second toInteger)
         . getZipList
         . foldr (\nsAmt acc -> combineNs <$> nsAmt <*> acc) (List.NonEmpty.head elemsList)
         $ List.NonEmpty.tail elemsList
@@ -180,29 +197,36 @@ toDistribution prvSale nativeData = Distribution (assetClass prvSale) <$> recipi
     combineNs (ns, a1) (_, a2) = (ns, a1 + a2)
 
     recipients :: m [Recipient]
-    recipients = traverse (fmap (uncurry Recipient) . firstM nativeScriptToAddr) mergedNativeScriptAmts
+    recipients = traverse (fmap (uncurry Recipient) . firstM nativeScriptToAddrText) mergedNativeScriptAmts
 
-
-nativeScriptToAddr ::
+nativeScriptToAddrText ::
   forall (m :: Type -> Type).
   ( MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
-  NativeScript -> m Address
-nativeScriptToAddr ns = undefined
-  where -- scriptHash = hashScript cardanNs
-        cardanNs = 
-          RequireAllOf [
-            RequireSignature pkHash,
-            RequireTimeAfter TimeLocksInSimpleScriptV2 unlockAfterSlot
-          ]
+  NativeScript ->
+  m Text
+nativeScriptToAddrText ns =
+  (\nid -> serialiseToBech32 $ makeShelleyAddress nid (PaymentCredentialByScript hashedScript) NoStakeAddress)
+    <$> getNetworkId
+  where
+    hashedScript = hashScript $ SimpleScript SimpleScriptV2 cardanNs
+    cardanNs =
+      RequireAllOf
+        [ RequireSignature pkHash
+        , RequireTimeAfter TimeLocksInSimpleScriptV2 unlockAfterSlot
+        ]
 
-        pkHash :: Hash PaymentKey
-        pkHash =  fromString (pkh ns)
+    pkHash :: Hash PaymentKey
+    pkHash = fromString (pkh ns)
 
-        unlockAfterSlot :: SlotNo
-        unlockAfterSlot = fromInteger (unlockTime ns)
+    unlockAfterSlot :: SlotNo
+    unlockAfterSlot = fromInteger (unlockTime ns)
 
+{- Useful links
+  https://input-output-hk.github.io/cardano-node/cardano-api/lib/Cardano-Api.html#g:9
+
+-}
 
 toDbOutput ::
   forall (m :: Type -> Type).
