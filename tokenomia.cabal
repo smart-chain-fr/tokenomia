@@ -211,6 +211,7 @@ test-suite tokenomia-tests
   other-modules:
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
+    Spec.Tokenomia.Vesting.Sendings
     Spec.Tokenomia.Wallet.UTxO
     Spec.Tokenomia.Common.Value
     Spec.Tokenomia.ICO.Funds.Exchange.Plan
@@ -225,7 +226,8 @@ test-suite tokenomia-tests
     plutus-contract -any,
     plutus-ledger -any,
     plutus-ledger-api,
-    tokenomia -any
+    tokenomia -any,
+    mtl
   build-depends:
     base >=4.9 && <5,
     tasty -any,
@@ -237,12 +239,16 @@ test-suite tokenomia-tests
     random,
     nonempty-containers,
     freer-simple -any,
+    blockfrost-client,
     bytestring,
     text,
     ordered-containers,
     interpolatedstring-perl6,
     blockfrost-api,
     safe-money,
+    containers,
+    either,
+    hex,
     data-default
 
 

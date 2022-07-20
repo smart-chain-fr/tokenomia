@@ -13,6 +13,8 @@ import           Data.List.NonEmpty (nonEmpty, NonEmpty)
 import           Tokenomia.Common.Address ( Address(..) )
 import qualified Blockfrost.Client as B
 import           Tokenomia.Wallet.Type
+import           Blockfrost.Types (TxHash)
+import           Ledger.Value (Value)
 
 data TokenomiaError
     = NoWalletRegistered
@@ -40,6 +42,11 @@ data TokenomiaError
     | ICOWhitelistingNotValid Integer Integer
     | ICONoValidTxs String
     | InvalidTransaction String
+    | SendingsContainsZeroValue
+    | SendingsNoSuchTransactions [TxHash]
+    | SendingsJSONDecodingFailure String
+    | SendingsValueMismatch (Value, Value)
+    | SendingsMalformedAddress
     deriving Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)

@@ -144,7 +144,13 @@ recursiveMenu = do
                                   printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved  
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         ChildAddressNotIndexed w address 
-                                  -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately")
+                                  -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately"
+        SendingsContainsZeroValue           -> printLn $ "Sendings - Input file contains entry with zero value"
+        SendingsNoSuchTransactions txhs     -> printLn $ "Sendings - No such transactions : " <> show txhs
+        SendingsJSONDecodingFailure jsonErr -> printLn $ "Sendings - JSON Decoding Failure : " <> show jsonErr
+        SendingsValueMismatch _             -> printLn $ "Sendings - Value mismatch"
+        SendingsMalformedAddress            -> printLn $ "Sendings - Invalid treasury address")
+
             
   liftIO waitAndClear         
   recursiveMenu
