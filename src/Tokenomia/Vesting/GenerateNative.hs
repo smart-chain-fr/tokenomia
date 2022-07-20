@@ -2,11 +2,12 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Tokenomia.Vesting.GenerateNative (generatePrivateSaleFiles) where
 
@@ -14,26 +15,28 @@ import qualified Cardano.Api as Api
 import Control.Monad.Except (MonadError (throwError), liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Reader (MonadReader, asks)
-import Data.Aeson (eitherDecodeFileStrict)
+import Data.Aeson (ToJSON (toJSON), eitherDecodeFileStrict)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.Bifunctor (first)
+import Data.Bifunctor (Bifunctor (bimap), first)
 import Data.Either (lefts)
 import Data.Foldable (foldl', traverse_)
 import Data.Foldable.Extra (sumOn')
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty, (<|))
 import qualified Data.List.NonEmpty as List.NonEmpty
+import Data.Map (Map, mapKeys)
+import Data.Map.NonEmpty (NEMap, mapWithKey, toMap)
 import qualified Data.Map.NonEmpty as Map.NonEmpty
 import Data.Text (Text, unpack)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Numeric.Natural
-
+import Data.Tuple.Extra (firstM)
 import Ledger (Address, POSIXTime (POSIXTime), Slot (Slot, getSlot))
-import Ledger.Value (AssetClass)
-
+import Ledger.Value (AssetClass (unAssetClass))
+import Numeric.Natural
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
 import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale))
 import Tokenomia.TokenDistribution.Parser.Address (serialiseCardanoAddress)
+import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution))
 
 type Amount = Natural
 
@@ -76,33 +79,33 @@ data PrivateSale = PrivateSale
 
 $(deriveJSON defaultOptions ''PrivateSale)
 
-data NativeScript = NativeScript 
-  { pkh :: String 
-  , unlockTime :: Integer 
+data NativeScript = NativeScript
+  { pkh :: String
+  , unlockTime :: Integer
   }
   deriving stock (Show)
 
 $(deriveJSON defaultOptions ''NativeScript)
 
-data LockedFund = LockedFund 
-  { nativeScript :: NativeScript 
+-- | Simplified AssetClass that serialises to JSON without newtypes over currency symbol and token name
+data AssetClassSimple = AssetClassSimple
+  { currencySymbol :: String -- As hex
+  , tokenName :: String -- As hex
+  }
+  deriving stock (Show)
+
+$(deriveJSON defaultOptions ''AssetClassSimple)
+
+data LockedFund = LockedFund
+  { nativeScript :: NativeScript
   , asset :: AssetClassSimple
   }
   deriving stock (Show)
 
 $(deriveJSON defaultOptions ''LockedFund)
 
--- | Simplified AssetClass that serialises to JSON without newtypes over currency symbol and token name
-data AssetClassSimple = AssetClassSimple 
-  { currencySymbol :: String -- As hex
-  , tokenName :: String -- As hex 
-  }
-  deriving stock (Show)
-
-$(deriveJSON defaultOptions ''AssetClassSimple)
-
 -- Map AddressAsText [LockedFund]
-type DatabaseOutput = Map Text [LockedFund]
+type DatabaseOutput = NEMap Text (NonEmpty LockedFund)
 
 getNetworkId :: forall (m :: Type -> Type). MonadReader Environment m => m Api.NetworkId
 getNetworkId = asks readNetworkId
@@ -138,10 +141,57 @@ generatePrivateSaleFiles = do
 
   prvSale <- parsePrivateSale path
   nativeData <- splitInTranches prvSale
+
+  {- let dbOutput = mapKeys serialiseAddress (id <$> toMap nativeData) -}
+  dbOutput <- toDbOutput prvSale nativeData
+  {- disrtibution <- toDistribution prvSale nativeData -}
   -- Generate DatabaseOutput as `path` with filename as database.json
   -- Generate Distribution as `path` with filename as distribution.json
   -- AMIR, start here :)
+
+  liftIO . writeFile (path <> "database.json") $ show dbOutput
+  {- liftIO . writeFile (path <> "distribution.json") $ show prvSaleJson -}
   pure ()
+
+toDistribution ::
+  forall (m :: Type -> Type).
+  ( MonadError TokenomiaError m
+  , MonadReader Environment m
+  ) =>
+  PrivateSale ->
+  NEMap Address (NonEmpty (NativeScript, Amount)) ->
+  m Distribution
+toDistribution prvSale nativeData = Distribution (assetClass prvSale) recipients
+  where recipients = []
+
+        nativeScriptToAddr :: NativeScript -> m Address
+        nativeScriptToAddr = undefined
+
+
+
+toDbOutput ::
+  forall (m :: Type -> Type).
+  ( MonadError TokenomiaError m
+  , MonadReader Environment m
+  ) =>
+  PrivateSale ->
+  NEMap Address (NonEmpty (NativeScript, Amount)) ->
+  m DatabaseOutput
+toDbOutput ps invDistMap =
+  fmap Map.NonEmpty.fromList
+    . traverse (firstM addrToText)
+    . Map.NonEmpty.toList
+    $ fmap ((`LockedFund` acSimple) . fst) <$> invDistMap
+  where
+    acSimple = uncurry AssetClassSimple . bimap show show . unAssetClass $ assetClass ps
+    addrToText :: Address -> m Text
+
+    addrToText addr = getNetworkId >>= (liftEither . first toAddressError . (`serialiseCardanoAddress` addr))
+
+{- liftEither . first InvalidPrivateSale . serialiseCardanoAddress (getNetworkId) -}
+
+toAddressError :: Text -> TokenomiaError
+toAddressError err = InvalidPrivateSale $ "Failed to serialise address " <> unpack err
 
 assertErr :: String -> Bool -> Either TokenomiaError ()
 assertErr _ True = Right ()
@@ -149,13 +199,13 @@ assertErr err _ = Left $ InvalidPrivateSale err
 
 validateTranches :: Tranches -> Either TokenomiaError ()
 validateTranches tranches = do
-    assertErr
-      ("The sum of all the tranches must be 10000, but we got: " <> show tranchesSum)
-      $ tranchesSum == 10000
+  assertErr
+    ("The sum of all the tranches must be 10000, but we got: " <> show tranchesSum)
+    $ tranchesSum == 10000
   where
     tranchesSum = sumOn' percentage $ unTranches tranches
 
-mergeInvestors :: NonEmpty PrivateInvestor -> Map.NonEmpty.NEMap Address Amount
+mergeInvestors :: NonEmpty PrivateInvestor -> NEMap Address Amount
 mergeInvestors = Map.NonEmpty.fromListWith (+) . (toTuple <$>)
   where
     toTuple :: PrivateInvestor -> (Address, Amount)
@@ -190,7 +240,7 @@ splitInTranches ::
   , MonadReader Environment m
   ) =>
   PrivateSale ->
-  m (Map.NonEmpty.NEMap Address (NonEmpty (NativeScript, Amount)))
+  m (NEMap Address (NonEmpty (NativeScript, Amount)))
 splitInTranches PrivateSale {..} = do
   networkId <- getNetworkId
   startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix start -- change undefined for posix -> utc
@@ -200,12 +250,9 @@ splitInTranches PrivateSale {..} = do
       toNative :: Address -> (Slot, Amount) -> m (NativeScript, Amount)
       toNative addr (slot, amt) = do
         addrStr <- liftEither $ first toAddressError $ serialiseCardanoAddress networkId addr
-        pure $ (NativeScript (unpack addrStr) $ getSlot slot, amt)
+        pure (NativeScript (unpack addrStr) $ getSlot slot, amt)
 
-      toAddressError :: Text -> TokenomiaError
-      toAddressError err = InvalidPrivateSale $ "Failed to serialise address " <> unpack err
-
-      investorsMap :: Map.NonEmpty.NEMap Address Amount
+      investorsMap :: NEMap Address Amount
       investorsMap = mergeInvestors investors
 
   Map.NonEmpty.traverseWithKey f investorsMap
