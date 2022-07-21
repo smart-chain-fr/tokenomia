@@ -9,7 +9,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Tokenomia.Vesting.GenerateNative (generatePrivateSaleFiles) where
+module Tokenomia.Vesting.GenerateNative (generatePrivateSaleFiles, nativeScriptToLedgerAddr, NativeScript (NativeScript)) where
 
 import Cardano.Api (
   Hash,
@@ -50,13 +50,16 @@ import Data.String (IsString (fromString))
 import Data.Text (Text, unpack)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Tuple.Extra (firstM, second)
-import Ledger (Address (Address), POSIXTime (POSIXTime), Slot (Slot, getSlot))
+import Ledger (POSIXTime, Slot (Slot, getSlot))
+import Ledger.Address (Address)
+
+{- import Ledger (Address (Address), POSIXTime (POSIXTime), Slot (Slot, getSlot)) -}
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
-import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale))
+import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale, UnreachableMalformedAddress))
 import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient))
-import Tokenomia.TokenDistribution.Parser.Address (serialiseCardanoAddress)
+import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress, serialiseCardanoAddress)
 
 type Amount = Natural
 
@@ -65,6 +68,7 @@ data Tranche = Tranche
   , duration :: Integer -- number of slots
   }
   deriving stock (Show)
+
 $(deriveJSON defaultOptions ''Tranche)
 
 -- Invariants
@@ -81,7 +85,6 @@ unTranches (Tranches x) = x
 $(deriveJSON defaultOptions ''Tranches)
 
 data PrivateInvestor = PrivateInvestor
-  -- TODO: Verify the from json instance for this is the longform string addr1..., and not just its raw constructors. If it isn't, use blockfrost's Address and convert
   { address :: Address
   , allocation :: Amount
   }
@@ -143,11 +146,21 @@ parsePrivateSale ::
   m PrivateSale
 parsePrivateSale path = do
   eitherErrPriv <- liftIO . (eitherDecodeFileStrict @PrivateSale) $ path
-  -- TODO: validate address here
+  -- TODO: Verify the from json instance for this is the longform string addr1..., and not just its raw constructors. If it isn't, use blockfrost's Address and convert
   liftEither $ do
     prvSale <- first InvalidPrivateSale eitherErrPriv
+
     validateTranches $ tranches prvSale
     pure prvSale
+
+{- checkMalformedAddr ::
+  forall (m :: Type -> Type).
+  ( MonadError TokenomiaError m
+  ) =>
+  Address ->
+  m Address
+checkMalformedAddr addr =
+  addr <$ (liftEither . first (const SendingsMalformedAddress) $ deserialiseCardanoAddress (unAddress addr)) -}
 
 generatePrivateSaleFiles ::
   forall (m :: Type -> Type).
@@ -163,15 +176,12 @@ generatePrivateSaleFiles = do
   prvSale <- parsePrivateSale path
   nativeData <- splitInTranches prvSale
 
-  {- let dbOutput = mapKeys serialiseAddress (id <$> toMap nativeData) -}
   dbOutput <- toDbOutput prvSale nativeData
-  {- disrtibution <- toDistribution prvSale nativeData -}
-  -- Generate DatabaseOutput as `path` with filename as database.json
-  -- Generate Distribution as `path` with filename as distribution.json
-  -- AMIR, start here :)
+  disrtibution <- toDistribution prvSale nativeData
 
   liftIO . writeFile (path <> "database.json") $ show dbOutput
-  {- liftIO . writeFile (path <> "distribution.json") $ show prvSaleJson -}
+  liftIO . writeFile (path <> "distribution.json") $ show disrtibution
+
   pure ()
 
 toDistribution ::
@@ -197,19 +207,20 @@ toDistribution prvSale nativeData = Distribution (assetClass prvSale) <$> recipi
     combineNs (ns, a1) (_, a2) = (ns, a1 + a2)
 
     recipients :: m [Recipient]
-    recipients = traverse (fmap (uncurry Recipient) . firstM nativeScriptToAddrText) mergedNativeScriptAmts
+    recipients = traverse (fmap (uncurry Recipient) . firstM nativeScriptToLedgerAddr) mergedNativeScriptAmts
 
-nativeScriptToAddrText ::
+nativeScriptToLedgerAddr ::
   forall (m :: Type -> Type).
   ( MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
   NativeScript ->
-  m Text
-nativeScriptToAddrText ns =
-  (\nid -> serialiseToBech32 $ makeShelleyAddress nid (PaymentCredentialByScript hashedScript) NoStakeAddress)
-    <$> getNetworkId
+  m Address
+nativeScriptToLedgerAddr ns = do
+  networkId <- getNetworkId
+  nsToLedgerAddress . serialiseToBech32 $ shelleyAddr networkId
   where
+    shelleyAddr nid = makeShelleyAddress nid (PaymentCredentialByScript hashedScript) NoStakeAddress
     hashedScript = hashScript $ SimpleScript SimpleScriptV2 cardanNs
     cardanNs =
       RequireAllOf
@@ -223,10 +234,12 @@ nativeScriptToAddrText ns =
     unlockAfterSlot :: SlotNo
     unlockAfterSlot = fromInteger (unlockTime ns)
 
-{- Useful links
-  https://input-output-hk.github.io/cardano-node/cardano-api/lib/Cardano-Api.html#g:9
+    nsToLedgerAddress :: Text -> m Address
+    nsToLedgerAddress textAddr = do
+      liftEither . first (const UnreachableMalformedAddress) $ deserialiseCardanoAddress textAddr
 
--}
+--                              ^^ in theory serialising a valid address then
+--                                 deserialising it should be the same as the original
 
 toDbOutput ::
   forall (m :: Type -> Type).
@@ -246,8 +259,6 @@ toDbOutput ps invDistMap =
     addrToText :: Address -> m Text
 
     addrToText addr = getNetworkId >>= (liftEither . first toAddressError . (`serialiseCardanoAddress` addr))
-
-{- liftEither . first InvalidPrivateSale . serialiseCardanoAddress (getNetworkId) -}
 
 toAddressError :: Text -> TokenomiaError
 toAddressError err = InvalidPrivateSale $ "Failed to serialise address " <> unpack err
