@@ -179,6 +179,7 @@ generatePrivateSaleFiles = do
   liftIO $ do
     encodeFile (replaceFileName path "database.json") dbOutput
     encodeFile (replaceFileName path "distribution.json") $ distribution `WithNetworkId` networkId
+    purStrLn "Files database.json and distribution.json generated."
 
 toDistribution ::
   forall (m :: Type -> Type).
