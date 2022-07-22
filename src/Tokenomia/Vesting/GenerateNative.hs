@@ -37,7 +37,7 @@ import Control.Applicative (ZipList (ZipList, getZipList))
 import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Reader (MonadReader, asks)
-import Data.Aeson (eitherDecodeFileStrict)
+import Data.Aeson (eitherDecodeFileStrict, encodeFile)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Bifunctor (Bifunctor (bimap), first)
 import Data.Either.Combinators (maybeToRight)
@@ -56,10 +56,11 @@ import Ledger (POSIXTime, Slot (Slot, getSlot), toPubKeyHash)
 import Ledger.Address (Address)
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
+import System.FilePath (replaceFileName)
 import Tokenomia.Vesting.Sendings (checkMalformedAddr)
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
 import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale, MalformedAddress))
-import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient))
+import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient), WithNetworkId (WithNetworkId))
 import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress)
 
 type Amount = Natural
@@ -169,14 +170,14 @@ generatePrivateSaleFiles = do
 
   prvSale <- parsePrivateSale path
   nativeData <- splitInTranches prvSale
+  networkId <- getNetworkId
 
   let dbOutput = toDbOutput prvSale nativeData
-  disrtibution <- toDistribution prvSale nativeData
+  distribution <- toDistribution prvSale nativeData
 
-  liftIO . writeFile (path <> "database.json") $ show dbOutput
-  liftIO . writeFile (path <> "distribution.json") $ show disrtibution
-
-  pure ()
+  liftIO $ do
+    encodeFile (replaceFileName path "database.json") dbOutput
+    encodeFile (replaceFileName path "distribution.json") $ distribution `WithNetworkId` networkId
 
 toDistribution ::
   forall (m :: Type -> Type).

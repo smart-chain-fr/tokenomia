@@ -153,6 +153,7 @@ library
       composition-extra,
       either,
       extra,
+      filepath,
       memory,
       text,
       time,
