@@ -299,7 +299,7 @@ splitInTranches ::
   PrivateSale ->
   m (NEMap Blockfrost.Address (NonEmpty (NativeScript, Amount)))
 splitInTranches PrivateSale {..} = do
-  startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix start
+  startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix $ start * 1000
   let f :: Blockfrost.Address -> Amount -> m (NonEmpty (NativeScript, Amount))
       f addr x = traverse (toNative addr) $ splitAmountInTranches startSlot x tranches 0
 
