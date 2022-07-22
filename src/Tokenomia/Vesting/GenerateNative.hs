@@ -236,9 +236,7 @@ toDbOutput ::
   NEMap Blockfrost.Address (NonEmpty (NativeScript, Amount)) ->
   DatabaseOutput
 toDbOutput ps invDistMap =
-  Map.NonEmpty.fromList
-    . fmap (first addrToText)
-    . Map.NonEmpty.toList
+    Map.NonEmpty.mapKeys addrToText
     $ fmap ((`LockedFund` acSimple) . fst) <$> invDistMap
   where
     acSimple = uncurry AssetClassSimple . bimap show show . unAssetClass $ assetClass ps
