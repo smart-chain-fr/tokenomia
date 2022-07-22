@@ -40,6 +40,7 @@ import Control.Monad.Reader (MonadReader, asks)
 import Data.Aeson (eitherDecodeFileStrict)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Bifunctor (Bifunctor (bimap), first)
+import Data.Either.Combinators (maybeToRight)
 import Data.Foldable (traverse_)
 import Data.Foldable.Extra (sumOn')
 import Data.Kind (Type)
@@ -48,10 +49,10 @@ import qualified Data.List.NonEmpty as List.NonEmpty
 import Data.Map.NonEmpty (NEMap)
 import qualified Data.Map.NonEmpty as Map.NonEmpty
 import Data.String (IsString (fromString))
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Tuple.Extra (firstM, second)
-import Ledger (POSIXTime, Slot (Slot, getSlot))
+import Ledger (POSIXTime, Slot (Slot, getSlot), toPubKeyHash)
 import Ledger.Address (Address)
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
@@ -211,7 +212,7 @@ nativeScriptToLedgerAddr ::
   m Address
 nativeScriptToLedgerAddr ns = do
   networkId <- getNetworkId
-  nsToLedgerAddress . serialiseToBech32 $ shelleyAddr networkId
+  textToLedgerAddress . serialiseToBech32 $ shelleyAddr networkId
   where
     shelleyAddr nid = makeShelleyAddress nid (PaymentCredentialByScript hashedScript) NoStakeAddress
     hashedScript = hashScript $ SimpleScript SimpleScriptV2 cardanNs
@@ -227,9 +228,13 @@ nativeScriptToLedgerAddr ns = do
     unlockAfterSlot :: SlotNo
     unlockAfterSlot = fromInteger (unlockTime ns)
 
-    nsToLedgerAddress :: Text -> m Address
-    nsToLedgerAddress textAddr = do
-      liftEither . first (const MalformedAddress) $ deserialiseCardanoAddress textAddr
+textToLedgerAddress ::
+  forall (m :: Type -> Type).
+  MonadError TokenomiaError m =>
+  Text ->
+  m Address
+textToLedgerAddress =
+  liftEither . first (const MalformedAddress) . deserialiseCardanoAddress
 
 toDbOutput ::
   PrivateSale ->
@@ -286,20 +291,23 @@ splitAmountInTranches startSlot total trs acc =
 splitInTranches ::
   forall (m :: Type -> Type).
   ( MonadIO m
+  , MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
   PrivateSale ->
   m (NEMap Blockfrost.Address (NonEmpty (NativeScript, Amount)))
 splitInTranches PrivateSale {..} = do
   startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix start
-  let f :: Blockfrost.Address -> Amount -> NonEmpty (NativeScript, Amount)
-      f addr x = (toNative addr) <$> splitAmountInTranches startSlot x tranches 0
+  let f :: Blockfrost.Address -> Amount -> m (NonEmpty (NativeScript, Amount))
+      f addr x = traverse (toNative addr) $ splitAmountInTranches startSlot x tranches 0
 
-      toNative :: Blockfrost.Address -> (Slot, Amount) -> (NativeScript, Amount)
-      toNative (Blockfrost.Address addr) (slot, amt) =
-        (NativeScript (unpack addr) $ getSlot slot, amt)
+      toNative :: Blockfrost.Address -> (Slot, Amount) -> m (NativeScript, Amount)
+      toNative (Blockfrost.Address addr) (slot, amt) = do
+        ledgerAddress <- textToLedgerAddress addr
+        pkh <- liftEither $ maybeToRight (InvalidPrivateSale "Address is not PubKeyHash address") $ toPubKeyHash ledgerAddress
+        pure $ (NativeScript (show pkh) $ getSlot slot, amt)
 
       investorsMap :: NEMap Blockfrost.Address Amount
       investorsMap = mergeInvestors investors
 
-  pure $ Map.NonEmpty.mapWithKey f investorsMap
+  Map.NonEmpty.traverseWithKey f investorsMap
