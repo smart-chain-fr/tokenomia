@@ -8,6 +8,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Tokenomia.Vesting.GenerateNative (generatePrivateSaleFiles, nativeScriptToLedgerAddr, NativeScript (NativeScript)) where
 
@@ -29,6 +31,7 @@ import Cardano.Api (
   makeShelleyAddress,
   serialiseToBech32,
  )
+import qualified Blockfrost.Client as Blockfrost
 import qualified Cardano.Api as Api
 import Control.Applicative (ZipList (ZipList, getZipList))
 import Control.Monad.Except (MonadError, liftEither)
@@ -37,6 +40,7 @@ import Control.Monad.Reader (MonadReader, asks)
 import Data.Aeson (eitherDecodeFileStrict)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Bifunctor (Bifunctor (bimap), first)
+import Data.Foldable (traverse_)
 import Data.Foldable.Extra (sumOn')
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty, (<|))
@@ -51,10 +55,11 @@ import Ledger (POSIXTime, Slot (Slot, getSlot))
 import Ledger.Address (Address)
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
+import Tokenomia.Vesting.Sendings (checkMalformedAddr)
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
 import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale, MalformedAddress))
 import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient))
-import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress, serialiseCardanoAddress)
+import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress)
 
 type Amount = Natural
 
@@ -80,7 +85,7 @@ unTranches (Tranches x) = x
 $(deriveJSON defaultOptions ''Tranches)
 
 data PrivateInvestor = PrivateInvestor
-  { address :: Address
+  { address :: Blockfrost.Address
   , allocation :: Amount
   }
   deriving stock (Show)
@@ -125,6 +130,8 @@ $(deriveJSON defaultOptions ''LockedFund)
 -- Map AddressAsText [LockedFund]
 type DatabaseOutput = NEMap Text (NonEmpty LockedFund)
 
+deriving newtype instance Ord Blockfrost.Address
+
 getNetworkId :: forall (m :: Type -> Type). MonadReader Environment m => m Api.NetworkId
 getNetworkId = asks readNetworkId
   where
@@ -145,6 +152,7 @@ parsePrivateSale path = do
     prvSale <- first InvalidPrivateSale eitherErrPriv
 
     validateTranches $ tranches prvSale
+    traverse_ (checkMalformedAddr . address) $ investors prvSale
     pure prvSale
 
 generatePrivateSaleFiles ::
@@ -161,7 +169,7 @@ generatePrivateSaleFiles = do
   prvSale <- parsePrivateSale path
   nativeData <- splitInTranches prvSale
 
-  dbOutput <- toDbOutput prvSale nativeData
+  let dbOutput = toDbOutput prvSale nativeData
   disrtibution <- toDistribution prvSale nativeData
 
   liftIO . writeFile (path <> "database.json") $ show dbOutput
@@ -175,7 +183,7 @@ toDistribution ::
   , MonadReader Environment m
   ) =>
   PrivateSale ->
-  NEMap Address (NonEmpty (NativeScript, Amount)) ->
+  NEMap Blockfrost.Address (NonEmpty (NativeScript, Amount)) ->
   m Distribution
 toDistribution prvSale nativeData = Distribution (assetClass prvSale) <$> recipients
   where
@@ -224,26 +232,18 @@ nativeScriptToLedgerAddr ns = do
       liftEither . first (const MalformedAddress) $ deserialiseCardanoAddress textAddr
 
 toDbOutput ::
-  forall (m :: Type -> Type).
-  ( MonadError TokenomiaError m
-  , MonadReader Environment m
-  ) =>
   PrivateSale ->
-  NEMap Address (NonEmpty (NativeScript, Amount)) ->
-  m DatabaseOutput
+  NEMap Blockfrost.Address (NonEmpty (NativeScript, Amount)) ->
+  DatabaseOutput
 toDbOutput ps invDistMap =
-  fmap Map.NonEmpty.fromList
-    . traverse (firstM addrToText)
+  Map.NonEmpty.fromList
+    . fmap (first addrToText)
     . Map.NonEmpty.toList
     $ fmap ((`LockedFund` acSimple) . fst) <$> invDistMap
   where
     acSimple = uncurry AssetClassSimple . bimap show show . unAssetClass $ assetClass ps
-    addrToText :: Address -> m Text
-
-    addrToText addr = getNetworkId >>= (liftEither . first toAddressError . (`serialiseCardanoAddress` addr))
-
-toAddressError :: Text -> TokenomiaError
-toAddressError err = InvalidPrivateSale $ "Failed to serialise address " <> unpack err
+    addrToText :: Blockfrost.Address -> Text
+    addrToText (Blockfrost.Address addr) = addr
 
 assertErr :: String -> Bool -> Either TokenomiaError ()
 assertErr _ True = Right ()
@@ -257,10 +257,10 @@ validateTranches tranches = do
   where
     tranchesSum = sumOn' percentage $ unTranches tranches
 
-mergeInvestors :: NonEmpty PrivateInvestor -> NEMap Address Amount
+mergeInvestors :: NonEmpty PrivateInvestor -> NEMap Blockfrost.Address Amount
 mergeInvestors = Map.NonEmpty.fromListWith (+) . (toTuple <$>)
   where
-    toTuple :: PrivateInvestor -> (Address, Amount)
+    toTuple :: PrivateInvestor -> (Blockfrost.Address, Amount)
     toTuple (PrivateInvestor x y) = (x, y)
 
 {- | We are taking the floor of the corresponding percentage in all items
@@ -288,23 +288,20 @@ splitAmountInTranches startSlot total trs acc =
 splitInTranches ::
   forall (m :: Type -> Type).
   ( MonadIO m
-  , MonadError TokenomiaError m
   , MonadReader Environment m
   ) =>
   PrivateSale ->
-  m (NEMap Address (NonEmpty (NativeScript, Amount)))
+  m (NEMap Blockfrost.Address (NonEmpty (NativeScript, Amount)))
 splitInTranches PrivateSale {..} = do
-  networkId <- getNetworkId
   startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix start
-  let f :: Address -> Amount -> m (NonEmpty (NativeScript, Amount))
-      f addr x = traverse (toNative addr) $ splitAmountInTranches startSlot x tranches 0
+  let f :: Blockfrost.Address -> Amount -> NonEmpty (NativeScript, Amount)
+      f addr x = (toNative addr) <$> splitAmountInTranches startSlot x tranches 0
 
-      toNative :: Address -> (Slot, Amount) -> m (NativeScript, Amount)
-      toNative addr (slot, amt) = do
-        addrStr <- liftEither $ first toAddressError $ serialiseCardanoAddress networkId addr
-        pure (NativeScript (unpack addrStr) $ getSlot slot, amt)
+      toNative :: Blockfrost.Address -> (Slot, Amount) -> (NativeScript, Amount)
+      toNative (Blockfrost.Address addr) (slot, amt) =
+        (NativeScript (unpack addr) $ getSlot slot, amt)
 
-      investorsMap :: NEMap Address Amount
+      investorsMap :: NEMap Blockfrost.Address Amount
       investorsMap = mergeInvestors investors
 
-  Map.NonEmpty.traverseWithKey f investorsMap
+  pure $ Map.NonEmpty.mapWithKey f investorsMap

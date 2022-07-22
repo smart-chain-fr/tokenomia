@@ -15,7 +15,7 @@
 {-# OPTIONS_GHC -Werror #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Tokenomia.Vesting.Sendings (Sendings (Sendings), MonadRunBlockfrost (getAddressTransactions, getTxUtxos), jsonToSendings, verifySendings, verifySendings') where
+module Tokenomia.Vesting.Sendings (Sendings (Sendings), MonadRunBlockfrost (getAddressTransactions, getTxUtxos), checkMalformedAddr, jsonToSendings, verifySendings, verifySendings') where
 
 import Blockfrost.Client (
   Address,

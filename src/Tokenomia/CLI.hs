@@ -272,6 +272,7 @@ instance DisplayMenuItem Action where
     VestingVestFunds      ->  "[Vesting] - Vest Funds"
     VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     VestingVerifySendings -> "[Vesting] - Verify Sendings"
+    VestingGenerateNative -> "[Vesting] - Generate Database and airdrop outputs"
     NodeStatus            ->  "[Node]    - Status"
     NodeTranslateSlotToTime -> "[Node]    - Translate Slot To Time"
     NodeTranslateTimeToSlot -> "[Node]    - Translate Time To Slot"
