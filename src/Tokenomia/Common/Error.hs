@@ -46,7 +46,7 @@ data TokenomiaError
     | SendingsNoSuchTransactions [TxHash]
     | SendingsJSONDecodingFailure String
     | SendingsValueMismatch (Value, Value)
-    | SendingsMalformedAddress
+    | MalformedAddress
     | InvalidPrivateSale String
     | UnreachableMalformedAddress -- TODO: use the same error as Sendings
     deriving Show

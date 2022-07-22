@@ -31,20 +31,17 @@ import Cardano.Api (
  )
 import qualified Cardano.Api as Api
 import Control.Applicative (ZipList (ZipList, getZipList))
-import Control.Monad.Except (MonadError (throwError), liftEither)
+import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Reader (MonadReader, asks)
-import Data.Aeson (ToJSON (toJSON), eitherDecodeFileStrict)
+import Data.Aeson (eitherDecodeFileStrict)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Bifunctor (Bifunctor (bimap), first)
-import Data.Either (lefts)
-import Data.Foldable (foldl', traverse_)
 import Data.Foldable.Extra (sumOn')
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty, (<|))
 import qualified Data.List.NonEmpty as List.NonEmpty
-import Data.Map (Map, mapKeys)
-import Data.Map.NonEmpty (NEMap, mapWithKey, toMap)
+import Data.Map.NonEmpty (NEMap)
 import qualified Data.Map.NonEmpty as Map.NonEmpty
 import Data.String (IsString (fromString))
 import Data.Text (Text, unpack)
@@ -52,12 +49,10 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Tuple.Extra (firstM, second)
 import Ledger (POSIXTime, Slot (Slot, getSlot))
 import Ledger.Address (Address)
-
-{- import Ledger (Address (Address), POSIXTime (POSIXTime), Slot (Slot, getSlot)) -}
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
-import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale, UnreachableMalformedAddress))
+import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale, MalformedAddress))
 import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient))
 import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress, serialiseCardanoAddress)
 
@@ -146,21 +141,11 @@ parsePrivateSale ::
   m PrivateSale
 parsePrivateSale path = do
   eitherErrPriv <- liftIO . (eitherDecodeFileStrict @PrivateSale) $ path
-  -- TODO: Verify the from json instance for this is the longform string addr1..., and not just its raw constructors. If it isn't, use blockfrost's Address and convert
   liftEither $ do
     prvSale <- first InvalidPrivateSale eitherErrPriv
 
     validateTranches $ tranches prvSale
     pure prvSale
-
-{- checkMalformedAddr ::
-  forall (m :: Type -> Type).
-  ( MonadError TokenomiaError m
-  ) =>
-  Address ->
-  m Address
-checkMalformedAddr addr =
-  addr <$ (liftEither . first (const SendingsMalformedAddress) $ deserialiseCardanoAddress (unAddress addr)) -}
 
 generatePrivateSaleFiles ::
   forall (m :: Type -> Type).
@@ -236,10 +221,7 @@ nativeScriptToLedgerAddr ns = do
 
     nsToLedgerAddress :: Text -> m Address
     nsToLedgerAddress textAddr = do
-      liftEither . first (const UnreachableMalformedAddress) $ deserialiseCardanoAddress textAddr
-
---                              ^^ in theory serialising a valid address then
---                                 deserialising it should be the same as the original
+      liftEither . first (const MalformedAddress) $ deserialiseCardanoAddress textAddr
 
 toDbOutput ::
   forall (m :: Type -> Type).
@@ -313,7 +295,7 @@ splitInTranches ::
   m (NEMap Address (NonEmpty (NativeScript, Amount)))
 splitInTranches PrivateSale {..} = do
   networkId <- getNetworkId
-  startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix start -- change undefined for posix -> utc
+  startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix start
   let f :: Address -> Amount -> m (NonEmpty (NativeScript, Amount))
       f addr x = traverse (toNative addr) $ splitAmountInTranches startSlot x tranches 0
 
