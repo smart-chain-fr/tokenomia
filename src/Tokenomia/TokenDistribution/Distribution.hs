@@ -25,6 +25,7 @@ import Data.Aeson
     , (.:)
     , (.=)
     )
+import Data.Either.Combinators  ( fromRight' )
 
 import Prelude           hiding ( readFile, lines )
 
@@ -70,7 +71,7 @@ instance FromJSON Recipient where
 instance ToJSON (WithNetworkId Recipient) where
     toJSON (Recipient addr amt `WithNetworkId` netId) =
         object
-            [ "address" .= serialiseCardanoAddress netId addr
+            [ "address" .= fromRight' (serialiseCardanoAddress netId addr)
             , "amount" .= amt
             ]
 

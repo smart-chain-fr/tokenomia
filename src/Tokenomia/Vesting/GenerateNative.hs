@@ -56,6 +56,7 @@ import Ledger (POSIXTime, Slot (Slot, getSlot), toPubKeyHash)
 import Ledger.Address (Address)
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
+import Plutus.V1.Ledger.Value (toString)
 import System.FilePath (replaceFileName)
 import Tokenomia.Vesting.Sendings (checkMalformedAddr)
 import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
@@ -245,7 +246,7 @@ toDbOutput ps invDistMap =
     Map.NonEmpty.mapKeys addrToText
     $ fmap ((`LockedFund` acSimple) . fst) <$> invDistMap
   where
-    acSimple = uncurry AssetClassSimple . bimap show show . unAssetClass $ assetClass ps
+    acSimple = uncurry AssetClassSimple . bimap show toString . unAssetClass $ assetClass ps
     addrToText :: Blockfrost.Address -> Text
     addrToText (Blockfrost.Address addr) = addr
 
