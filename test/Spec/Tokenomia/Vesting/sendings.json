@@ -1,0 +1,10 @@
+{
+  "sendingsRecipientAddress": "addr_test1qzu80eg7jesd2tryfk3z2ww7fz2s40wcmxxcd43ylh7efunflufrxedaepnz8zsfadnt5h92j6k673ue9rj5mzcwvp4saxlckq",
+  "sendingsTxValues": {
+    "75d39ec2fd731ea9ef284eac3ceaa8191cc70f97b95194c5ab5a4985792047fd": {
+      "getValue": [
+        [{ "unCurrencySymbol": "" }, [[{ "unTokenName": "" }, 10000000]]]
+      ]
+    }
+  }
+}

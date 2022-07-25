@@ -72,10 +72,10 @@ tests = testGroup "Monetary CLAP Policy"
 burnContract' ::  Wallet -> Params -> Integer -> Contract () EmptySchema CLAPMonetaryPolicyError ()
 burnContract' wallet params amountGiven
     = void $ burnContract  @() @EmptySchema @CLAPMonetaryPolicyError
-        (Ledger.pubKeyHash $ walletPubKey wallet) params amountGiven
+        (walletPubKeyHash wallet) params amountGiven
 
 mintCLAPContract' :: Contract (Maybe (Last (CurrencySymbol,Params))) EmptySchema CLAPMonetaryPolicyError (CurrencySymbol,Params)
 mintCLAPContract' = do 
-    result <- mintContract (Ledger.pubKeyHash $ walletPubKey w1) (TokenName "CLAP") (1000000000000 :: Integer)
+    result <- mintContract (walletPubKeyHash w1) (TokenName "CLAP") (1000000000000 :: Integer)
     (tell . Just . Last) result
     pure result

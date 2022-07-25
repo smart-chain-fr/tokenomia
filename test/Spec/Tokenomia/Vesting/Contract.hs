@@ -81,7 +81,7 @@ vesting startTime =
     VestingParams
         { vestingTranche1 = VestingTranche (startTime + 10000) (Ada.lovelaceValueOf 20)
         , vestingTranche2 = VestingTranche (startTime + 20000) (Ada.lovelaceValueOf 40)
-        , vestingOwner    = Ledger.pubKeyHash $ walletPubKey w1 }
+        , vestingOwner    = walletPubKeyHash w1 }
 
 retrieveFundsTrace :: EmulatorTrace ()
 retrieveFundsTrace = do

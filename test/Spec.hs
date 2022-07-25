@@ -7,6 +7,7 @@ import qualified Spec.Tokenomia.Common.Value
 import qualified Spec.Tokenomia.ICO.Funds.Exchange.Plan
 import qualified Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
 import qualified Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+import qualified Spec.Tokenomia.Vesting.Sendings
 import Test.Tasty ( TestTree, defaultMain, testGroup )
 
 main :: IO ()
@@ -18,5 +19,6 @@ tests = testGroup "use cases" [
     Spec.Tokenomia.Common.Value.tests,
     Spec.Tokenomia.ICO.Funds.Exchange.Plan.tests,
     Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan.tests,
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan.tests
+    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan.tests,
+    Spec.Tokenomia.Vesting.Sendings.tests
     ]

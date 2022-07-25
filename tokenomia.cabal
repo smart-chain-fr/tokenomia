@@ -31,6 +31,9 @@ common lang
       -Wall -Wnoncanonical-monad-instances
       -Wincomplete-uni-patterns -Wincomplete-record-updates
       -Wredundant-constraints -Widentities -rtsopts
+      -Wcompat -Wmissing-export-lists
+      -Wmissing-deriving-strategies
+      -Wno-orphans
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
@@ -67,6 +70,7 @@ library
       Tokenomia.Vesting.Repository
       Tokenomia.Vesting.Vest
       Tokenomia.Vesting.Retrieve
+      Tokenomia.Vesting.Sendings
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
@@ -136,8 +140,10 @@ library
       Tokenomia.ICO.Funds.Validation.Status
       Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
       Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
+      Tokenomia.Vesting.GenerateNative
     build-depends:
       base >= 4.9 && < 5,
+      Cabal,
       base16-bytestring,
       lens,
       aeson,
@@ -146,6 +152,8 @@ library
       composition,
       composition-extra,
       either,
+      extra,
+      filepath,
       memory,
       text,
       time,
@@ -190,8 +198,10 @@ library
       ordered-containers,
       nonempty-containers,
       streamly,
+      transformers,
       deepseq,
       hashable,
+      hex,
       hex-text
     hs-source-dirs: src 
 
@@ -203,6 +213,7 @@ test-suite tokenomia-tests
   other-modules:
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
+    Spec.Tokenomia.Vesting.Sendings
     Spec.Tokenomia.Wallet.UTxO
     Spec.Tokenomia.Common.Value
     Spec.Tokenomia.ICO.Funds.Exchange.Plan
@@ -217,7 +228,8 @@ test-suite tokenomia-tests
     plutus-contract -any,
     plutus-ledger -any,
     plutus-ledger-api,
-    tokenomia -any
+    tokenomia -any,
+    mtl
   build-depends:
     base >=4.9 && <5,
     tasty -any,
@@ -229,12 +241,16 @@ test-suite tokenomia-tests
     random,
     nonempty-containers,
     freer-simple -any,
+    blockfrost-client,
     bytestring,
     text,
     ordered-containers,
     interpolatedstring-perl6,
     blockfrost-api,
     safe-money,
+    containers,
+    either,
+    hex,
     data-default
 
 

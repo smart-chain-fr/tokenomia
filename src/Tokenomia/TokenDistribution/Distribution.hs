@@ -25,6 +25,7 @@ import Data.Aeson
     , (.:)
     , (.=)
     )
+import Data.Either.Combinators  ( fromRight' )
 
 import Prelude           hiding ( readFile, lines )
 
@@ -70,7 +71,7 @@ instance FromJSON Recipient where
 instance ToJSON (WithNetworkId Recipient) where
     toJSON (Recipient addr amt `WithNetworkId` netId) =
         object
-            [ "address" .= serialiseCardanoAddress netId addr
+            [ "address" .= fromRight' (serialiseCardanoAddress netId addr)
             , "amount" .= amt
             ]
 
@@ -89,7 +90,7 @@ instance FromJSON Distribution where
 instance ToJSON (WithNetworkId Distribution) where
     toJSON (Distribution (Value.AssetClass (cs, tn)) recips `WithNetworkId` netId) =
         object
-            [ "assetClass" .= object [ "currencySymbol" .= show cs, "tokenName" .= show tn ]
+            [ "assetClass" .= object [ "currencySymbol" .= show cs, "tokenName" .= Value.toString tn ]
             , "recipients" .= toJSON (flip WithNetworkId netId <$> recips)
             ]
 
