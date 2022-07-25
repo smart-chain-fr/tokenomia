@@ -140,6 +140,7 @@ library
       Tokenomia.ICO.Funds.Validation.Status
       Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
       Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
+      Tokenomia.Vesting.GenerateNative
     build-depends:
       base >= 4.9 && < 5,
       Cabal,
@@ -152,6 +153,7 @@ library
       composition-extra,
       either,
       extra,
+      filepath,
       memory,
       text,
       time,

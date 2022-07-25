@@ -15,7 +15,7 @@
 {-# OPTIONS_GHC -Werror #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Tokenomia.Vesting.Sendings (Sendings (Sendings), MonadRunBlockfrost (getAddressTransactions, getTxUtxos), jsonToSendings, verifySendings, verifySendings') where
+module Tokenomia.Vesting.Sendings (Sendings (Sendings), MonadRunBlockfrost (getAddressTransactions, getTxUtxos), checkMalformedAddr, jsonToSendings, verifySendings, verifySendings') where
 
 import Blockfrost.Client (
   Address,
@@ -50,7 +50,7 @@ import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value, assetClass, a
 import Money qualified
 import Tokenomia.Common.Blockfrost (projectFromEnv'')
 import Tokenomia.Common.Environment (Environment)
-import Tokenomia.Common.Error (TokenomiaError (BlockFrostError, SendingsContainsZeroValue, SendingsJSONDecodingFailure, SendingsMalformedAddress, SendingsNoSuchTransactions, SendingsValueMismatch))
+import Tokenomia.Common.Error (TokenomiaError (BlockFrostError, MalformedAddress, SendingsContainsZeroValue, SendingsJSONDecodingFailure, SendingsNoSuchTransactions, SendingsValueMismatch))
 import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress)
 
 data Sendings = Sendings
@@ -142,7 +142,7 @@ checkMalformedAddr ::
   Address ->
   m Address
 checkMalformedAddr addr =
-  addr <$ (liftEither . first (const SendingsMalformedAddress) $ deserialiseCardanoAddress (unAddress addr))
+  addr <$ (liftEither . first (const MalformedAddress) $ deserialiseCardanoAddress (unAddress addr))
 
 jsonToSendings ::
   forall (m :: Type -> Type).
