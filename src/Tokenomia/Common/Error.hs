@@ -48,7 +48,6 @@ data TokenomiaError
     | SendingsValueMismatch (Value, Value)
     | MalformedAddress
     | InvalidPrivateSale String
-    | UnreachableMalformedAddress -- TODO: use the same error as Sendings
     deriving Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)

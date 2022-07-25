@@ -50,16 +50,16 @@ import Data.Map.NonEmpty (NEMap)
 import qualified Data.Map.NonEmpty as Map.NonEmpty
 import Data.String (IsString (fromString))
 import Data.Text (Text)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock.POSIX (POSIXTime, posixSecondsToUTCTime)
 import Data.Tuple.Extra (firstM, second)
-import Ledger (POSIXTime, Slot (Slot, getSlot), toPubKeyHash)
+import Ledger (Slot (Slot, getSlot), toPubKeyHash)
 import Ledger.Address (Address)
 import Ledger.Value (AssetClass (unAssetClass))
 import Numeric.Natural
 import Plutus.V1.Ledger.Value (toString)
 import System.FilePath (replaceFileName)
 import Tokenomia.Vesting.Sendings (checkMalformedAddr)
-import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), convertToExternalPosix, toSlot)
+import Tokenomia.Common.Environment (Environment (Mainnet, Testnet, magicNumber), toSlot)
 import Tokenomia.Common.Error (TokenomiaError (InvalidPrivateSale, MalformedAddress))
 import Tokenomia.TokenDistribution.Distribution (Distribution (Distribution), Recipient (Recipient), WithNetworkId (WithNetworkId))
 import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress)
@@ -96,7 +96,7 @@ data PrivateInvestor = PrivateInvestor
 $(deriveJSON defaultOptions ''PrivateInvestor)
 
 data PrivateSale = PrivateSale
-  { start :: POSIXTime
+  { start :: POSIXTime -- External POSIXTime, given in seconds
   , tranches :: Tranches
   , assetClass :: AssetClass
   , investors :: NonEmpty PrivateInvestor
@@ -300,7 +300,7 @@ splitInTranches ::
   PrivateSale ->
   m (NEMap Blockfrost.Address (NonEmpty (NativeScript, Amount)))
 splitInTranches PrivateSale {..} = do
-  startSlot <- toSlot $ posixSecondsToUTCTime $ convertToExternalPosix $ start * 1000
+  startSlot <- toSlot $ posixSecondsToUTCTime start
   let f :: Blockfrost.Address -> Amount -> m (NonEmpty (NativeScript, Amount))
       f addr x = traverse (toNative addr) $ splitAmountInTranches startSlot x tranches 0
 
