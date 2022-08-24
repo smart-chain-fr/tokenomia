@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# This script is a wrapper around cardano-address.
+#
+# By default, cardano-address takes its input from stdin. For now, piping with
+# (|>) from Shh.Internal leads to unexpected behaviour when doing IO inside the
+# PropertyM transformer of QuickCheck. With (|>)¸the command cardano-address
+# sometimes does not receive stdin and hang indefinitely, probably due to a
+# strictness issue of the monads involved.
+#
+# The purpose of this script is to provide a hack, hidding the plumbing inside a
+# bash script to avoid depending on the pipe from Haskell. The parameter
+# following `--` is taken as the input for cardano-address. The rest of the
+# arguments are propagated as-is.
+#
+# In order to use cardano-address in property testing from Haskell, you must
+# install this script on your path.
+
+args=()
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        "--")
+            shift
+            break 2
+            ;;
+        *)
+            args+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [ -t 0 ]; then
+    printf '%s\n' "$1"
+else
+    cat -
+fi | cardano-address "${args[@]}"

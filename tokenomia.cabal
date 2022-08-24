@@ -72,6 +72,13 @@ library
       Tokenomia.Vesting.Retrieve
       Tokenomia.Vesting.Sendings
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.Common.Aeson.AssetClass
+      Tokenomia.Common.Arbitrary.AssetClass
+      Tokenomia.Common.Arbitrary.Builtins
+      Tokenomia.Common.Arbitrary.Modifiers
+      Tokenomia.Common.Arbitrary.POSIXTime
+      Tokenomia.Common.Arbitrary.Slot
+      Tokenomia.Common.Arbitrary.Wallet
       Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
       Tokenomia.Common.Value
@@ -86,12 +93,15 @@ library
       Tokenomia.Common.Address
       Tokenomia.Common.Asset
       Tokenomia.Common.Hash
+      Tokenomia.Common.Time
       Tokenomia.Common.Token 
       Tokenomia.Common.PageNumber 
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
+      Tokenomia.Common.Data.List.Extra
       Tokenomia.Common.Data.List.NonEmpty
       Tokenomia.Common.Parser
+      Tokenomia.Common.Parser.Address
       Tokenomia.Common.Parser.AssetClass
       Tokenomia.Common.Parser.MinRequiredUTxO
       Tokenomia.Common.Parser.Value
@@ -152,6 +162,7 @@ library
       composition,
       composition-extra,
       either,
+      errors,
       extra,
       filepath,
       memory,
@@ -202,7 +213,9 @@ library
       deepseq,
       hashable,
       hex,
-      hex-text
+      hex-text,
+      tasty-quickcheck,
+      quickcheck-instances
     hs-source-dirs: src 
 
 test-suite tokenomia-tests
@@ -211,6 +224,10 @@ test-suite tokenomia-tests
   main-is: Spec.hs
   hs-source-dirs: test
   other-modules:
+    Spec.Tokenomia.Vesting.GenerateNative
+    Spec.Tokenomia.Common.Data.List.Extra
+    Spec.Tokenomia.Common.Parser.Address
+    Spec.Tokenomia.Common.Time
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
     Spec.Tokenomia.Vesting.Sendings
@@ -250,6 +267,7 @@ test-suite tokenomia-tests
     safe-money,
     containers,
     either,
+    composition-extra,
     hex,
     data-default
 
