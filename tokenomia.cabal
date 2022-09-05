@@ -72,12 +72,19 @@ library
       Tokenomia.Vesting.Retrieve
       Tokenomia.Vesting.Sendings
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.CardanoApi.FromPlutus.Error
+      Tokenomia.CardanoApi.FromPlutus.Value
+      Tokenomia.CardanoApi.Fees
+      Tokenomia.CardanoApi.PParams
+      Tokenomia.CardanoApi.Value
       Tokenomia.Common.Aeson.AssetClass
       Tokenomia.Common.Arbitrary.AssetClass
       Tokenomia.Common.Arbitrary.Builtins
       Tokenomia.Common.Arbitrary.Modifiers
       Tokenomia.Common.Arbitrary.POSIXTime
       Tokenomia.Common.Arbitrary.Slot
+      Tokenomia.Common.Arbitrary.Utils
+      Tokenomia.Common.Arbitrary.Value
       Tokenomia.Common.Arbitrary.Wallet
       Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
@@ -98,6 +105,7 @@ library
       Tokenomia.Common.PageNumber 
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
+      Tokenomia.Common.Data.Either.Extra
       Tokenomia.Common.Data.List.Extra
       Tokenomia.Common.Data.List.NonEmpty
       Tokenomia.Common.Parser
@@ -186,8 +194,10 @@ library
       containers,
       cardano-api,
       cardano-cli,
+      cardano-ledger-core,
       cardano-ledger-alonzo,
       cardano-ledger-byron,
+      cardano-ledger-shelley,
       plutus-ledger-api,
       serialise,
       freer-extras,
@@ -224,7 +234,11 @@ test-suite tokenomia-tests
   main-is: Spec.hs
   hs-source-dirs: test
   other-modules:
+    Spec.Tokenomia.CardanoApi.FromPlutus.Value
+    Spec.Tokenomia.CardanoApi.Fees
     Spec.Tokenomia.Vesting.GenerateNative
+    Spec.Tokenomia.Common.Arbitrary.Builtins
+    Spec.Tokenomia.Common.Arbitrary.Utils
     Spec.Tokenomia.Common.Data.List.Extra
     Spec.Tokenomia.Common.Parser.Address
     Spec.Tokenomia.Common.Time
@@ -269,6 +283,7 @@ test-suite tokenomia-tests
     either,
     composition-extra,
     hex,
+    cardano-api,
     data-default
 
 

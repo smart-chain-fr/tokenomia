@@ -22,6 +22,7 @@ module Tokenomia.Vesting.GenerateNative
     , PrivateSaleTranche(..)
     , TrancheProperties(..)
     , TranchesProportions(..)
+    , calculateDefaultMinimumUTxOFromAssetClass
     , generatePrivateSaleFiles
     , getNetworkId
     , investorAddressPubKeyHash
@@ -47,7 +48,7 @@ import Control.Monad.Except                 ( MonadError, liftEither )
 import Control.Monad.IO.Class               ( MonadIO, liftIO )
 import Control.Monad.Reader                 ( MonadReader, asks )
 import Data.Bifunctor                       ( first )
-import Data.Either.Combinators              ( maybeToRight )
+import Data.Either.Combinators              ( fromRight, maybeToRight )
 import Data.Foldable                        ( traverse_ )
 import Data.Functor.Syntax                  ( (<$$>) )
 import Data.Kind                            ( Type )
@@ -83,7 +84,9 @@ import Data.Aeson
     )
 
 import Cardano.Api
-    ( PaymentCredential(PaymentCredentialByScript)
+    ( NetworkMagic(..)
+    , PaymentCredential(PaymentCredentialByScript)
+    , ShelleyBasedEra(..)
     , Script(SimpleScript)
     , SimpleScript
         ( RequireAllOf
@@ -97,16 +100,20 @@ import Cardano.Api
     , hashScript
     , makeShelleyAddress
     , serialiseToBech32
-    , NetworkMagic(..)
  )
 
-import qualified Cardano.Api as Api ( NetworkId(..) )
+import Cardano.Api qualified
+    as Api                                  ( NetworkId(..) )
 
+import Tokenomia.CardanoApi.Fees            ( calculateDefaultMinimumUTxOFromAssetId )
 import Tokenomia.Common.Aeson.AssetClass    ( assetClassToJSON )
 import Tokenomia.Common.Data.List.Extra     ( mapLastWith, transpose )
 import Tokenomia.Common.Environment         ( Environment(..) )
 import Tokenomia.Common.Error               ( TokenomiaError(InvalidPrivateSale, MalformedAddress) )
 import Tokenomia.Common.Time                ( posixTimeToEnclosingSlotNo , toNextBeginPOSIXTime )
+
+import Tokenomia.CardanoApi.FromPlutus.Value
+    ( assetClassAsAssetId )
 
 import Tokenomia.TokenDistribution.Parser.Address
     ( deserialiseCardanoAddress )
@@ -283,12 +290,23 @@ validatePrivateSale ::
     => PrivateSale -> m ()
 validatePrivateSale PrivateSale{..} =
     let proportions = TranchesProportions $ proportion <$> tranchesProperties
-        ε = 10
     in
         liftEither $ do
+            ε <- calculateDefaultMinimumUTxOFromAssetClass assetClass
             validateTranchesProportions proportions
             validateAllocations ε proportions $ NEMap.elems allocationByAddress
             traverse_ (unsafeDeserialiseCardanoAddress . unInvestorAddress) $ NEMap.keys allocationByAddress
+
+-- | Calculate mininum UTxO from a Plutus AssetClass
+calculateDefaultMinimumUTxOFromAssetClass :: AssetClass -> Either TokenomiaError Natural
+calculateDefaultMinimumUTxOFromAssetClass assetClass =
+    do
+        assetId <- first
+            (InvalidPrivateSale . show)
+            (assetClassAsAssetId assetClass)
+        naturalFromInteger <$> maybeToRight
+            (InvalidPrivateSale "Could not calculate minimum UTxO")
+            (calculateDefaultMinimumUTxOFromAssetId ShelleyBasedEraAlonzo assetId)
 
 -- | Preconditions on tranches proportions
 validateTranchesProportions :: TranchesProportions -> Either TokenomiaError ()

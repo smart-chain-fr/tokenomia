@@ -75,6 +75,7 @@ import Tokenomia.Vesting.GenerateNative
     , PrivateSaleTranche(..)
     , TrancheProperties(..)
     , TranchesProportions(..)
+    , calculateDefaultMinimumUTxOFromAssetClass
     , investorAddressPubKeyHash
     , merge
     , minAllocation
@@ -199,11 +200,11 @@ instance Arbitrary (Restricted PrivateSale) where
     arbitrary =
         do
             tranchesProperties <- getRestricted <$> arbitrary
-            assetClass <- arbitrary
+            Restricted assetClass <- arbitrary
             allocationByAddress <- scale (*7) arbitrary
 
             let proportions = TranchesProportions $ proportion <$> tranchesProperties
-                ε = 10
+                ε = fromRight' $ calculateDefaultMinimumUTxOFromAssetClass assetClass
                 µ = minAllocation ε proportions
 
             pure $
@@ -212,9 +213,8 @@ instance Arbitrary (Restricted PrivateSale) where
                     assetClass
                     ((+ µ) <$> allocationByAddress)
     shrink (Restricted PrivateSale{..}) =
-        let shrinkedProperties =
-                getRestricted <$> shrink' (Restricted tranchesProperties)
-            shrinkedAssetClass = shrink' assetClass
+        let shrinkedProperties = getRestricted <$> shrink' (Restricted tranchesProperties)
+            shrinkedAssetClass = getRestricted <$> shrink' (Restricted assetClass)
             shrinkedAllocationByAddress = shrink' allocationByAddress
 
             shrinkedPrivateSale =
@@ -232,7 +232,7 @@ instance Arbitrary (Restricted PrivateSale) where
 validPrivateSaleAllocations :: PrivateSale -> Bool
 validPrivateSaleAllocations PrivateSale{..} =
     let proportions = TranchesProportions $ proportion <$> tranchesProperties
-        ε = 10
+        ε = fromRight' $ calculateDefaultMinimumUTxOFromAssetClass assetClass
     in
         isRight $ validateAllocations ε proportions $ NEMap.elems allocationByAddress
 

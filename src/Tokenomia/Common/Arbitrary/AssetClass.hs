@@ -1,12 +1,19 @@
-{-# OPTIONS_GHC -Wno-orphans              #-}
+{-# LANGUAGE DerivingStrategies             #-}
+{-# LANGUAGE FlexibleInstances              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving     #-}
+{-# LANGUAGE StandaloneDeriving             #-}
+{-# OPTIONS_GHC -Wno-orphans                #-}
 
 module Tokenomia.Common.Arbitrary.AssetClass
     () where
 
+import Data.String                          ( fromString )
+import Plutus.V1.Ledger.Ada                 ( adaSymbol, adaToken )
 import Plutus.V1.Ledger.Value
     ( AssetClass(..)
     , CurrencySymbol (..)
     , TokenName (..)
+    , assetClass
     )
 
 import Test.Tasty.QuickCheck
@@ -14,10 +21,14 @@ import Test.Tasty.QuickCheck
     , CoArbitrary
     , Function
     , arbitrary
+    , frequency
+    , resize
     , shrink
     )
 
-import Tokenomia.Common.Arbitrary.Builtins ()
+import Tokenomia.Common.AssetClass          ( adaAssetClass )
+import Tokenomia.Common.Arbitrary.Builtins  ( vectorOfHexBytes )
+import Tokenomia.Common.Arbitrary.Modifiers ( Restricted(..) )
 
 
 instance Arbitrary CurrencySymbol where
@@ -39,3 +50,37 @@ instance CoArbitrary AssetClass
 instance Function CurrencySymbol
 instance Function TokenName
 instance Function AssetClass
+
+instance Arbitrary (Restricted CurrencySymbol) where
+    arbitrary = frequency
+        [ (3, pure $ Restricted adaSymbol)
+        , (1, Restricted . fromString <$> vectorOfHexBytes 28)
+        ]
+    shrink (Restricted x)
+        | x == adaSymbol = []
+        | otherwise = [Restricted adaSymbol]
+
+instance Arbitrary (Restricted TokenName) where
+    arbitrary = Restricted . TokenName <$> resize 32 arbitrary
+    shrink x  = Restricted . TokenName <$> shrink (unTokenName . getRestricted $ x)
+
+instance Arbitrary (Restricted AssetClass) where
+    arbitrary =
+        do
+            Restricted currencySymbol <- arbitrary
+            Restricted tokenName <- arbitrary
+            pure . Restricted $
+                if currencySymbol == adaSymbol
+                    then assetClass adaSymbol adaToken
+                    else assetClass currencySymbol tokenName
+    shrink (Restricted (AssetClass (currencySymbol, tokenName)))
+        | currencySymbol == adaSymbol = []
+        | otherwise =
+            let shrinkedTokenNames = getRestricted <$> shrink (Restricted tokenName)
+                shrinks = adaAssetClass : (assetClass currencySymbol <$> shrinkedTokenNames)
+            in
+                Restricted <$> shrinks
+
+deriving newtype instance Ord (Restricted CurrencySymbol)
+deriving newtype instance Ord (Restricted TokenName)
+deriving newtype instance Ord (Restricted AssetClass)
