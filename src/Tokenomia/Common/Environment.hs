@@ -7,6 +7,7 @@
 module Tokenomia.Common.Environment
     ( getTestnetEnvironmment
     , getMainnetEnvironmment
+    , getPreprodEnvironmment
     , getNetworkEnvironmment
     , readNetworkMagic
     , Environment (..)
@@ -79,6 +80,20 @@ getMainnetEnvironmment magicNumber = do
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
 
     return $ Mainnet {..}
+
+getPreprodEnvironmment :: MonadIO m => Integer -> m Environment
+getPreprodEnvironmment magicNumber = do
+    socketPath <- liftIO $ getEnv "CARDANO_NODE_SOCKET_PATH"
+    let localNodeConnectInfo = LocalNodeConnectInfo {
+                                        localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
+                                        localNodeNetworkId       = Shelley.Testnet  (NetworkMagic (fromIntegral magicNumber)),
+                                        localNodeSocketPath      = socketPath}
+        preShelleyEpochs = 208
+        byronSlotsPerEpoch = 21600
+        byronSecondsPerSlot = 20
+    systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+
+    return $ Testnet {..}
 
 getTestnetEnvironmment :: MonadIO m => Integer -> m Environment
 getTestnetEnvironmment magicNumber = do
