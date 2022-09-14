@@ -75,6 +75,7 @@ selectNetwork = do
   environment <- liftIO $ askMenu networks >>= \case 
       SelectTestnet     -> getTestnetEnvironmment 1097911063 
       SelectMainnet     -> getMainnetEnvironmment 764824073
+      SelectPreprod     -> getPreprodEnvironmment 1
   clearConsole
   result :: Either TokenomiaError () <- runExceptT $ runReaderT recursiveMenu environment 
   case result of 
@@ -86,17 +87,20 @@ selectNetwork = do
 networks :: NonEmpty SelectEnvironment
 networks = NonEmpty.fromList [
   SelectTestnet,
-  SelectMainnet
+  SelectMainnet,
+  SelectPreprod
   ]
 
 data SelectEnvironment 
   = SelectTestnet
   | SelectMainnet
+  | SelectPreprod
 
 instance DisplayMenuItem SelectEnvironment where
   displayMenuItem item = case item of
     SelectTestnet   -> "Testnet (magicNumber 1097911063)" 
     SelectMainnet   -> "Mainnet (magicNumber 764824073)"
+    SelectPreprod   -> "Preprod (magicNumber 1)"
 
 
 recursiveMenu 
