@@ -76,6 +76,7 @@ library
       Tokenomia.CardanoApi.FromPlutus.Value
       Tokenomia.CardanoApi.Fees
       Tokenomia.CardanoApi.PParams
+      Tokenomia.CardanoApi.Query
       Tokenomia.CardanoApi.Value
       Tokenomia.Common.Aeson.AssetClass
       Tokenomia.Common.Arbitrary.AssetClass
@@ -190,6 +191,7 @@ library
       iso8601-time,
       unordered-containers,
       ouroboros-consensus,
+      ouroboros-network,
       bytestring,
       containers,
       cardano-api,
@@ -198,6 +200,7 @@ library
       cardano-ledger-alonzo,
       cardano-ledger-byron,
       cardano-ledger-shelley,
+      cardano-slotting,
       plutus-ledger-api,
       serialise,
       freer-extras,
@@ -220,6 +223,7 @@ library
       nonempty-containers,
       streamly,
       transformers,
+      transformers-except,
       deepseq,
       hashable,
       hex,
