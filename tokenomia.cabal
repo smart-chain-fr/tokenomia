@@ -77,6 +77,7 @@ library
       Tokenomia.CardanoApi.Fees
       Tokenomia.CardanoApi.PParams
       Tokenomia.CardanoApi.Query
+      Tokenomia.CardanoApi.Time
       Tokenomia.CardanoApi.Value
       Tokenomia.Common.Aeson.AssetClass
       Tokenomia.Common.Arbitrary.AssetClass

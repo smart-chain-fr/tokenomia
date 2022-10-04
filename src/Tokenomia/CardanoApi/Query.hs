@@ -5,6 +5,8 @@ module Tokenomia.CardanoApi.Query
     ( QueryFailure(..)
     , queryCurrentEra
     , queryGenesisParameters
+    , queryNominalDiffTimeToSlot
+    , querySlotToNominalDiffTime
     , querySlotToWallclock
     , querySlotToWallclock'
     , querySystemStart
@@ -60,6 +62,8 @@ import Cardano.Api.Shelley
     , executeLocalStateQueryExpr
     , queryExpr
     )
+
+import Tokenomia.CardanoApi.Time            ( nominalDiffTimeToRelativeTime, relativeTimeToNominalDiffTime )
 
 
 data    QueryFailure
@@ -150,7 +154,7 @@ queryWallclockToSlot ::
 queryWallclockToSlot =
     interpretQueryHistory . wallclockToSlot
 
--- | Convert a time to its enclosing slot
+-- | Convert a relative time to its enclosing slot
 queryWallclockToSlot' ::
      ( MonadIO m )
     => RelativeTime
@@ -158,6 +162,16 @@ queryWallclockToSlot' ::
     -> ExceptT QueryFailure m SlotNo
 queryWallclockToSlot' =
     secondExceptT (^._1) .: queryWallclockToSlot
+
+-- | Convert a POSIXTime to its enclosing slot
+queryNominalDiffTimeToSlot ::
+     ( MonadIO m )
+    => SystemStart
+    -> NominalDiffTime
+    -> LocalNodeConnectInfo CardanoMode
+    -> ExceptT QueryFailure m SlotNo
+queryNominalDiffTimeToSlot =
+    queryWallclockToSlot' .: nominalDiffTimeToRelativeTime
 
 -- | Convert a slot to its begin time, with the slot length
 querySlotToWallclock ::
@@ -168,7 +182,7 @@ querySlotToWallclock ::
 querySlotToWallclock =
     interpretQueryHistory . slotToWallclock
 
--- | Convert a slot to its begin time
+-- | Convert a slot to its begin relative time
 querySlotToWallclock' ::
      ( MonadIO m )
     => SlotNo
@@ -176,6 +190,16 @@ querySlotToWallclock' ::
     -> ExceptT QueryFailure m RelativeTime
 querySlotToWallclock' =
     secondExceptT (^._1) .: querySlotToWallclock
+
+-- | Convert a slot to its begin POSIXTime
+querySlotToNominalDiffTime ::
+     ( MonadIO m )
+    => SystemStart
+    -> SlotNo
+    -> LocalNodeConnectInfo CardanoMode
+    -> ExceptT QueryFailure m NominalDiffTime
+querySlotToNominalDiffTime systemStart =
+    secondExceptT (relativeTimeToNominalDiffTime systemStart) .: querySlotToWallclock'
 
 -- | Query UTxO filtered by addresses
 queryUTxOByAddress ::
