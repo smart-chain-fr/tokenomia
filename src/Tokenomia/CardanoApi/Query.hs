@@ -4,13 +4,14 @@
 module Tokenomia.CardanoApi.Query
     ( QueryFailure(..)
     , queryCurrentEra
-    , queryWallclockToSlot
-    , queryWallclockToSlot'
+    , queryGenesisParameters
     , querySlotToWallclock
     , querySlotToWallclock'
+    , querySystemStart
     , queryUTxOByAddress
     , queryUTxOByTxIn
-    , queryGenesisParameters
+    , queryWallclockToSlot
+    , queryWallclockToSlot'
     ) where
 
 import Control.Monad                        ( join )
@@ -25,7 +26,7 @@ import Data.Set                             ( Set )
 import Data.Time.Clock                      ( NominalDiffTime )
 
 import Ouroboros.Consensus.BlockchainTime.WallClock.Types
-    ( SlotLength, RelativeTime )
+    ( RelativeTime, SlotLength, SystemStart )
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras
     ( EraMismatch )
 import Ouroboros.Consensus.HardFork.History.Qry
@@ -48,7 +49,7 @@ import Cardano.Api.Shelley
     , GenesisParameters
     , LocalNodeConnectInfo
     , QueryInEra(QueryInShelleyBasedEra)
-    , QueryInMode(QueryEraHistory, QueryInEra, QueryCurrentEra)
+    , QueryInMode(QueryEraHistory, QueryInEra, QueryCurrentEra, QuerySystemStart)
     , QueryInShelleyBasedEra(QueryGenesisParameters, QueryUTxO)
     , QueryUTxOFilter(QueryUTxOByTxIn, QueryUTxOByAddress)
     , ShelleyBasedEra(ShelleyBasedEraShelley)
@@ -113,6 +114,13 @@ queryCurrentEra ::
     => LocalNodeConnectInfo CardanoMode
     -> ExceptT QueryFailure m AnyCardanoEra
 queryCurrentEra = executeQueryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+
+-- | Query the system start
+querySystemStart ::
+     ( MonadIO m )
+    => LocalNodeConnectInfo CardanoMode
+    -> ExceptT QueryFailure m SystemStart
+querySystemStart = executeQueryExpr QuerySystemStart
 
 -- | Query the history needed to interpret hardfork query
 queryEraHistory ::
