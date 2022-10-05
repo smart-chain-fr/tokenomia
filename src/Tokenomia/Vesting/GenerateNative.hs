@@ -285,7 +285,6 @@ instance ToJSON (WithNetworkId DatabaseOutput)  where
 
 -- | Preconditions on the input data
 validatePrivateSale ::
-    forall (m :: Type -> Type).
      ( MonadError TokenomiaError m )
     => PrivateSale -> m ()
 validatePrivateSale PrivateSale{..} =
@@ -340,7 +339,9 @@ minAllocation ε (TranchesProportions xs) =
 
 --------------------------------------------------------------------------------
 
-getNetworkId :: forall (m :: Type -> Type). MonadReader Environment m => m Api.NetworkId
+getNetworkId ::
+     ( MonadReader Environment m )
+    => m Api.NetworkId
 getNetworkId = asks readNetworkId
     where
         readNetworkId :: Environment -> Api.NetworkId
@@ -348,7 +349,6 @@ getNetworkId = asks readNetworkId
         readNetworkId Testnet {magicNumber} = Api.Testnet . NetworkMagic $ fromInteger magicNumber
 
 unsafeDeserialiseCardanoAddress ::
-    forall (m :: Type -> Type).
      ( MonadError TokenomiaError m )
     => Text -> m Address
 unsafeDeserialiseCardanoAddress =
@@ -356,7 +356,6 @@ unsafeDeserialiseCardanoAddress =
 
 -- | Parse PrivateSale from a JSON file
 readPrivateSale ::
-    forall (m :: Type -> Type).
      ( MonadIO m
      , MonadError TokenomiaError m
      )
@@ -367,7 +366,6 @@ readPrivateSale path  =
 
 -- | Parse PrivateSale from a JSON file and validate the data
 parsePrivateSale ::
-    forall (m :: Type -> Type).
      ( MonadIO m
      , MonadError TokenomiaError m
      )
@@ -377,7 +375,6 @@ parsePrivateSale path = do
     privateSale <$ validatePrivateSale privateSale
 
 generatePrivateSaleFiles ::
-    forall (m :: Type -> Type).
      ( MonadIO m
      , MonadError TokenomiaError m
      , MonadReader Environment m
@@ -400,7 +397,6 @@ generatePrivateSaleFiles = do
 
 -- | Try to convert an Address to its PubKeyHash
 investorAddressPubKeyHash ::
-    forall (m :: Type -> Type).
      ( MonadError TokenomiaError m )
     => InvestorAddress -> m PubKeyHash
 investorAddressPubKeyHash (InvestorAddress text) = do
@@ -467,7 +463,6 @@ merge xxs@(x :| _) =
 
 -- | Reshape all tranches NativeScriptInfos into a DatabaseOutput
 toDatabaseOutput ::
-    forall (m :: Type -> Type).
      ( MonadError TokenomiaError m
      , MonadReader Environment m
      )

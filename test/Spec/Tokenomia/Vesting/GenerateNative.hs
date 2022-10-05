@@ -3,7 +3,6 @@
 {-# LANGUAGE RecordWildCards                #-}
 {-# LANGUAGE ImportQualifiedPost            #-}
 {-# LANGUAGE FlexibleInstances              #-}
-{-# LANGUAGE KindSignatures                 #-}
 {-# LANGUAGE TupleSections                  #-}
 
 module Spec.Tokenomia.Vesting.GenerateNative
@@ -27,7 +26,6 @@ import Data.Either                          ( isRight )
 import Data.Either.Combinators              ( fromRight' )
 import Data.Functor                         ( (<&>) )
 import Data.Functor.Syntax                  ( (<$$>) )
-import Data.Kind                            ( Type )
 import Data.Ratio                           ( (%) )
 
 import GHC.Natural                          ( Natural, naturalFromInteger )
@@ -109,14 +107,14 @@ instance (Ord k, Arbitrary k, Arbitrary v) => Arbitrary (NEMap k v) where
     arbitrary = NEMap.fromList <$> arbitrary
     shrink = fmap NEMap.fromList . shrinkAssocs . NEMap.toList
         where
-            shrinkAssocs :: forall a b. Arbitrary b => NonEmpty (a, b) -> [NonEmpty (a, b)]
+            shrinkAssocs :: Arbitrary b => NonEmpty (a, b) -> [NonEmpty (a, b)]
             shrinkAssocs xs =
                 [ NEList.fromList xs'
                 | xs' <- shrinkList shrinkPair (NEList.toList xs)
                 , not (null xs')
                 ]
 
-            shrinkPair :: forall a b. Arbitrary b => (a, b) -> [(a, b)]
+            shrinkPair :: Arbitrary b => (a, b) -> [(a, b)]
             shrinkPair (k, v) = (k,)  <$> shrink v
 
 instance Arbitrary PrivateSale where
@@ -225,7 +223,7 @@ instance Arbitrary (Restricted PrivateSale) where
         in
             Restricted <$> filter validPrivateSaleAllocations (tail shrinkedPrivateSale)
         where
-            shrink' :: forall a. Arbitrary a => a -> [a]
+            shrink' :: Arbitrary a => a -> [a]
             shrink' a = a : shrink a
 
 -- | Validate only allocations of a PrivateSale
@@ -242,7 +240,6 @@ toInvestorAddress = InvestorAddress . convert . unPaymentAddress
 
 -- | Update a PrivateSale with valid generated testnet addresses
 useValidAddresses ::
-    forall (m :: Type -> Type).
      ( MonadIO m )
     => PrivateSale -> m PrivateSale
 useValidAddresses PrivateSale{..} =
@@ -251,7 +248,7 @@ useValidAddresses PrivateSale{..} =
         addresses <- toInvestorAddress <$$> generateAddresses "testnet" (indices allocations)
         pure PrivateSale{allocationByAddress=NEMap.fromList $ NEList.zip addresses allocations,..}
   where
-    indices :: forall (a :: Type). NonEmpty a -> NonEmpty Integer
+    indices :: NonEmpty a -> NonEmpty Integer
     indices = NEList.fromList . (\n -> [0..n-1]) . toInteger . length
 
 -- | Validate an arbitrary PrivateSale updated with valid addresses
