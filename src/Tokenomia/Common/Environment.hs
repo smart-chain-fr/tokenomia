@@ -56,6 +56,7 @@ data Environment = Testnet
                     , preShelleyEpochs :: Integer
                     , byronSlotsPerEpoch :: Integer
                     , byronSecondsPerSlot :: Integer
+                    , systemStart' :: SystemStart
                     , systemStart :: ExternalPosix.POSIXTime }
                 |  Mainnet
                     { magicNumber :: Integer
@@ -63,6 +64,7 @@ data Environment = Testnet
                     , preShelleyEpochs :: Integer
                     , byronSlotsPerEpoch :: Integer
                     , byronSecondsPerSlot :: Integer
+                    , systemStart' :: SystemStart
                     , systemStart :: ExternalPosix.POSIXTime }
 
 
@@ -77,6 +79,7 @@ getMainnetEnvironmment magicNumber = do
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Mainnet {..}
 
@@ -91,6 +94,7 @@ getTestnetEnvironmment magicNumber = do
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Testnet {..}
 
@@ -161,4 +165,3 @@ convertToExternalPosix p = ExternalPosix.secondsToNominalDiffTime (fromIntegral 
 
 formatISO8601 :: ExternalPosix.POSIXTime -> String
 formatISO8601 = ExternalPosix.formatISO8601 . ExternalPosix.posixSecondsToUTCTime
-

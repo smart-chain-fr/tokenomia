@@ -98,6 +98,7 @@ library
       Tokenomia.Common.Shell.InteractiveMenu
       Tokenomia.Common.Shell.Console
       Tokenomia.Common.Environment
+      Tokenomia.Common.Environment.Query
       Tokenomia.Common.Datum
       Tokenomia.Common.Address
       Tokenomia.Common.Asset
