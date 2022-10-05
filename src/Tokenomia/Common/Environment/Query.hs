@@ -1,7 +1,5 @@
 {-# LANGUAGE FlexibleContexts               #-}
-{-# LANGUAGE KindSignatures                 #-}
 {-# LANGUAGE RecordWildCards                #-}
-{-# LANGUAGE ScopedTypeVariables            #-}
 
 module Tokenomia.Common.Environment.Query
     ( evalQuery
@@ -9,7 +7,6 @@ module Tokenomia.Common.Environment.Query
     ) where
 
 import Data.Bifunctor                       ( first )
-import Data.Kind                            ( Type )
 
 import Control.Monad.Except                 ( MonadError, liftEither )
 import Control.Monad.Reader                 ( MonadReader, asks )
@@ -23,7 +20,6 @@ import Tokenomia.Common.Environment         ( Environment(..) )
 
 -- | Lift an ExceptT into a MonadError
 evalExceptT ::
-    forall (m :: Type -> Type) (a :: Type) (b :: Type) (e :: Type).
      ( MonadError e m )
     => (a -> e)
     -> ExceptT a m b
@@ -33,7 +29,6 @@ evalExceptT err x =
 
 -- | Run a query that can fail in a MonadError, with a LocalNodeConnectInfo argument
 evalQuery ::
-    forall (m :: Type -> Type) (a :: Type) (b :: Type)  (c :: Type) (e :: Type).
      ( MonadError e m
      , MonadReader Environment m
      )
@@ -47,7 +42,6 @@ evalQuery err query args =
 
 -- | Run a query that can fail in a MonadError, with an additional SystemStart argument
 evalQueryWithSystemStart ::
-    forall (m :: Type -> Type) (a :: Type) (b :: Type) (c :: Type) (e :: Type).
      ( MonadError e m
      , MonadReader Environment m
      )
