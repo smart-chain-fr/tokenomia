@@ -73,6 +73,7 @@ library
       Tokenomia.Vesting.Sendings
       Tokenomia.Tokenomic.CLAP.Simulation
       Tokenomia.CardanoApi.FromPlutus.Error
+      Tokenomia.CardanoApi.FromPlutus.Time
       Tokenomia.CardanoApi.FromPlutus.Value
       Tokenomia.CardanoApi.Fees
       Tokenomia.CardanoApi.PParams

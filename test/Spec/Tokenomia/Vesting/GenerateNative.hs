@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables            #-}
 {-# LANGUAGE RecordWildCards                #-}
 {-# LANGUAGE ImportQualifiedPost            #-}
+{-# LANGUAGE FlexibleContexts               #-}
 {-# LANGUAGE FlexibleInstances              #-}
 {-# LANGUAGE TupleSections                  #-}
 
@@ -10,9 +11,9 @@ module Spec.Tokenomia.Vesting.GenerateNative
     ) where
 
 import Control.Applicative                  ( ZipList(..) )
-import Control.Monad.Except                 ( runExceptT )
+import Control.Monad.Except                 ( MonadError, runExceptT )
 import Control.Monad.IO.Class               ( MonadIO(..) )
-import Control.Monad.Reader                 ( runReaderT )
+import Control.Monad.Reader                 ( MonadReader, runReaderT )
 import Data.List.NonEmpty                   ( NonEmpty(..), (<|) )
 import Data.List.NonEmpty qualified
     as NEList                               ( fromList, toList, zip, zipWith )
@@ -52,17 +53,22 @@ import Test.Tasty.QuickCheck
     , withMaxSuccess
     )
 
-import Tokenomia.Common.Arbitrary.AssetClass    ()
-import Tokenomia.Common.Arbitrary.Modifiers     ( Restricted(..) )
-import Tokenomia.Common.Arbitrary.POSIXTime     ()
-import Tokenomia.Common.Arbitrary.Wallet        ( PaymentAddress(..), generateAddresses )
+import Tokenomia.Common.Arbitrary.AssetClass( )
+import Tokenomia.Common.Arbitrary.Modifiers ( Restricted(..) )
+import Tokenomia.Common.Arbitrary.POSIXTime ( )
+import Tokenomia.Common.Arbitrary.Wallet    ( PaymentAddress(..), generateAddresses )
 
-import Tokenomia.Common.Data.Convertible        ( convert )
-import Tokenomia.Common.Data.List.Extra         ( transpose )
-import Tokenomia.Common.Environment             ( getTestnetEnvironmment )
-import Tokenomia.Common.Time                    ( toNextBeginPOSIXTime )
+import Tokenomia.Common.Data.Convertible    ( convert )
+import Tokenomia.Common.Data.List.Extra     ( transpose )
+import Tokenomia.Common.Environment         ( Environment(..), getTestnetEnvironmment )
+import Tokenomia.Common.Environment.Query   ( evalQueryWithSystemStart )
+import Tokenomia.Common.Error               ( TokenomiaError )
+import Tokenomia.Common.Time                ( toNextBeginNominalDiffTime )
 
-import Tokenomia.TokenDistribution.Distribution ( Distribution(recipients), Recipient(..) )
+import Tokenomia.TokenDistribution.Distribution
+    ( Distribution(recipients)
+    , Recipient(..)
+    )
 
 import Tokenomia.Vesting.GenerateNative
     ( DatabaseOutput(..)
@@ -77,6 +83,7 @@ import Tokenomia.Vesting.GenerateNative
     , investorAddressPubKeyHash
     , merge
     , minAllocation
+    , queryError
     , scaleRatios
     , splitAllocation
     , splitInTranches
@@ -88,10 +95,10 @@ import Tokenomia.Vesting.GenerateNative
     , validateTranchesProportions
     )
 
--- import Test.QuickCheck.Monadic              ( assert )
--- import Tokenomia.Vesting.GenerateNativeRefacto ( getNetworkId )
--- import System.FilePath ( replaceFileName )
--- import Data.Aeson ( encodeFile )
+-- import Test.QuickCheck.Monadic                  ( assert )
+-- import Tokenomia.Vesting.GenerateNative         ( getNetworkId )
+-- import System.FilePath                          ( replaceFileName )
+-- import Data.Aeson                               ( encodeFile )
 -- import Tokenomia.TokenDistribution.Distribution ( WithNetworkId(..) )
 
 
@@ -174,7 +181,10 @@ instance Arbitrary (Restricted (NonEmpty TrancheProperties)) where
         Restricted <$>
             do
                 proportions <- unTranchesProportions <$> arbitrary
-                unlockTimes <- vectorOf (length proportions) arbitrary
+                unlockTimes <-
+                    vectorOf (length proportions) $
+                        fromInteger . (+1563999616) . getPositive -- testnet system start
+                            <$> arbitrary
                 pure $ NEList.fromList . getZipList $
                     TrancheProperties
                         <$> ZipList (NEList.toList proportions)
@@ -354,11 +364,21 @@ propertiesInvestorAddressPubKeyHash =
                             traverse (runExceptT . investorAddressPubKeyHash) addresses
         ]
 
-validTrancheNativeScriptUnlockTime :: PrivateSaleTranche -> NEMap InvestorAddress NativeScriptInfo -> Bool
+validTrancheNativeScriptUnlockTime ::
+     ( MonadError TokenomiaError m
+     , MonadReader Environment m
+     , MonadIO m
+     )
+    => PrivateSaleTranche
+    -> NEMap InvestorAddress NativeScriptInfo
+    -> m Bool
 validTrancheNativeScriptUnlockTime PrivateSaleTranche{..} xs =
-    all
-        (== toNextBeginPOSIXTime trancheUnlockTime)
-        (requireTimeAfter . requiring <$> NEMap.elems xs)
+    do
+        nextBeginTime <- evalQueryWithSystemStart queryError toNextBeginNominalDiffTime trancheUnlockTime
+        pure $
+            all
+                (== nextBeginTime)
+                (requireTimeAfter . requiring <$> NEMap.elems xs)
 
 validTrancheNativeScriptAddress :: PrivateSaleTranche -> NEMap InvestorAddress NativeScriptInfo -> Bool
 validTrancheNativeScriptAddress PrivateSaleTranche{..} xs =
@@ -380,23 +400,35 @@ propertiesTrancheNativeScriptInfos =
                             monadicIO $ do
                                 env <- getTestnetEnvironmment 1097911063
                                 validPrivateSale <- useValidAddresses ps
-                                and
-                                    <$> traverse
-                                            (runValidTrancheNativeScriptInfos env)
-                                            (splitInTranches validPrivateSale)
+                                and <$>
+                                    traverse
+                                        (runValidTrancheNativeScriptInfos env)
+                                        (splitInTranches validPrivateSale)
                     )
         ]
   where
+    validTrancheNativeScriptInfos ::
+         ( MonadError TokenomiaError m
+         , MonadReader Environment m
+         , MonadIO m
+         )
+        => PrivateSaleTranche
+        -> m Bool
+    validTrancheNativeScriptInfos tranche =
+        do
+            xs <- trancheNativeScriptInfos tranche
+            validTrancheNativeScriptUnlockTime tranche xs
+                <&> ( && validTrancheNativeScriptAddress tranche xs
+                      && validTrancheNativeScriptAllocation tranche xs
+                    )
+
+    runValidTrancheNativeScriptInfos ::
+         ( MonadIO m )
+        => Environment
+        -> PrivateSaleTranche
+        -> m Bool
     runValidTrancheNativeScriptInfos env tranche =
-        runExceptT (runReaderT (trancheNativeScriptInfos tranche) env)
-            <&> validTrancheNativeScriptInfos tranche
-    validTrancheNativeScriptInfos tranche e =
-        let xs = fromRight' e
-        in
-            isRight e
-                && validTrancheNativeScriptUnlockTime tranche xs
-                && validTrancheNativeScriptAddress tranche xs
-                && validTrancheNativeScriptAllocation tranche xs
+        fromRight' <$> runExceptT (runReaderT (validTrancheNativeScriptInfos tranche) env)
 
 newtype MapToTranspose k v
     =   MapToTranspose

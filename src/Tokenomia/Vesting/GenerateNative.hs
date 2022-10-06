@@ -30,6 +30,7 @@ module Tokenomia.Vesting.GenerateNative
     , minAllocation
     , nativeScriptAddress
     , parsePrivateSale
+    , queryError
     , readPrivateSale
     , scaleRatios
     , splitAllocation
@@ -43,18 +44,19 @@ module Tokenomia.Vesting.GenerateNative
     ) where
 
 import Control.Error.Safe                   ( assertErr )
-import Control.Monad                        ( join )
+import Control.Monad                        ( join, (>=>) )
 import Control.Monad.Except                 ( MonadError, liftEither )
 import Control.Monad.IO.Class               ( MonadIO, liftIO )
 import Control.Monad.Reader                 ( MonadReader, asks )
 import Data.Bifunctor                       ( first )
-import Data.Either.Combinators              ( fromRight, maybeToRight )
+import Data.Either.Combinators              ( maybeToRight )
 import Data.Foldable                        ( traverse_ )
 import Data.Functor.Syntax                  ( (<$$>) )
 import Data.Kind                            ( Type )
+import Data.Ratio                           ( Ratio, (%), numerator, denominator )
 import Data.String                          ( fromString )
 import Data.Text                            ( Text )
-import Data.Ratio                           ( Ratio, (%), numerator, denominator )
+import Data.Time.Clock                      ( NominalDiffTime )
 
 import Data.List.NonEmpty                   ( NonEmpty((:|)), (<|) )
 import Data.List.NonEmpty qualified
@@ -67,7 +69,7 @@ import Data.Map.NonEmpty qualified
 import GHC.Generics                         ( Generic )
 import GHC.Natural                          ( Natural, naturalFromInteger, naturalToInteger )
 
-import Ledger                               ( POSIXTime, PubKeyHash, toPubKeyHash )
+import Ledger                               ( PubKeyHash, toPubKeyHash )
 import Ledger.Address                       ( Address )
 import Ledger.Value                         ( AssetClass(..) )
 import System.FilePath                      ( replaceFileName )
@@ -107,10 +109,14 @@ import Cardano.Api qualified
 
 import Tokenomia.CardanoApi.Fees            ( calculateDefaultMinimumUTxOFromAssetId )
 import Tokenomia.Common.Aeson.AssetClass    ( assetClassToJSON )
+import Tokenomia.Common.AssetClass          ( adaAssetClass )
 import Tokenomia.Common.Data.List.Extra     ( mapLastWith, transpose )
 import Tokenomia.Common.Environment         ( Environment(..) )
+import Tokenomia.Common.Environment.Query   ( evalQueryWithSystemStart )
 import Tokenomia.Common.Error               ( TokenomiaError(InvalidPrivateSale, MalformedAddress) )
-import Tokenomia.Common.Time                ( posixTimeToEnclosingSlotNo , toNextBeginPOSIXTime )
+import Tokenomia.Common.Time                ( toNextBeginNominalDiffTime )
+
+import Tokenomia.CardanoApi.Query           ( QueryFailure, queryNominalDiffTimeToSlot )
 
 import Tokenomia.CardanoApi.FromPlutus.Value
     ( assetClassAsAssetId )
@@ -214,7 +220,7 @@ newtype TranchesProportions
 data    TrancheProperties
     =   TrancheProperties
     { proportion :: Ratio Natural
-    , unlockTime :: POSIXTime
+    , unlockTime :: NominalDiffTime
     }
     deriving stock (Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -230,7 +236,7 @@ data    PrivateSale
 
 data    PrivateSaleTranche
     =   PrivateSaleTranche
-    { trancheUnlockTime :: POSIXTime
+    { trancheUnlockTime :: NominalDiffTime
     , trancheAssetClass :: AssetClass
     , trancheAllocationByAddress :: NEMap InvestorAddress Allocation
     }
@@ -240,7 +246,7 @@ data    PrivateSaleTranche
 data    NativeScript
     =   NativeScript
     { requireSignature :: PubKeyHash
-    , requireTimeAfter :: POSIXTime
+    , requireTimeAfter :: NominalDiffTime
     }
     deriving stock (Show)
 
@@ -283,6 +289,14 @@ instance ToJSON (WithNetworkId DatabaseOutput)  where
 
 --------------------------------------------------------------------------------
 
+-- | Convert a generic failure to a TokenomiaError
+invalidPrivateSale :: Show a => a -> TokenomiaError
+invalidPrivateSale = InvalidPrivateSale . show
+
+-- | Convert a QueryFailure to a TokenomiaError
+queryError :: QueryFailure -> TokenomiaError
+queryError = invalidPrivateSale
+
 -- | Preconditions on the input data
 validatePrivateSale ::
      ( MonadError TokenomiaError m )
@@ -300,8 +314,7 @@ validatePrivateSale PrivateSale{..} =
 calculateDefaultMinimumUTxOFromAssetClass :: AssetClass -> Either TokenomiaError Natural
 calculateDefaultMinimumUTxOFromAssetClass assetClass =
     do
-        assetId <- first
-            (InvalidPrivateSale . show)
+        assetId <- first invalidPrivateSale
             (assetClassAsAssetId assetClass)
         naturalFromInteger <$> maybeToRight
             (InvalidPrivateSale "Could not calculate minimum UTxO")
@@ -410,17 +423,22 @@ nativeScriptAddress ::
     forall (m :: Type -> Type).
      ( MonadError TokenomiaError m
      , MonadReader Environment m
+     , MonadIO m
      )
     => NativeScript -> m Address
 nativeScriptAddress =
-    simpleScriptAddress . toCardanoSimpleScript
+    toCardanoSimpleScript >=> simpleScriptAddress
   where
-    toCardanoSimpleScript :: NativeScript -> SimpleScript SimpleScriptV2
+    toCardanoSimpleScript :: NativeScript -> m (SimpleScript SimpleScriptV2)
     toCardanoSimpleScript NativeScript{..} =
-        RequireAllOf
-            [ RequireSignature (fromString . show $ requireSignature)
-            , RequireTimeAfter TimeLocksInSimpleScriptV2 (posixTimeToEnclosingSlotNo requireTimeAfter)
-            ]
+        do
+            slotNo <-
+                evalQueryWithSystemStart queryError
+                    queryNominalDiffTimeToSlot requireTimeAfter
+            pure $ RequireAllOf
+                [ RequireSignature (fromString . show $ requireSignature)
+                , RequireTimeAfter TimeLocksInSimpleScriptV2 slotNo
+                ]
 
     simpleScriptAddress :: SimpleScript SimpleScriptV2 -> m Address
     simpleScriptAddress script = do
@@ -436,22 +454,31 @@ trancheNativeScriptInfos ::
     forall (m :: Type -> Type).
      ( MonadError TokenomiaError m
      , MonadReader Environment m
+     , MonadIO m
      )
     => PrivateSaleTranche -> m (NEMap InvestorAddress NativeScriptInfo)
 trancheNativeScriptInfos PrivateSaleTranche{..} =
     traverseWithKey nativeScriptInfo trancheAllocationByAddress
   where
     nativeScriptInfo :: InvestorAddress -> Allocation -> m NativeScriptInfo
-    nativeScriptInfo investorAddress allocation = do
-        requiring <- nativeScript investorAddress
-        recipient <- (`Recipient` naturalToInteger allocation)
-            <$> nativeScriptAddress requiring
-        pure NativeScriptInfo{..}
+    nativeScriptInfo investorAddress allocation =
+        do
+            requiring <- nativeScript investorAddress
+            recipient <-
+                (`Recipient` naturalToInteger allocation)
+                    <$> nativeScriptAddress requiring
+
+            pure NativeScriptInfo{..}
 
     nativeScript :: InvestorAddress -> m NativeScript
-    nativeScript investorAddress = do
-        pubKeyHash <- investorAddressPubKeyHash investorAddress
-        pure $ NativeScript pubKeyHash (toNextBeginPOSIXTime trancheUnlockTime)
+    nativeScript investorAddress =
+        do
+            requireSignature <- investorAddressPubKeyHash investorAddress
+            requireTimeAfter <-
+                evalQueryWithSystemStart queryError
+                    toNextBeginNominalDiffTime trancheUnlockTime
+
+            pure NativeScript{..}
 
 -- | Merge a list of maps into a single map to list using the keys of the first map
 merge :: (Ord k) => NonEmpty (NEMap k v) -> NEMap k (NonEmpty v)
@@ -465,6 +492,7 @@ merge xxs@(x :| _) =
 toDatabaseOutput ::
      ( MonadError TokenomiaError m
      , MonadReader Environment m
+     , MonadIO m
      )
     => NonEmpty PrivateSaleTranche -> m DatabaseOutput
 toDatabaseOutput tranches =
