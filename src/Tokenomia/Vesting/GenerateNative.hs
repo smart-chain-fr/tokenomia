@@ -305,7 +305,10 @@ validatePrivateSale PrivateSale{..} =
     let proportions = TranchesProportions $ proportion <$> tranchesProperties
     in
         liftEither $ do
-            ε <- calculateDefaultMinimumUTxOFromAssetClass assetClass
+            ε <-
+                if assetClass == adaAssetClass
+                    then calculateDefaultMinimumUTxOFromAssetClass assetClass
+                    else pure 1
             validateTranchesProportions proportions
             validateAllocations ε proportions $ NEMap.elems allocationByAddress
             traverse_ (unsafeDeserialiseCardanoAddress . unInvestorAddress) $ NEMap.keys allocationByAddress
