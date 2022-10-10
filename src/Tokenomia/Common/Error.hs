@@ -48,6 +48,7 @@ data TokenomiaError
     | SendingsValueMismatch (Value, Value)
     | MalformedAddress
     | InvalidPrivateSale String
+    | QueryFailure String
     deriving Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)
@@ -64,4 +65,3 @@ whenNothingThrow err = maybe (throwError err) pure
 
 whenLeftThrow :: MonadError e m => (a -> e) -> Either a b ->  m b
 whenLeftThrow toErr = either (throwError . toErr) pure
-

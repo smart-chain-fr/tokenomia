@@ -1,22 +1,14 @@
-{-# LANGUAGE ImportQualifiedPost            #-}
-
 module Tokenomia.Common.Time
-    ( posixTimeToEnclosingSlotNo
-    , slotAfterNextBeginPOSIXTime
+    ( slotAfterNextBeginRelativeTime
     , toNextBeginNominalDiffTime
-    , toNextBeginPOSIXTime
     , toNextBeginRelativeTime
     ) where
 
-import Data.Default                         ( def )
 import Data.Time.Clock                      ( NominalDiffTime )
 
 import Control.Monad.Reader                 ( MonadIO(..) )
 import Control.Monad.Trans.Except           ( ExceptT )
 import Control.Monad.Trans.Except.Extra     ( secondExceptT )
-
-import Ledger                               ( POSIXTime(..), Slot (..) )
-import Ledger.TimeSlot                      ( posixTimeToEnclosingSlot, slotToBeginPOSIXTime )
 
 import Cardano.Api                          ( SlotNo(..) )
 import Cardano.Api.Shelley                  ( CardanoMode, LocalNodeConnectInfo )
@@ -27,25 +19,7 @@ import Ouroboros.Consensus.BlockchainTime.WallClock.Types
 
 import Tokenomia.CardanoApi.Query           ( QueryFailure, querySlotToWallclock', queryWallclockToSlot' )
 import Tokenomia.CardanoApi.Time            ( relativeTimeToNominalDiffTime, nominalDiffTimeToRelativeTime )
-import Tokenomia.CardanoApi.FromPlutus.Time ( fromPlutusSlot )
 
-
--- | POSIXTime to enclosing SlotNo
-posixTimeToEnclosingSlotNo :: POSIXTime -> SlotNo
-posixTimeToEnclosingSlotNo = fromPlutusSlot . posixTimeToEnclosingSlot def
-
--- | Smallest slot whose starting POSIXTime is greater or equal than the given time
-slotAfterNextBeginPOSIXTime :: POSIXTime -> Slot
-slotAfterNextBeginPOSIXTime time =
-    let n = posixTimeToEnclosingSlot def time
-    in
-        if time == slotToBeginPOSIXTime def n
-            then n
-            else n + 1
-
--- | Smallest POSIXTime starting a slot that is greater or equal than the given time
-toNextBeginPOSIXTime :: POSIXTime -> POSIXTime
-toNextBeginPOSIXTime = slotToBeginPOSIXTime def . slotAfterNextBeginPOSIXTime
 
 -- | Smallest slot whose starting time is greater or equal than the given time
 slotAfterNextBeginRelativeTime ::

@@ -145,6 +145,7 @@ recursiveMenu = do
                                   printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         InvalidPrivateSale e -> printLn $ "Invalid Private sale input : " <> e
+        QueryFailure e       -> printLn $ "QueryFailure : " <> e
         ChildAddressNotIndexed w address
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately"
         MalformedAddress            -> printLn "Sendings - Invalid treasury address"
@@ -283,5 +284,3 @@ instance DisplayMenuItem Action where
     ICOExchangeRun             ->  "[ICO]     - Funds Exchange Run"
     ICOUpdateWhiteListing      ->  "[ICO]     - Update Whitelisting"
     ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch ADAs on child addresses )"
-
-

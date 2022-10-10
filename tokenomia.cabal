@@ -72,6 +72,8 @@ library
       Tokenomia.Vesting.Retrieve
       Tokenomia.Vesting.Sendings
       Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.CardanoApi.Arbitrary.Slot
+      Tokenomia.CardanoApi.Arbitrary.Time
       Tokenomia.CardanoApi.FromPlutus.Error
       Tokenomia.CardanoApi.FromPlutus.Time
       Tokenomia.CardanoApi.FromPlutus.Value
@@ -282,6 +284,7 @@ test-suite tokenomia-tests
     blockfrost-client,
     bytestring,
     text,
+    time,
     ordered-containers,
     interpolatedstring-perl6,
     blockfrost-api,
@@ -291,6 +294,7 @@ test-suite tokenomia-tests
     composition-extra,
     hex,
     cardano-api,
+    ouroboros-consensus,
     data-default
 
 
