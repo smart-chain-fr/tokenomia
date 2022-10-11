@@ -44,7 +44,7 @@ module Tokenomia.Vesting.GenerateNative
     ) where
 
 import Control.Error.Safe                   ( assertErr )
-import Control.Monad                        ( join, (>=>) )
+import Control.Monad                        ( join )
 import Control.Monad.Except                 ( MonadError, liftEither )
 import Control.Monad.IO.Class               ( MonadIO, liftIO )
 import Control.Monad.Reader                 ( MonadReader, asks )
@@ -97,6 +97,7 @@ import Cardano.Api
         )
     , SimpleScriptVersion(SimpleScriptV2)
     , SimpleScriptV2
+    , SlotNo
     , StakeAddressReference(NoStakeAddress)
     , TimeLocksSupported(TimeLocksInSimpleScriptV2)
     , hashScript
@@ -247,6 +248,7 @@ data    NativeScript
     =   NativeScript
     { requireSignature :: PubKeyHash
     , requireTimeAfter :: NominalDiffTime
+    , requireTimeAfterSlot :: SlotNo
     }
     deriving stock (Show)
 
@@ -260,8 +262,9 @@ data    NativeScriptInfo
 instance ToJSON NativeScript  where
     toJSON NativeScript{..} =
         object
-            [ "requireSignature" .= toJSON (show requireSignature)
-            , "requireTimeAfter" .= toJSON requireTimeAfter
+            [ "requireSignature"        .= toJSON (show requireSignature)
+            , "requireTimeAfter"        .= toJSON requireTimeAfter
+            , "requireTimeAfterSlot"    .= toJSON requireTimeAfterSlot
             ]
 
 instance ToJSON (WithNetworkId NativeScriptInfo)  where
@@ -426,21 +429,16 @@ nativeScriptAddress ::
     forall (m :: Type -> Type).
      ( MonadError TokenomiaError m
      , MonadReader Environment m
-     , MonadIO m
      )
     => NativeScript -> m Address
 nativeScriptAddress =
-    toCardanoSimpleScript >=> simpleScriptAddress
+    simpleScriptAddress . toCardanoSimpleScript
   where
-    toCardanoSimpleScript :: NativeScript -> m (SimpleScript SimpleScriptV2)
+    toCardanoSimpleScript :: NativeScript -> SimpleScript SimpleScriptV2
     toCardanoSimpleScript NativeScript{..} =
-        do
-            slotNo <-
-                evalQueryWithSystemStart queryError
-                    queryNominalDiffTimeToSlot requireTimeAfter
-            pure $ RequireAllOf
+            RequireAllOf
                 [ RequireSignature (fromString . show $ requireSignature)
-                , RequireTimeAfter TimeLocksInSimpleScriptV2 slotNo
+                , RequireTimeAfter TimeLocksInSimpleScriptV2 requireTimeAfterSlot
                 ]
 
     simpleScriptAddress :: SimpleScript SimpleScriptV2 -> m Address
@@ -476,10 +474,14 @@ trancheNativeScriptInfos PrivateSaleTranche{..} =
     nativeScript :: InvestorAddress -> m NativeScript
     nativeScript investorAddress =
         do
-            requireSignature <- investorAddressPubKeyHash investorAddress
+            requireSignature <-
+                investorAddressPubKeyHash investorAddress
             requireTimeAfter <-
                 evalQueryWithSystemStart queryError
                     toNextBeginNominalDiffTime trancheUnlockTime
+            requireTimeAfterSlot <-
+                evalQueryWithSystemStart queryError
+                    queryNominalDiffTimeToSlot requireTimeAfter
 
             pure NativeScript{..}
 
