@@ -16,8 +16,7 @@ import Prelude           hiding ( take )
 import Data.Char                ( isSpace )
 import Data.String              ( fromString )
 
-import Ledger                   ( TxOutRef(TxOutRef) )
-import Ledger.TxId              ( TxId )
+import Ledger                   ( TxOutRef(TxOutRef), TxId )
 
 
 txOutRef :: Parser TxOutRef

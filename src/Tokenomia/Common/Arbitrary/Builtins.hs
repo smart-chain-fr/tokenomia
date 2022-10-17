@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies             #-}
 {-# LANGUAGE FlexibleInstances              #-}
-{-# LANGUAGE TypeApplications               #-}
 {-# OPTIONS_GHC -Wno-orphans                #-}
 
 module Tokenomia.Common.Arbitrary.Builtins
@@ -22,8 +21,6 @@ import Tokenomia.Common.Data.ByteString     ( unsafeDecodeHex, encode )
 import Test.QuickCheck.Instances.ByteString ()
 import Test.Tasty.QuickCheck
     ( Arbitrary
-    , CoArbitrary
-    , Function
     , Gen
     , arbitrary
     , elements
@@ -47,9 +44,6 @@ instance Arbitrary (Hex String) where
 instance Arbitrary BuiltinByteString where
     arbitrary = fromHexString <$> arbitrary
     shrink x  = fromHexString <$> shrink (toHexString x)
-
-instance CoArbitrary BuiltinByteString
-instance Function BuiltinByteString
 
 arbitraryHexSymbol :: Gen Char
 arbitraryHexSymbol = elements $ ['0'..'9'] ++ ['a' .. 'f']

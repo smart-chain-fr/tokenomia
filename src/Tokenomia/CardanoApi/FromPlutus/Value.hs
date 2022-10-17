@@ -24,7 +24,7 @@ import Cardano.Api
     )
 
 import PlutusTx.Builtins                    ( fromBuiltin )
-import Plutus.V1.Ledger.Ada                 ( adaSymbol, adaToken )
+import Plutus.V1.Ledger.Value               ( adaSymbol, adaToken )
 import Plutus.V1.Ledger.Value qualified
     as Plutus                               ( Value )
 import Plutus.V1.Ledger.Value

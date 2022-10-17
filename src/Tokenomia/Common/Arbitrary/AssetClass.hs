@@ -8,18 +8,17 @@ module Tokenomia.Common.Arbitrary.AssetClass
     () where
 
 import Data.String                          ( fromString )
-import Plutus.V1.Ledger.Ada                 ( adaSymbol, adaToken )
 import Plutus.V1.Ledger.Value
     ( AssetClass(..)
     , CurrencySymbol (..)
     , TokenName (..)
+    , adaSymbol
+    , adaToken
     , assetClass
     )
 
 import Test.Tasty.QuickCheck
     ( Arbitrary
-    , CoArbitrary
-    , Function
     , arbitrary
     , frequency
     , resize
@@ -42,14 +41,6 @@ instance Arbitrary TokenName where
 instance Arbitrary AssetClass where
     arbitrary = AssetClass <$> arbitrary
     shrink x  = AssetClass <$> shrink (unAssetClass x)
-
-instance CoArbitrary CurrencySymbol
-instance CoArbitrary TokenName
-instance CoArbitrary AssetClass
-
-instance Function CurrencySymbol
-instance Function TokenName
-instance Function AssetClass
 
 instance Arbitrary (Restricted CurrencySymbol) where
     arbitrary = frequency

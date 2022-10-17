@@ -27,7 +27,7 @@ module Tokenomia.ICO.Round.Settings
 
 import           Prelude hiding (round,print)
 
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import           Plutus.V1.Ledger.Value
 import           Ledger ( Slot(..) )
 import           Plutus.V1.Ledger.Interval
@@ -130,5 +130,3 @@ getRoundAddresses
     ,  fees = IndexedAddress {address = fees}
     ,  tokens = IndexedAddress {address = tokens}}
     = [exchange,fees,collateral,tokens]
-
-

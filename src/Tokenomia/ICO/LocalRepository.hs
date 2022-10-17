@@ -16,7 +16,7 @@ module Tokenomia.ICO.LocalRepository
 
 import           Prelude hiding (round,print)
 
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import           Plutus.V1.Ledger.Value
 import           Plutus.V1.Ledger.Interval
 import           Data.List.NonEmpty
@@ -166,4 +166,3 @@ getPublicSaleSettings  = do
                                                 , tokens = tokens
                                                 , adaSink = "DdzFFzCqrhsuG7R4n5w9vr2Zo6quuzVbqQbfcDm8BZV29p5T8yTfBnz4Jx3mmgsXCoDtjpCVyB61ttV4MVsVivnQHMKEzFozBHVE8Emq"
                                                 , fees } }}) 
-

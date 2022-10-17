@@ -17,7 +17,7 @@ import           Prelude hiding (round,print)
 
 import           Data.Set.Ordered
 
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import           Plutus.V1.Ledger.Interval as I
 
 import           Tokenomia.ICO.Funds.Validation.Investor.Command as C
@@ -103,8 +103,3 @@ transition
 
 sumAdaFunds :: [Command] -> Ada
 sumAdaFunds xs = sum (getAdas <$> xs)
-
-
-
-
-

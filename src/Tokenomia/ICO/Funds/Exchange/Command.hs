@@ -15,7 +15,7 @@ module Tokenomia.ICO.Funds.Exchange.Command
 
 import           Prelude hiding (round,print)
 
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 
 import           Ledger ( Slot(..) )
 

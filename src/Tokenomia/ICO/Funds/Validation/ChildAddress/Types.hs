@@ -25,7 +25,7 @@ import           Prelude hiding (round,print)
 
 import           Data.List (intersperse)
 import Data.Set.Ordered ( OSet, toAscList )
-import Plutus.V1.Ledger.Ada ( Ada(Lovelace) )
+import Ledger.Ada ( Ada(Lovelace) )
 
 
 import Ledger.Ada as Ada ( Ada(Lovelace) )

@@ -14,7 +14,7 @@ import           Prelude hiding ((+),(-), print)
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)))
 
 import Ledger ( TxOutRef (..), Slot (..))
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import           Plutus.V1.Ledger.Value
 import           Test.QuickCheck
 import           System.Random

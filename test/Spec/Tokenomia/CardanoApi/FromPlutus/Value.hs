@@ -4,7 +4,7 @@ module Spec.Tokenomia.CardanoApi.FromPlutus.Value
 
 import Data.Either                          ( isRight )
 
-import Plutus.V1.Ledger.Ada                 ( adaSymbol )
+import Ledger.Ada                           ( adaSymbol )
 import Plutus.V1.Ledger.Value               ( CurrencySymbol(..) )
 
 import Test.Tasty.QuickCheck                ( testProperty, shrink )

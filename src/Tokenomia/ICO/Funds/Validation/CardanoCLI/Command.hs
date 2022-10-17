@@ -11,7 +11,7 @@ module Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
 
 import           Prelude hiding (round,print)
 
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import           Ledger ( Slot(..) )
 
 import           Tokenomia.Wallet.UTxO
