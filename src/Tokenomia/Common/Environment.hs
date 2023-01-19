@@ -95,6 +95,7 @@ getPreprodEnvironmment magicNumber = do
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Testnet {..}
 
