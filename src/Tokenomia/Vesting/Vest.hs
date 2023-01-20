@@ -19,8 +19,9 @@ import qualified Data.Time.Clock.POSIX as POSIX
 import           Control.Monad.Reader hiding (ask)
 import           Control.Monad.Except
 
+import           Ledger.Ada
 import           Ledger.Value 
-import           Plutus.V1.Ledger.Ada
+import           Plutus.V1.Ledger.Value
 
 
 import qualified Tokenomia.Common.Datum as Script

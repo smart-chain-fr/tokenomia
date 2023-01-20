@@ -9,7 +9,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
     ( Command (..)) where
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import           Ledger ( Slot(..) )
 
 import           Tokenomia.Wallet.UTxO

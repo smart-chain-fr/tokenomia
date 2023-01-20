@@ -60,7 +60,6 @@ data Sendings = Sendings
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON)
 
-deriving stock instance Ord TxHash
 deriving newtype instance ToJSONKey TxHash
 deriving newtype instance FromJSONKey TxHash
 

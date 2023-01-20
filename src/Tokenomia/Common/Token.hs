@@ -9,7 +9,7 @@ module Tokenomia.Common.Token
   , getMinimumUTxOAdaRequired) where
 
 import Plutus.V1.Ledger.Value hiding (assetClass)
-import Plutus.V1.Ledger.Ada
+import Ledger.Ada
 import Tokenomia.ICO.Balanceable
 
 data Token 

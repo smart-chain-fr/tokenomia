@@ -35,10 +35,10 @@ import qualified Data.Map                 as Map
 import           Prelude                  (Semigroup (..),Show)
 
 import           GHC.Generics             (Generic)
-import           Ledger                   (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), Validator)
-import           Ledger.Constraints       (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn)
-import           Ledger.Contexts          (ScriptContext (..), TxInfo (..))
-import qualified Ledger.Contexts          as Validation
+import           Ledger                   (Address, POSIXTime, POSIXTimeRange, PubKeyHash (..), PaymentPubKeyHash(..), Validator)
+import           Ledger.Constraints       (TxConstraints, mustBeSignedBy, mustPayToTheScript, mustValidateIn, collectFromTheScript)
+import           Plutus.V1.Ledger.Contexts (ScriptContext (..), TxInfo (..))
+import qualified Plutus.V1.Ledger.Contexts as Validation
 import qualified Ledger.Interval          as Interval
 import qualified Ledger.Tx                as Tx
 import           Ledger.Typed.Scripts     (ValidatorTypes (..))
@@ -60,7 +60,6 @@ import Plutus.Contract
       selectList,
       throwError,
       Promise(awaitPromise) )
-import qualified Plutus.Contract.Typed.Tx as Typed
 import qualified PlutusTx
 import PlutusTx.Prelude
     ( return,
@@ -179,7 +178,7 @@ typedValidator = Scripts.mkTypedValidatorParam @Vesting
     $$(PlutusTx.compile [|| validate ||])
     $$(PlutusTx.compile [|| wrap ||])
     where
-        wrap = Scripts.wrapValidator
+        wrap = Scripts.mkUntypedValidator
 
 contractAddress :: VestingParams -> Address
 contractAddress = Scripts.validatorAddress . typedValidator
@@ -244,10 +243,10 @@ retrieveFundsC vesting payment = mapError (review _VestingError) $ do
         remainingOutputs = case liveness of
                             Alive -> payIntoContract remainingValue
                             Dead  -> mempty
-        tx = Typed.collectFromScript unspentOutputs ()
+        tx = collectFromTheScript unspentOutputs ()
                 <> remainingOutputs
                 <> mustValidateIn (Interval.from nextTime)
-                <> mustBeSignedBy (vestingOwner vesting)
+                <> mustBeSignedBy (PaymentPubKeyHash $ vestingOwner vesting)
                 -- we don't need to add a pubkey output for 'vestingOwner' here
                 -- because this will be done by the wallet when it balances the
                 -- transaction.

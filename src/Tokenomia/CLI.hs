@@ -77,6 +77,7 @@ selectNetwork = do
   environment <- liftIO $ askMenu networks >>= \case
       SelectTestnet     -> getTestnetEnvironmment 1097911063
       SelectMainnet     -> getMainnetEnvironmment 764824073
+      SelectPreprod     -> getPreprodEnvironmment 1
   clearConsole
   result :: Either TokenomiaError () <- runExceptT $ runReaderT recursiveMenu environment
   case result of
@@ -88,17 +89,20 @@ selectNetwork = do
 networks :: NonEmpty SelectEnvironment
 networks = NonEmpty.fromList [
   SelectTestnet,
-  SelectMainnet
+  SelectMainnet,
+  SelectPreprod
   ]
 
 data SelectEnvironment
   = SelectTestnet
   | SelectMainnet
+  | SelectPreprod
 
 instance DisplayMenuItem SelectEnvironment where
   displayMenuItem item = case item of
     SelectTestnet   -> "Testnet (magicNumber 1097911063)"
     SelectMainnet   -> "Mainnet (magicNumber 764824073)"
+    SelectPreprod   -> "Preprod (magicNumber 1)"
 
 
 recursiveMenu
@@ -145,6 +149,7 @@ recursiveMenu = do
                                   printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         InvalidPrivateSale e -> printLn $ "Invalid Private sale input : " <> e
+        QueryFailure e       -> printLn $ "QueryFailure : " <> e
         ChildAddressNotIndexed w address
                                   -> printLn $ "Address not indexed " <> show (w,address) <>", please generate your indexes appropriately"
         MalformedAddress            -> printLn "Sendings - Invalid treasury address"
@@ -283,5 +288,3 @@ instance DisplayMenuItem Action where
     ICOExchangeRun             ->  "[ICO]     - Funds Exchange Run"
     ICOUpdateWhiteListing      ->  "[ICO]     - Update Whitelisting"
     ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch ADAs on child addresses )"
-
-

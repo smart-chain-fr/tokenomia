@@ -14,7 +14,7 @@ import           Prelude hiding (round,print)
 
 
 import           Tokenomia.ICO.Round.Settings
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import           Ledger ( Slot(..) )
 import           Plutus.V1.Ledger.Interval
 

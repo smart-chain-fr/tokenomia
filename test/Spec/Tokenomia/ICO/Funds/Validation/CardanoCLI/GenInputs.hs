@@ -12,7 +12,7 @@ module Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
 import           Prelude hiding ((+), print)
 
 import Ledger ( TxOutRef (..), Slot (..))
-import           Plutus.V1.Ledger.Ada
+import           Ledger.Ada
 import Test.QuickCheck
 import           System.Random
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef

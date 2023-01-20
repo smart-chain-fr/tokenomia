@@ -7,6 +7,7 @@
 module Tokenomia.Common.Environment
     ( getTestnetEnvironmment
     , getMainnetEnvironmment
+    , getPreprodEnvironmment
     , getNetworkEnvironmment
     , readNetworkMagic
     , Environment (..)
@@ -56,6 +57,7 @@ data Environment = Testnet
                     , preShelleyEpochs :: Integer
                     , byronSlotsPerEpoch :: Integer
                     , byronSecondsPerSlot :: Integer
+                    , systemStart' :: SystemStart
                     , systemStart :: ExternalPosix.POSIXTime }
                 |  Mainnet
                     { magicNumber :: Integer
@@ -63,6 +65,7 @@ data Environment = Testnet
                     , preShelleyEpochs :: Integer
                     , byronSlotsPerEpoch :: Integer
                     , byronSecondsPerSlot :: Integer
+                    , systemStart' :: SystemStart
                     , systemStart :: ExternalPosix.POSIXTime }
 
 
@@ -77,8 +80,24 @@ getMainnetEnvironmment magicNumber = do
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Mainnet {..}
+
+getPreprodEnvironmment :: MonadIO m => Integer -> m Environment
+getPreprodEnvironmment magicNumber = do
+    socketPath <- liftIO $ getEnv "CARDANO_NODE_SOCKET_PATH"
+    let localNodeConnectInfo = LocalNodeConnectInfo {
+                                        localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
+                                        localNodeNetworkId       = Shelley.Testnet  (NetworkMagic (fromIntegral magicNumber)),
+                                        localNodeSocketPath      = socketPath}
+        preShelleyEpochs = 208
+        byronSlotsPerEpoch = 21600
+        byronSecondsPerSlot = 20
+    systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
+
+    return $ Testnet {..}
 
 getTestnetEnvironmment :: MonadIO m => Integer -> m Environment
 getTestnetEnvironmment magicNumber = do
@@ -91,6 +110,7 @@ getTestnetEnvironmment magicNumber = do
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Testnet {..}
 
@@ -161,4 +181,3 @@ convertToExternalPosix p = ExternalPosix.secondsToNominalDiffTime (fromIntegral 
 
 formatISO8601 :: ExternalPosix.POSIXTime -> String
 formatISO8601 = ExternalPosix.formatISO8601 . ExternalPosix.posixSecondsToUTCTime
-

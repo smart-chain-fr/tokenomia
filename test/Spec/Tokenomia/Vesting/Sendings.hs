@@ -77,8 +77,6 @@ newtype FakeBlockfrost (m :: Type -> Type) (a :: Type) = FakeBlockfrost {runFake
 deriving via (IdentityT m) instance (MonadState a m) => MonadState a (FakeBlockfrost m)
 deriving via (IdentityT m) instance (MonadError e m) => MonadError e (FakeBlockfrost m)
 
-deriving newtype instance Ord Address
-
 instance (Monad m, MonadState TestState m, MonadError TokenomiaError m) => MonadRunBlockfrost (FakeBlockfrost m) where
   getAddressTransactions addr = do
     atsMap <- gets fst
@@ -127,7 +125,7 @@ invalidInputTests =
     valueTest = testBuilder $ testDataBuilder sendingsAddress emptyValueSendingsTxs bfAddrTxMap bfUtxos
 
     sendingsAddress = testAddress
-    bfAddr = [AddressTransaction (TxHash "abcd") 0 0, AddressTransaction (TxHash "wxyz") 0 0]
+    bfAddr = [AddressTransaction (TxHash "abcd") 0 0 0, AddressTransaction (TxHash "wxyz") 0 0 0]
     sendingsTxs =
       NonEmpty.fromList
         [ (TxHash "abcd", lovelaceValueOf 10000000)
@@ -165,7 +163,7 @@ validTxHashTests =
   where
     -- All request TxHashes exist
     passTest = testBuilder $ testDataBuilder sendingsAddress sendingsTxs (bfAddrTxMap goodBfAddr) bfUtxos
-    goodBfAddr = [AddressTransaction (TxHash "abcd") 0 0, AddressTransaction (TxHash "wxyz") 0 0]
+    goodBfAddr = [AddressTransaction (TxHash "abcd") 0 0 0, AddressTransaction (TxHash "wxyz") 0 0 0]
 
     -- Some TxHash doesn't exist
     failTest = testBuilder $ testDataBuilder sendingsAddress sendingsTxs (bfAddrTxMap badBfAddr) bfUtxos
@@ -232,8 +230,8 @@ valueCheckTests =
       [
         ( Address sendingsAddress
         ,
-          [ AddressTransaction (TxHash "abcd") 0 0
-          , AddressTransaction (TxHash "wxyz") 0 0
+          [ AddressTransaction (TxHash "abcd") 0 0 0
+          , AddressTransaction (TxHash "wxyz") 0 0 0
           ]
         )
       ]

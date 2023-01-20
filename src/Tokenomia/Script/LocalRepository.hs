@@ -37,9 +37,10 @@ import           Cardano.Api hiding (Testnet,Mainnet,Address,Hash)
 import qualified Cardano.Api.Shelley  as Shelley
 
 
-import           Ledger hiding (Address)
+import           Ledger hiding (Address, scriptCurrencySymbol, validatorHash)
 
 import qualified Plutus.V1.Ledger.Scripts as Script
+import           Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol, validatorHash)
 
 import           Tokenomia.Common.Environment
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
@@ -107,4 +108,3 @@ toPlutusScriptV1
   . SBS.toShort
   . LB.toStrict
   . serialise
-

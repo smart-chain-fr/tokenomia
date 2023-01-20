@@ -20,7 +20,7 @@ module Tokenomia.ICO.Funds.Validation.ChildAddress.State
 import           Prelude hiding (round,print)
 
 import Data.Set.Ordered as OS ( fromList, OSet, filter )
-import Plutus.V1.Ledger.Ada ( Ada(..) )
+import Ledger.Ada ( Ada(..) )
 
 
 import Ledger.Ada as Ada ( lovelaceOf )
@@ -168,4 +168,3 @@ fetchAddressVolumes (Address addr) = do
 filterOnlyLovelaces :: Amount -> Ada
 filterOnlyLovelaces (AdaAmount x)   = Ada.lovelaceOf (fromIntegral x)
 filterOnlyLovelaces (AssetAmount _) = Ada.lovelaceOf 0
-

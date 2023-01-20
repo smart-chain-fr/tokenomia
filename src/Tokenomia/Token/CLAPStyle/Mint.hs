@@ -23,7 +23,8 @@ import qualified Data.ByteString.UTF8 as BSU
 
 import           Control.Monad.Except
 
-import           Ledger hiding (mint,Address,Mint)
+import           Ledger hiding (mint, Address, Mint, Params, scriptCurrencySymbol)
+import           Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import qualified Ledger.Value as L
 import           Ledger.Ada
 

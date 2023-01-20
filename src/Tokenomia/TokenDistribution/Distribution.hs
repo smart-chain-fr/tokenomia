@@ -1,6 +1,7 @@
-{-# LANGUAGE OverloadedStrings            #-}
-{-# LANGUAGE ImportQualifiedPost          #-}
-{-# LANGUAGE FlexibleInstances            #-}
+{-# LANGUAGE DerivingStrategies             #-}
+{-# LANGUAGE FlexibleInstances              #-}
+{-# LANGUAGE ImportQualifiedPost            #-}
+{-# LANGUAGE OverloadedStrings              #-}
 
 module Tokenomia.TokenDistribution.Distribution
     ( Distribution(..)
@@ -43,13 +44,15 @@ data  Recipient
     = Recipient
     { address :: Address
     , amount :: Integer
-    } deriving (Show)
+    }
+    deriving stock ( Show )
 
 data  Distribution
     = Distribution
     { assetClass :: AssetClass
     , recipients :: [Recipient]
-    } deriving (Show)
+    }
+    deriving stock ( Show )
 
 -- Unfortunately, address serialisation requires a network Id. As such, one cannot correctly ToJSON a Distribution.
 -- Instead, we use a proxy type that allows us to provide this information

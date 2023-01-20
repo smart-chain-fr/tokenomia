@@ -26,8 +26,8 @@ import Prelude           hiding ( length )
 
 import Plutus.Contract.CardanoAPI
     ( ToCardanoError
-    , fromCardanoAddress
-    , toCardanoAddress
+    , fromCardanoAddressInEra
+    , toCardanoAddressInEra
     )
 
 import Cardano.Chain.Common     ( decodeAddressBase58 )
@@ -41,7 +41,7 @@ import Cardano.Api
     , NetworkId
     , AddressInEra(AddressInEra)
     , AddressTypeInEra(ByronAddressInAnyEra)
-    , AlonzoEra
+    , BabbageEra
     , deserialiseAddress
     , serialiseAddress
     )
@@ -53,27 +53,25 @@ deserialiseAddressInEra
     :: forall (era :: Type). IsCardanoEra era
     => AsType era -> Text -> Either Text Address
 deserialiseAddressInEra era address = do
-    cardanoAddress <- maybeToRight "deserialisation failed" $
-        deserialiseAddress (AsAddressInEra era) address
-    mapLeft (const "not a cardano address") $
-        fromCardanoAddress cardanoAddress
+    maybeToRight "deserialisation failed" $ fromCardanoAddressInEra
+        <$> deserialiseAddress (AsAddressInEra era) address
 
 deserialiseCardanoAddress :: Text -> Either Text Address
 deserialiseCardanoAddress address
     | "addr" `isPrefixOf` address = deserialiseAddressInEra AsAlonzoEra address
     | otherwise                   = deserialiseAddressInEra AsByronEra  address
 
-serialiseAlonzoAddress :: NetworkId -> Address -> Either Text (AddressInEra AlonzoEra)
+serialiseAlonzoAddress :: NetworkId -> Address -> Either Text (AddressInEra BabbageEra)
 serialiseAlonzoAddress networdId address =
     mapLeft showError $
-        toCardanoAddress networdId address
+        toCardanoAddressInEra networdId address
   where
     showError :: ToCardanoError -> Text
     showError err =
            (convert . show . pretty $ err)
         <> (convert . show $ address)
 
-serialiseByronAddress :: Address -> Either Text (AddressInEra AlonzoEra)
+serialiseByronAddress :: Address -> Either Text (AddressInEra BabbageEra)
 serialiseByronAddress (Address (PubKeyCredential (PubKeyHash bytes)) _) = do
     base58 <-
         mapLeft (convert . show) $
