@@ -35,8 +35,6 @@ import qualified Tokenomia.Token.Transfer as Token
 
 import qualified Tokenomia.Ada.Transfer as Ada
 
-import qualified Tokenomia.Vesting.Vest as Vesting
-import qualified Tokenomia.Vesting.Retrieve as Vesting
 import qualified Tokenomia.Vesting.Sendings as Vesting
 import qualified Tokenomia.Vesting.GenerateNative as Vesting
 
@@ -120,10 +118,6 @@ recursiveMenu = do
         NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
         TryingToBurnTokenWithoutScriptRegistered
                                   -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
-        NoVestingInProgress       -> printLn "No vesting in progress"
-        NoFundsToBeRetrieved      -> printLn "No funds to be retrieved"
-        AllFundsLocked            -> printLn "All the funds alerady retrieved"
-        FundAlreadyRetrieved      -> printLn "All the funds are locked and can't be retrieve so far.."
         BlockFrostError e         -> printLn $ "Blockfrost issue " <> show e
         NoActiveAddressesOnWallet -> printLn "No Active Addresses, add funds on this wallet"
         InconsistenciesBlockFrostVSLocalNode errorMsg ->
@@ -167,8 +161,6 @@ runAction = \case
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
       AdaTransfer      -> Ada.transfer
-      VestingVestFunds -> Vesting.vestFunds
-      VestingRetrieveFunds -> Vesting.retrieveFunds
       VestingVerifySendings -> Vesting.verifySendings
       VestingGenerateNative -> Vesting.generatePrivateSaleFiles
       NodeStatus           -> Node.displayStatus
@@ -190,8 +182,6 @@ actions = NonEmpty.fromList [
     TokenBurn,
     TokenTransfer,
     AdaTransfer,
-    VestingVestFunds,
-    VestingRetrieveFunds,
     VestingVerifySendings,
     VestingGenerateNative,
     NodeStatus,
@@ -212,8 +202,6 @@ data Action
   | TokenBurn
   | TokenTransfer
   | AdaTransfer
-  | VestingVestFunds
-  | VestingRetrieveFunds
   | VestingVerifySendings
   | VestingGenerateNative
   | NodeStatus
@@ -236,8 +224,6 @@ instance DisplayMenuItem Action where
     TokenBurn             ->  "[Token]   - Burn Tokens with CLAP type policy"
     TokenTransfer         ->  "[Token]   - Transfer Tokens"
     AdaTransfer           ->  "[Ada]     - Transfer ADAs"
-    VestingVestFunds      ->  "[Vesting] - Vest Funds"
-    VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     VestingVerifySendings -> "[Vesting] - Verify Sendings"
     VestingGenerateNative -> "[Vesting] - Generate Database and airdrop outputs"
     NodeStatus            ->  "[Node]    - Status"

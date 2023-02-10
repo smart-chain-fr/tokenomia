@@ -17,9 +17,7 @@ Tokenomia is built for the Cardashift [ICO](https://ico.cardashift.com/), it aim
 	9-  [Token]   - Burn Tokens with CLAP type policy
 	10- [Token]   - Transfer Tokens
 	11- [Ada]     - Transfer ADAs
-	12- [Vesting] - Vest Funds
-	13- [Vesting] - Retrieve Funds
-	14- [Node]    - Status
+	12- [Node]    - Status
 
 
 

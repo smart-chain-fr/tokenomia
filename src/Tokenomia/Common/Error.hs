@@ -25,10 +25,6 @@ data TokenomiaError
     | NoADAsOnChildAddress
     | NoUTxOWithOnlyOneToken
     | TryingToBurnTokenWithoutScriptRegistered
-    | NoVestingInProgress
-    | NoFundsToBeRetrieved
-    | AllFundsLocked
-    | FundAlreadyRetrieved
     | BlockFrostError B.BlockfrostError
     | NoActiveAddressesOnWallet
     | ChildAddressNotIndexed WalletName Address

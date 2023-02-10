@@ -119,13 +119,8 @@ library
       Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
       Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
       Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-      Tokenomia.Tokenomic.CLAP.Simulation
-      Tokenomia.Vesting.Contract
       Tokenomia.Vesting.GenerateNative
-      Tokenomia.Vesting.Repository
-      Tokenomia.Vesting.Retrieve
       Tokenomia.Vesting.Sendings
-      Tokenomia.Vesting.Vest
       Tokenomia.Wallet.CLI
       Tokenomia.Wallet.ChildAddress.ChainIndex
       Tokenomia.Wallet.ChildAddress.ChildAddressRef
@@ -228,7 +223,6 @@ test-suite tokenomia-tests
     Spec.Tokenomia.Common.Time
     Spec.Tokenomia.Common.Value
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
-    Spec.Tokenomia.Vesting.Contract
     Spec.Tokenomia.Vesting.GenerateNative
     Spec.Tokenomia.Vesting.Sendings
     Spec.Tokenomia.Wallet.UTxO
