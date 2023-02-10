@@ -20,11 +20,6 @@ Tokenomia is built for the Cardashift [ICO](https://ico.cardashift.com/), it aim
 	12- [Vesting] - Vest Funds
 	13- [Vesting] - Retrieve Funds
 	14- [Node]    - Status
-	15- [ICO]     - Funds Validation Dry Run
-	16- [ICO]     - Funds Validation Run
-	17- [ICO]     - Funds Exchange Dry Run
-	18- [ICO]     - Funds Exchange Run
-	19- [ICO]     - Funds Simulation (Dispatch ADAs on child addresses )
 
 
 

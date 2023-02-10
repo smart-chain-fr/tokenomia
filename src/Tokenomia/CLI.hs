@@ -41,12 +41,6 @@ import qualified Tokenomia.Vesting.Sendings as Vesting
 import qualified Tokenomia.Vesting.GenerateNative as Vesting
 
 import qualified Tokenomia.Node.Status as Node
-import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
-import qualified Tokenomia.ICO.Funds.Validation.Simulation.Transfer as ICO.Simulation
-import qualified Tokenomia.ICO.Funds.WhiteListing.Repository as ICO.WhiteListing
-import qualified Tokenomia.ICO.Funds.Exchange.Run as ICO.Exchange
-import qualified Tokenomia.ICO.LocalRepository as ICO
-import qualified Tokenomia.ICO.Status as ICO
 import qualified Streamly.Prelude as S
 
 load SearchPath ["cardano-cli"]
@@ -134,19 +128,8 @@ recursiveMenu = do
         NoActiveAddressesOnWallet -> printLn "No Active Addresses, add funds on this wallet"
         InconsistenciesBlockFrostVSLocalNode errorMsg ->
                                      printLn $ "Inconsistencies Blockfrost vs Local Node  :" <> errorMsg
-        NoICOTransactionsToBePerformOnThisWallet
-                                  -> printLn "No ICO Transactions to be performed on wallet used "
         NoDerivedChildAddress  -> printLn "No derived child adresses on this wallet"
         NoUTxOsFound           -> printLn "No UTxOs found"
-        ICOExchangeUtxoWithoutHash
-                               -> printLn "ICO - Echange UTxOs without Hashes"
-        ICOTokensDispatchedOnMultipleUTxOs
-                               -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
-        ICONoValidTxs message  -> liftIO $ putStrLn $ "ICO - No Valid Txs Found : " <>  message
-        ICOPaybackAddressNotAvailable walletName index ->
-                                  printLn $ "ICO - Payback Address not available for  : " <>  walletName <> " index #" <> show index
-        ICOWhitelistingNotValid index indexRetrieved ->
-                                  printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         InvalidPrivateSale e -> printLn $ "Invalid Private sale input : " <> e
         QueryFailure e       -> printLn $ "QueryFailure : " <> e
@@ -191,13 +174,6 @@ runAction = \case
       NodeStatus           -> Node.displayStatus
       NodeTranslateSlotToTime    -> Node.translateSlotToTime
       NodeTranslateTimeToSlot    -> Node.translateTimeToSlot
-      ICOStatus                  -> ICO.askRoundSettings >>= ICO.displayStatus
-      ICOFundsValidationDryRun   -> ICO.askRoundSettings >>= ICO.Validation.dryRun
-      ICOFundsValidationRun      -> ICO.askRoundSettings >>= ICO.Validation.run
-      ICOExchangeDryRun          -> ICO.askRoundSettings >>= ICO.Exchange.dryRun
-      ICOExchangeRun             -> ICO.askRoundSettings >>= ICO.Exchange.run
-      ICOUpdateWhiteListing      -> ICO.askRoundSettings >>= ICO.WhiteListing.update
-      ICOFundsDispatchSimulation -> ICO.Simulation.dispatchAdasOnChildAdresses
 
 
 actions :: NonEmpty Action
@@ -220,14 +196,7 @@ actions = NonEmpty.fromList [
     VestingGenerateNative,
     NodeStatus,
     NodeTranslateSlotToTime,
-    NodeTranslateTimeToSlot,
-    ICOStatus,
-    ICOFundsValidationDryRun,
-    ICOFundsValidationRun,
-    ICOExchangeDryRun,
-    ICOExchangeRun,
-    ICOUpdateWhiteListing,
-    ICOFundsDispatchSimulation
+    NodeTranslateTimeToSlot
     ]
 
 data Action
@@ -250,13 +219,6 @@ data Action
   | NodeStatus
   | NodeTranslateSlotToTime
   | NodeTranslateTimeToSlot
-  | ICOStatus
-  | ICOFundsValidationDryRun
-  | ICOFundsValidationRun
-  | ICOExchangeDryRun
-  | ICOExchangeRun
-  | ICOUpdateWhiteListing
-  | ICOFundsDispatchSimulation
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
@@ -281,10 +243,3 @@ instance DisplayMenuItem Action where
     NodeStatus            ->  "[Node]    - Status"
     NodeTranslateSlotToTime -> "[Node]    - Translate Slot To Time"
     NodeTranslateTimeToSlot -> "[Node]    - Translate Time To Slot"
-    ICOStatus                  ->  "[ICO]     - Status"
-    ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
-    ICOFundsValidationRun      ->  "[ICO]     - Funds Validation Run"
-    ICOExchangeDryRun          ->  "[ICO]     - Funds Exchange Dry Run"
-    ICOExchangeRun             ->  "[ICO]     - Funds Exchange Run"
-    ICOUpdateWhiteListing      ->  "[ICO]     - Update Whitelisting"
-    ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch ADAs on child addresses )"

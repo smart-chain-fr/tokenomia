@@ -96,34 +96,6 @@ library
       Tokenomia.Common.Transacting
       Tokenomia.Common.TxOutRef
       Tokenomia.Common.Value
-      Tokenomia.ICO.Balanceable
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
-      Tokenomia.ICO.Funds.Exchange.Command
-      Tokenomia.ICO.Funds.Exchange.Plan
-      Tokenomia.ICO.Funds.Exchange.Plan.Settings
-      Tokenomia.ICO.Funds.Exchange.ReceivedFunds
-      Tokenomia.ICO.Funds.Exchange.Run
-      Tokenomia.ICO.Funds.Exchange.Tokens
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
-      Tokenomia.ICO.Funds.Validation.ChildAddress.State
-      Tokenomia.ICO.Funds.Validation.ChildAddress.Types
-      Tokenomia.ICO.Funds.Validation.Investor.Command
-      Tokenomia.ICO.Funds.Validation.Investor.Plan
-      Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
-      Tokenomia.ICO.Funds.Validation.Run
-      Tokenomia.ICO.Funds.Validation.Simulation.Transfer
-      Tokenomia.ICO.Funds.Validation.Status
-      Tokenomia.ICO.Funds.WhiteListing.Repository
-      Tokenomia.ICO.Funds.WhiteListing.Types
-      Tokenomia.ICO.LocalRepository
-      Tokenomia.ICO.Round.Settings
-      Tokenomia.ICO.Status
       Tokenomia.Node.Status
       Tokenomia.Script.ChainIndex
       Tokenomia.Script.LocalRepository
@@ -255,12 +227,6 @@ test-suite tokenomia-tests
     Spec.Tokenomia.Common.Parser.Address
     Spec.Tokenomia.Common.Time
     Spec.Tokenomia.Common.Value
-    Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
-    Spec.Tokenomia.ICO.Funds.Exchange.Plan
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
-    Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
     Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
     Spec.Tokenomia.Vesting.Contract
     Spec.Tokenomia.Vesting.GenerateNative
