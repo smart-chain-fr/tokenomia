@@ -79,7 +79,7 @@ library
       Tokenomia.Common.Folder
       Tokenomia.Common.Hash
       Tokenomia.Common.Node
-      Tokenomia.Common.PageNumber 
+      Tokenomia.Common.PageNumber
       Tokenomia.Common.Parser
       Tokenomia.Common.Parser.Address
       Tokenomia.Common.Parser.AssetClass
@@ -92,7 +92,7 @@ library
       Tokenomia.Common.Shell.Console
       Tokenomia.Common.Shell.InteractiveMenu
       Tokenomia.Common.Time
-      Tokenomia.Common.Token 
+      Tokenomia.Common.Token
       Tokenomia.Common.Transacting
       Tokenomia.Common.TxOutRef
       Tokenomia.Common.Value
@@ -133,7 +133,7 @@ library
       Tokenomia.Wallet.UTxO
       Tokenomia.Wallet.WalletUTxO
     build-depends:
-      base >= 4.9 && < 5,
+      base,
       Cabal,
       Unique,
       aeson,
@@ -151,6 +151,7 @@ library
       cardano-ledger-byron,
       cardano-ledger-core,
       cardano-ledger-shelley,
+      cardano-node-emulator,
       cardano-slotting,
       composition,
       composition-extra,
@@ -206,7 +207,7 @@ library
       transformers-except,
       unordered-containers,
       utf8-string
-    hs-source-dirs: src 
+    hs-source-dirs: src
 
 test-suite tokenomia-tests
   import: lang
@@ -235,7 +236,7 @@ test-suite tokenomia-tests
     tokenomia -any,
     mtl
   build-depends:
-    base >=4.9 && <5,
+    base,
     QuickCheck,
     blockfrost-api,
     blockfrost-client,
@@ -262,14 +263,14 @@ test-suite tokenomia-tests
     time
 
 
-executable tokenomia-cli 
+executable tokenomia-cli
   import: lang
   main-is: Main.hs
   hs-source-dirs: app
   ghc-options:
     -threaded
   build-depends:
-    base >= 4.9 && < 5,
+    base,
     tokenomia
 
 executable token-distribution
@@ -279,5 +280,5 @@ executable token-distribution
   ghc-options:
     -threaded
   build-depends:
-    base >= 4.9 && < 5,
+    base,
     tokenomia

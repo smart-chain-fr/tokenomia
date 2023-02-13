@@ -38,11 +38,10 @@ import Ouroboros.Consensus.HardFork.History.Qry
     , slotToWallclock
     , wallclockToSlot
     )
-import Ouroboros.Network.Protocol.LocalStateQuery.Type
-    ( AcquireFailure )
 
 import Cardano.Api.Shelley
-    ( AddressAny
+    ( AcquiringFailure
+    , AddressAny
     , AnyCardanoEra
     , CardanoMode
     , ConsensusModeIsMultiEra(CardanoModeIsMultiEra)
@@ -67,7 +66,7 @@ import Tokenomia.CardanoApi.Time            ( nominalDiffTimeToRelativeTime, rel
 
 
 data    QueryFailure
-    =   QueryNetworkFailure AcquireFailure
+    =   QueryNetworkFailure AcquiringFailure
     |   QueryHistoryFailure PastHorizonException
     |   QueryEraMismatch EraMismatch
     deriving stock ( Show )
