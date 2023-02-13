@@ -33,7 +33,7 @@ common lang
       -Wredundant-constraints -Widentities
       -Wcompat -Wmissing-export-lists
       -Wmissing-deriving-strategies
-      -Wno-orphans
+      -Wno-orphans -Wunused-packages
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
@@ -134,19 +134,15 @@ library
       Tokenomia.Wallet.WalletUTxO
     build-depends:
       base,
-      Cabal,
       Unique,
       aeson,
-      async,
       attoparsec,
       base16-bytestring,
       blockfrost-api,
       blockfrost-client,
       blockfrost-client-core,
-      blockfrost-pretty,
       bytestring,
       cardano-api,
-      cardano-cli,
       cardano-ledger-alonzo,
       cardano-ledger-byron,
       cardano-ledger-core,
@@ -157,30 +153,20 @@ library
       composition-extra,
       containers,
       data-default,
-      deepseq,
       directory,
       either,
       errors,
-      exceptions,
-      extra,
       filepath,
-      freer-extras,
-      freer-simple,
-      hashable,
       hex,
       hex-text,
       iso8601-time,
       lens,
-      lifted-base,
       memory,
       mtl,
       nonempty-containers,
       optparse-applicative,
-      ordered-containers,
       ouroboros-consensus,
       ouroboros-network,
-      playground-common,
-      plutus-chain-index,
       plutus-chain-index-core,
       plutus-contract,
       plutus-core,
@@ -190,8 +176,6 @@ library
       plutus-ledger-constraints,
       plutus-script-utils,
       plutus-tx,
-      plutus-tx-plugin,
-      pretty-simple,
       prettyprinter,
       quickcheck-instances,
       random,
@@ -205,7 +189,6 @@ library
       time,
       transformers,
       transformers-except,
-      unordered-containers,
       utf8-string
     hs-source-dirs: src
 
@@ -229,7 +212,6 @@ test-suite tokenomia-tests
     Spec.Tokenomia.Wallet.UTxO
   build-depends:
     plutus-tx -any,
-    plutus-tx-plugin,
     plutus-contract -any,
     plutus-ledger -any,
     plutus-ledger-api,
@@ -244,23 +226,17 @@ test-suite tokenomia-tests
     cardano-api,
     composition-extra,
     containers,
-    data-default,
     either,
     freer-simple -any,
     hex,
     interpolatedstring-perl6,
     nonempty-containers,
-    ordered-containers,
     ouroboros-consensus,
-    quickcheck-instances,
-    random,
     safe-money,
     tasty -any,
-    tasty-hedgehog >=0.2.0.0,
     tasty-hunit -any,
     tasty-quickcheck,
-    text,
-    time
+    text
 
 
 executable tokenomia-cli

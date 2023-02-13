@@ -276,15 +276,5 @@ source-repository-package
 
 allow-newer:
   *:aeson,
-  monoidal-containers:aeson,
-  size-based:template-haskell,
-  *:base,
-  protolude:ghc-prim,
-  *:integer-gmp,
-  *:ghc,
   *:servant,
-  *:bytestring,
-  *:servant-client,
   *:time,
-  *:http-api-data,
-  *:template-haskell
