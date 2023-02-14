@@ -179,6 +179,7 @@ library
       plutus-ledger-constraints,
       plutus-script-utils,
       plutus-tx,
+      plutus-tx-plugin,
       prettyprinter,
       quickcheck-instances,
       random,

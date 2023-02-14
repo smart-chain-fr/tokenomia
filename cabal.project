@@ -11,6 +11,10 @@ repository cardano-haskell-packages
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
 -- Bump this if you need newer packages.
+-- Note: We repeat the hackage index-state because haskell.nix has trouble parsing the index-state with multiple repositories
+-- Cabal will ignore the first index-state anyway.
+-- cf. https://github.com/input-output-hk/cardano-ledger/pull/3265#issue-1548330220
+index-state: 2022-10-29T00:00:00Z
 index-state:
   , hackage.haskell.org      2022-10-29T00:00:00Z
   , cardano-haskell-packages 2022-12-14T00:40:15Z
