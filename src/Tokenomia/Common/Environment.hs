@@ -91,7 +91,7 @@ getPreprodEnvironmment magicNumber = do
                                         localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
                                         localNodeNetworkId       = Shelley.Testnet  (NetworkMagic (fromIntegral magicNumber)),
                                         localNodeSocketPath      = socketPath}
-        preShelleyEpochs = 208
+        preShelleyEpochs = 4
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo

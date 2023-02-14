@@ -45,6 +45,6 @@ inputoutput/cardano-node
 
 Test the CLI has connected to your node
 ```
-cardano-cli query tip --testnet-magic 1097911063
+cardano-cli query tip --testnet-magic 1
 ```
-*Note, change `--testnet-magic 1097911063` to `--mainnet` or whatever network you're running on*
+*Note, change `--testnet-magic 1` to `--mainnet` or whatever network you're running on*
