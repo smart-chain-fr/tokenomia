@@ -41,11 +41,12 @@ import Shh.Internal
     , captureTrim
     , captureWords
     , (|>)
+    , (>>>)
     )
 
 
 load SearchPath
-    [ "cardano-address-script"
+    [ "cardano-address"
     ]
 
 missingExecutables :: IO [FilePath]
@@ -91,7 +92,7 @@ generateMnemonics ::
     => Integer -> m Mnemonics
 generateMnemonics size =
     Mnemonics <$> liftIO
-        ( cardano_address_script "recovery-phrase" "generate" "--size" size
+        ( cardano_address "recovery-phrase" "generate" "--size" size
             |> captureWords
         )
 
@@ -101,7 +102,7 @@ getRootPrivateKey ::
     => Mnemonics -> m RootPrivateKey
 getRootPrivateKey (Mnemonics mnemonics) =
     RootPrivateKey <$> liftIO
-        ( cardano_address_script "key" "from-recovery-phrase" "Shelley" "--" (ByteString.unwords mnemonics)
+        ( (ByteString.unwords mnemonics) >>> cardano_address "key" "from-recovery-phrase" "Shelley"
             |> captureTrim
         )
 
@@ -111,7 +112,7 @@ getStakePrivateKey ::
     => RootPrivateKey -> m StakePrivateKey
 getStakePrivateKey (RootPrivateKey rootPrivateKey) =
     StakePrivateKey <$> liftIO
-        ( cardano_address_script "key" "child" "1852H/1815H/0H/2/0" "--" rootPrivateKey
+        ( rootPrivateKey >>> cardano_address "key" "child" "1852H/1815H/0H/2/0"
             |> captureTrim
         )
 
@@ -121,7 +122,7 @@ getStakePublicKey ::
     => StakePrivateKey-> m StakePublicKey
 getStakePublicKey (StakePrivateKey stakePrivateKey) =
     StakePublicKey <$> liftIO
-        ( cardano_address_script "key" "public" "--with-chain-code" "--" stakePrivateKey
+        ( stakePrivateKey >>> cardano_address "key" "public" "--with-chain-code"
             |> captureTrim
         )
 
@@ -131,7 +132,7 @@ getPaymentPrivateKey ::
     => RootPrivateKey -> Integer -> m PaymentPrivateKey
 getPaymentPrivateKey (RootPrivateKey rootPrivateKey) index =
     PaymentPrivateKey <$> liftIO
-        ( cardano_address_script "key" "child" ("1852H/1815H/0H/0/" <> show index) "--" rootPrivateKey
+        ( rootPrivateKey >>> cardano_address "key" "child" ("1852H/1815H/0H/0/" <> show index)
             |> captureTrim
         )
 
@@ -141,7 +142,7 @@ getPaymentPublicKey ::
     => PaymentPrivateKey -> m PaymentPublicKey
 getPaymentPublicKey (PaymentPrivateKey paymentPrivateKey) =
     PaymentPublicKey <$> liftIO
-        ( cardano_address_script "key" "public" "--with-chain-code" "--" paymentPrivateKey
+        ( paymentPrivateKey >>> cardano_address "key" "public" "--with-chain-code"
             |> captureTrim
         )
 
@@ -151,7 +152,7 @@ getPaymentAddress ::
     => String -> PaymentPublicKey -> m PaymentAddress
 getPaymentAddress network (PaymentPublicKey paymentPublicKey) =
     PaymentAddress <$> liftIO
-        ( cardano_address_script "address" "payment" "--network-tag" network "--" paymentPublicKey
+        ( paymentPublicKey >>> cardano_address "address" "payment" "--network-tag" network
             |> captureTrim
         )
 
@@ -161,7 +162,7 @@ getPaymentAddressDelegated ::
     => StakePublicKey -> PaymentAddress -> m PaymentAddress
 getPaymentAddressDelegated (StakePublicKey stakePublicKey) (PaymentAddress paymentAddress) =
     PaymentAddress <$> liftIO
-        ( cardano_address_script "address" "delegation" stakePublicKey "--" paymentAddress
+        ( paymentAddress >>> cardano_address "address" "delegation" stakePublicKey
             |> captureTrim
         )
 

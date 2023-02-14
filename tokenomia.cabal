@@ -34,6 +34,9 @@ common lang
       -Wcompat -Wmissing-export-lists
       -Wmissing-deriving-strategies
       -Wno-orphans -Wunused-packages
+      -- Necessary to run tests with cardano-address binary
+      -- "Some of the features in Shh require that you use the threaded runtime. Please compile with the -threaded flag to avoid deadlocks."
+      -threaded
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
