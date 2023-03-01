@@ -1,6 +1,6 @@
 {
   description = "Tokenomia";
-  nixConfig.bash-prompt = "\\[\\e[0m\\][\\[\\e[0;2m\\]nix-develop \\[\\e[0;1m\\]tokenomia \\[\\e[0;93m\\]\\w\\[\\e[0m\\]]\\[\\e[0m\\]$ \\[\\e[0m\\]";
+  nixConfig.bash-prompt = "\\[\\e[0m\\][\\[\\e[0;2m\\]nix-develop \\[\\e[0;1m\\]tokenomia \\[\\e[0;93m\\]\\w\\[\\e[0m\\]\\[\\e[0;94m\\]$(__git_ps1)\\[\\e[0m\\]]\\[\\e[0m\\]$ \\[\\e[0m\\]";
 
   # inputs is an attribute set of all the dependencies of the flake
   inputs = {
@@ -27,16 +27,16 @@
   # i.e. uses the inputs to build some outputs (packages, apps, shells,..)
 
   outputs = { self, nixpkgs, flake-parts, libsodium, secp256k1, cardano-addresses, cardano-node }@inputs:
-    
+
     # mkFlake is the main function of flake-parts to build a flake with standardized arguments
     flake-parts.lib.mkFlake { inherit self; inherit inputs; } {
-      
+
       # list of systems to be built upon
       systems = nixpkgs.lib.systems.flakeExposed;
-      
+
       # make a build for each system
       perSystem = { system, pkgs, lib, config, self', inputs', ... }: {
-        
+
         packages = {
           # Cardano relies on custom version of libsodium and secp256k1 crytpographic libraries.
           # So we cannot get them from nixpkgs, we have to install them manually.
@@ -80,6 +80,10 @@
               self'.packages.vscodium
               # necessary for vscodium integrated terminal
               pkgs.bashInteractive
+              # haskdogs and hasktags download and tag dependencies source files
+              # so we can enjoy "jump to definition" in deps
+              pkgs.haskellPackages.hasktags
+              pkgs.haskellPackages.haskdogs
             ];
             # other useful tools
             otherTools = [
@@ -90,6 +94,13 @@
             pkgs.mkShell {
               buildInputs = libs ++ cardanoTools ++ devTools ++ otherTools;
               LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath libs;
+              shellHook = ''
+                source <(curl -s https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh);
+                export LANG=C.utf8;
+                cabal update;
+                ! test -f tags && haskdogs;
+                codium .
+              '';
             };
       };
     };

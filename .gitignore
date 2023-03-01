@@ -27,7 +27,8 @@ cabal.project.local~
 result*
 .envrc
 .vim
-.vscode/
 testdata.json
 .node/
 tokenomia-setup.md
+ghcid.txt
+
