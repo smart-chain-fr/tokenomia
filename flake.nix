@@ -71,6 +71,7 @@
             cardanoTools = [
               cardano-addresses.defaultPackage.${system}
               cardano-node.packages.${system}.cardano-cli
+              cardano-node.packages.${system}.cardano-node
             ];
             # tools for Haskell development
             devTools = [
@@ -97,6 +98,8 @@
               shellHook = ''
                 source <(curl -s https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh);
                 export LANG=C.utf8;
+                export TOKENOMIA=$(pwd);
+                export CARDANO_NODE_SOCKET_PATH=$TOKENOMIA/cardano-node/node.sock
                 cabal update;
                 ! test -f tags && haskdogs;
                 codium .
