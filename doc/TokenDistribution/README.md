@@ -14,7 +14,7 @@ Usage: token-distribution [(-m|--mainnet) | (-t|--testnet MAGIC)]
 
 Available options:
   -m,--mainnet             Use the mainnet network
-  -t,--testnet MAGIC       Use this testnet magic id (default: 1097911063)
+  -t,--testnet MAGIC       Use this testnet magic id (default (preprod network): 1)
   -i,--distribution-file FILENAME
                            Recipient addresses and amounts to distribute
   -n,--recipient-per-tx SIZE

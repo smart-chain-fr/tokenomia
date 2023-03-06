@@ -35,18 +35,10 @@ import qualified Tokenomia.Token.Transfer as Token
 
 import qualified Tokenomia.Ada.Transfer as Ada
 
-import qualified Tokenomia.Vesting.Vest as Vesting
-import qualified Tokenomia.Vesting.Retrieve as Vesting
 import qualified Tokenomia.Vesting.Sendings as Vesting
 import qualified Tokenomia.Vesting.GenerateNative as Vesting
 
 import qualified Tokenomia.Node.Status as Node
-import qualified Tokenomia.ICO.Funds.Validation.Run as ICO.Validation
-import qualified Tokenomia.ICO.Funds.Validation.Simulation.Transfer as ICO.Simulation
-import qualified Tokenomia.ICO.Funds.WhiteListing.Repository as ICO.WhiteListing
-import qualified Tokenomia.ICO.Funds.Exchange.Run as ICO.Exchange
-import qualified Tokenomia.ICO.LocalRepository as ICO
-import qualified Tokenomia.ICO.Status as ICO
 import qualified Streamly.Prelude as S
 
 load SearchPath ["cardano-cli"]
@@ -75,9 +67,9 @@ selectNetwork = do
   printLn "  Select a network"
   printLn "----------------------"
   environment <- liftIO $ askMenu networks >>= \case
-      SelectTestnet     -> getTestnetEnvironmment 1097911063
       SelectMainnet     -> getMainnetEnvironmment 764824073
       SelectPreprod     -> getPreprodEnvironmment 1
+      SelectTestnet     -> getTestnetEnvironmment 1097911063
   clearConsole
   result :: Either TokenomiaError () <- runExceptT $ runReaderT recursiveMenu environment
   case result of
@@ -88,21 +80,21 @@ selectNetwork = do
 
 networks :: NonEmpty SelectEnvironment
 networks = NonEmpty.fromList [
-  SelectTestnet,
   SelectMainnet,
-  SelectPreprod
+  SelectPreprod,
+  SelectTestnet
   ]
 
 data SelectEnvironment
-  = SelectTestnet
-  | SelectMainnet
+  = SelectMainnet
   | SelectPreprod
+  | SelectTestnet
 
 instance DisplayMenuItem SelectEnvironment where
   displayMenuItem item = case item of
-    SelectTestnet   -> "Testnet (magicNumber 1097911063)"
     SelectMainnet   -> "Mainnet (magicNumber 764824073)"
     SelectPreprod   -> "Preprod (magicNumber 1)"
+    SelectTestnet   -> "`Old` Testnet (magicNumber 1097911063)"
 
 
 recursiveMenu
@@ -126,27 +118,12 @@ recursiveMenu = do
         NoUTxOWithOnlyOneToken    -> printLn "Please, add tokens to your wallet..."
         TryingToBurnTokenWithoutScriptRegistered
                                   -> printLn "You can't burn tokens without the monetary script registered in Tokenomia"
-        NoVestingInProgress       -> printLn "No vesting in progress"
-        NoFundsToBeRetrieved      -> printLn "No funds to be retrieved"
-        AllFundsLocked            -> printLn "All the funds alerady retrieved"
-        FundAlreadyRetrieved      -> printLn "All the funds are locked and can't be retrieve so far.."
         BlockFrostError e         -> printLn $ "Blockfrost issue " <> show e
         NoActiveAddressesOnWallet -> printLn "No Active Addresses, add funds on this wallet"
         InconsistenciesBlockFrostVSLocalNode errorMsg ->
                                      printLn $ "Inconsistencies Blockfrost vs Local Node  :" <> errorMsg
-        NoICOTransactionsToBePerformOnThisWallet
-                                  -> printLn "No ICO Transactions to be performed on wallet used "
         NoDerivedChildAddress  -> printLn "No derived child adresses on this wallet"
         NoUTxOsFound           -> printLn "No UTxOs found"
-        ICOExchangeUtxoWithoutHash
-                               -> printLn "ICO - Echange UTxOs without Hashes"
-        ICOTokensDispatchedOnMultipleUTxOs
-                               -> printLn "ICO - Tokens Dispatched On Multiple UTxOs"
-        ICONoValidTxs message  -> liftIO $ putStrLn $ "ICO - No Valid Txs Found : " <>  message
-        ICOPaybackAddressNotAvailable walletName index ->
-                                  printLn $ "ICO - Payback Address not available for  : " <>  walletName <> " index #" <> show index
-        ICOWhitelistingNotValid index indexRetrieved ->
-                                  printLn $ "ICO - Whitelisting not valid index =" <> show index <> " retrieved= " <> show indexRetrieved
         InvalidTransaction e -> printLn $ "Invalid Transaction : " <> e
         InvalidPrivateSale e -> printLn $ "Invalid Private sale input : " <> e
         QueryFailure e       -> printLn $ "QueryFailure : " <> e
@@ -184,20 +161,11 @@ runAction = \case
       TokenBurn        -> Token.burn
       TokenTransfer    -> Token.transfer
       AdaTransfer      -> Ada.transfer
-      VestingVestFunds -> Vesting.vestFunds
-      VestingRetrieveFunds -> Vesting.retrieveFunds
       VestingVerifySendings -> Vesting.verifySendings
       VestingGenerateNative -> Vesting.generatePrivateSaleFiles
       NodeStatus           -> Node.displayStatus
       NodeTranslateSlotToTime    -> Node.translateSlotToTime
       NodeTranslateTimeToSlot    -> Node.translateTimeToSlot
-      ICOStatus                  -> ICO.askRoundSettings >>= ICO.displayStatus
-      ICOFundsValidationDryRun   -> ICO.askRoundSettings >>= ICO.Validation.dryRun
-      ICOFundsValidationRun      -> ICO.askRoundSettings >>= ICO.Validation.run
-      ICOExchangeDryRun          -> ICO.askRoundSettings >>= ICO.Exchange.dryRun
-      ICOExchangeRun             -> ICO.askRoundSettings >>= ICO.Exchange.run
-      ICOUpdateWhiteListing      -> ICO.askRoundSettings >>= ICO.WhiteListing.update
-      ICOFundsDispatchSimulation -> ICO.Simulation.dispatchAdasOnChildAdresses
 
 
 actions :: NonEmpty Action
@@ -214,20 +182,11 @@ actions = NonEmpty.fromList [
     TokenBurn,
     TokenTransfer,
     AdaTransfer,
-    VestingVestFunds,
-    VestingRetrieveFunds,
     VestingVerifySendings,
     VestingGenerateNative,
     NodeStatus,
     NodeTranslateSlotToTime,
-    NodeTranslateTimeToSlot,
-    ICOStatus,
-    ICOFundsValidationDryRun,
-    ICOFundsValidationRun,
-    ICOExchangeDryRun,
-    ICOExchangeRun,
-    ICOUpdateWhiteListing,
-    ICOFundsDispatchSimulation
+    NodeTranslateTimeToSlot
     ]
 
 data Action
@@ -243,20 +202,11 @@ data Action
   | TokenBurn
   | TokenTransfer
   | AdaTransfer
-  | VestingVestFunds
-  | VestingRetrieveFunds
   | VestingVerifySendings
   | VestingGenerateNative
   | NodeStatus
   | NodeTranslateSlotToTime
   | NodeTranslateTimeToSlot
-  | ICOStatus
-  | ICOFundsValidationDryRun
-  | ICOFundsValidationRun
-  | ICOExchangeDryRun
-  | ICOExchangeRun
-  | ICOUpdateWhiteListing
-  | ICOFundsDispatchSimulation
 
 instance DisplayMenuItem Action where
   displayMenuItem item = case item of
@@ -274,17 +224,8 @@ instance DisplayMenuItem Action where
     TokenBurn             ->  "[Token]   - Burn Tokens with CLAP type policy"
     TokenTransfer         ->  "[Token]   - Transfer Tokens"
     AdaTransfer           ->  "[Ada]     - Transfer ADAs"
-    VestingVestFunds      ->  "[Vesting] - Vest Funds"
-    VestingRetrieveFunds  ->  "[Vesting] - Retrieve Funds"
     VestingVerifySendings -> "[Vesting] - Verify Sendings"
     VestingGenerateNative -> "[Vesting] - Generate Database and airdrop outputs"
     NodeStatus            ->  "[Node]    - Status"
     NodeTranslateSlotToTime -> "[Node]    - Translate Slot To Time"
     NodeTranslateTimeToSlot -> "[Node]    - Translate Time To Slot"
-    ICOStatus                  ->  "[ICO]     - Status"
-    ICOFundsValidationDryRun   ->  "[ICO]     - Funds Validation Dry Run"
-    ICOFundsValidationRun      ->  "[ICO]     - Funds Validation Run"
-    ICOExchangeDryRun          ->  "[ICO]     - Funds Exchange Dry Run"
-    ICOExchangeRun             ->  "[ICO]     - Funds Exchange Run"
-    ICOUpdateWhiteListing      ->  "[ICO]     - Update Whitelisting"
-    ICOFundsDispatchSimulation ->  "[ICO]     - Funds Simulation (Dispatch ADAs on child addresses )"

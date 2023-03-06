@@ -12,7 +12,6 @@ module Tokenomia.Wallet.WalletUTxO
     ( WalletUTxO (..)
     , getAdas
     , value
-    , getDatumHashesAndAdaStrict
     ) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
@@ -45,17 +44,6 @@ value = UTxO.value . utxo
 
 getAdas :: WalletUTxO -> Ada
 getAdas = fromValue . value
-
-
-getDatumHashesAndAdaStrict 
-  :: (MonadError  TokenomiaError m)
-  => NEL.NonEmpty WalletUTxO -> m (NEL.NonEmpty (Hash,Ada,WalletUTxO))
-getDatumHashesAndAdaStrict xs = 
-    (return . NEL.nonEmpty . catMaybes . NEL.toList $ ( getDatumHashAndAdaMaybe <$> xs)) 
-      >>= whenNothingThrow ICOExchangeUtxoWithoutHash 
-      >>= (\case
-          ys | NEL.length ys /= NEL.length xs -> throwError ICOExchangeUtxoWithoutHash
-          ys -> return ys ) 
 
 getDatumHashAndAdaMaybe :: WalletUTxO -> Maybe (Hash,Ada,WalletUTxO)
 getDatumHashAndAdaMaybe w@WalletUTxO {utxo = UTxO {maybeDatumHash = Just hash,..}} | containingStrictlyADAs value = Just (hash,fromValue value,w)

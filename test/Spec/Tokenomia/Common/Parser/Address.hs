@@ -20,11 +20,11 @@ tests = testGroup "Common.Parser.Address" [ properties ]
 properties :: TestTree
 properties = testGroup "Properties"
     [ testGroup "deserialiseCardanoAddress"
-        [ testProperty "generated with cardano-address (testnet)" $
+        [ testProperty "generated with cardano-address (preprod)" $
             withMaxSuccess 1 $ monadicIO $
                 all isRight
                     <$>  deserialiseCardanoAddress . convert . unPaymentAddress
-                    <$$> generateAddresses "testnet" [0..3]
+                    <$$> generateAddresses "1" [0..3]
         , testProperty "generated with cardano-address (mainnet)" $
             withMaxSuccess 1 $ monadicIO $
                 all isRight

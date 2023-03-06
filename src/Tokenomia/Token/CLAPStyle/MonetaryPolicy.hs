@@ -57,7 +57,8 @@ import Plutus.Contract as Contract
 import           Plutus.Contract.Wallet (getUnspentOutput)
 
 import Ledger
-    ( TxOutRef(..),
+    ( CardanoAddress,
+      TxOutRef(..),
       pubKeyHashAddress,
       mkMintingPolicyScript,
       PaymentPubKeyHash(..),
@@ -145,16 +146,16 @@ burnContract
     :: forall w s e.
     ( AsCLAPMonetaryPolicyError e
     )
-    => PubKeyHash
+    => CardanoAddress
     -> Params
     -> Integer
     -> Contract w s e ()
-burnContract burnerPK monetaryPolicyParams@Params {..} amountToBurn =
+burnContract addr monetaryPolicyParams@Params {..} amountToBurn =
     mapError (review _CLAPMonetaryPolicyError) $ do
     let policyHash = (scriptCurrencySymbol . mkMonetaryPolicyScript) monetaryPolicyParams
         monetaryPolicyScript = mkMonetaryPolicyScript monetaryPolicyParams
         valueToBurn = singleton policyHash tokenName amountToBurn
-    utxosInBurnerWallet <- Contract.utxosAt (pubKeyHashAddress (PaymentPubKeyHash burnerPK) Haskell.Nothing)
+    utxosInBurnerWallet <- utxosAt addr
     submitTxConstraintsWith
             @Scripts.Any
             (Constraints.plutusV1MintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInBurnerWallet)
@@ -167,18 +168,18 @@ mintContract
     :: forall w s e.
     ( AsCLAPMonetaryPolicyError e
     )
-    => PubKeyHash
+    => CardanoAddress
     -> TokenName
     -> Integer
     -> Contract w s e (CurrencySymbol,Params)
-mintContract pk tokenName amount =
+mintContract addr tokenName amount =
     mapError (review _CLAPMonetaryPolicyError) $ do
     txOutRefToConsume <- getUnspentOutput
     let monetaryPolicyParams = Params {..}
         policyHash = (scriptCurrencySymbol . mkMonetaryPolicyScript) monetaryPolicyParams
         monetaryPolicyScript = mkMonetaryPolicyScript monetaryPolicyParams
         valueToMint = singleton policyHash tokenName amount
-    utxosInWallet <- utxosAt (pubKeyHashAddress (PaymentPubKeyHash pk) Haskell.Nothing)
+    utxosInWallet <- utxosAt addr
     submitTxConstraintsWith
             @Scripts.Any
             (Constraints.plutusV1MintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInWallet)

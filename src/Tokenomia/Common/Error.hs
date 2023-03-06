@@ -25,22 +25,12 @@ data TokenomiaError
     | NoADAsOnChildAddress
     | NoUTxOWithOnlyOneToken
     | TryingToBurnTokenWithoutScriptRegistered
-    | NoVestingInProgress
-    | NoFundsToBeRetrieved
-    | AllFundsLocked
-    | FundAlreadyRetrieved
     | BlockFrostError B.BlockfrostError
     | NoActiveAddressesOnWallet
     | ChildAddressNotIndexed WalletName Address
     | InconsistenciesBlockFrostVSLocalNode String
-    | NoICOTransactionsToBePerformOnThisWallet
     | NoDerivedChildAddress
     | NoUTxOsFound
-    | ICOExchangeUtxoWithoutHash
-    | ICOTokensDispatchedOnMultipleUTxOs
-    | ICOPaybackAddressNotAvailable String Integer
-    | ICOWhitelistingNotValid Integer Integer
-    | ICONoValidTxs String
     | InvalidTransaction String
     | SendingsContainsZeroValue
     | SendingsNoSuchTransactions [TxHash]

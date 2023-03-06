@@ -53,7 +53,7 @@ networkId = mainnet <|> testnet
         <> long "testnet"
         <> help "Use this testnet magic id"
         <> showDefault
-        <> value 1097911063
+        <> value 1
         <> metavar "MAGIC"
 
 distributionFilePath :: Parser FilePath

@@ -3,7 +3,7 @@ module Tokenomia.Common.Arbitrary.POSIXTime
 
 import Data.Default                         ( def )
 import Ledger                               ( POSIXTime(..) )
-import Ledger.TimeSlot                      ( SlotConfig(..) )
+import Cardano.Node.Emulator.TimeSlot       ( SlotConfig(..) )
 
 import Test.Tasty.QuickCheck
     ( Arbitrary

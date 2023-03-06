@@ -60,7 +60,7 @@ import Tokenomia.Common.Arbitrary.Wallet    ( PaymentAddress(..), generateAddres
 
 import Tokenomia.Common.Data.Convertible    ( convert )
 import Tokenomia.Common.Data.List.Extra     ( transpose )
-import Tokenomia.Common.Environment         ( Environment(..), getTestnetEnvironmment )
+import Tokenomia.Common.Environment         ( Environment(..), getPreprodEnvironmment )
 import Tokenomia.Common.Environment.Query   ( evalQueryWithSystemStart )
 import Tokenomia.Common.Error               ( TokenomiaError )
 import Tokenomia.Common.Time                ( toNextBeginNominalDiffTime )
@@ -183,7 +183,7 @@ instance Arbitrary (Restricted (NonEmpty TrancheProperties)) where
                 proportions <- unTranchesProportions <$> arbitrary
                 unlockTimes <-
                     vectorOf (length proportions) $
-                        fromInteger . (+1563999616) . getPositive -- testnet system start
+                        fromInteger . (+1654041600) . getPositive -- preprod system start
                             <$> arbitrary
                 pure $ NEList.fromList . getZipList $
                     TrancheProperties
@@ -255,7 +255,7 @@ useValidAddresses ::
 useValidAddresses PrivateSale{..} =
     do
         let allocations = NEMap.elems allocationByAddress
-        addresses <- toInvestorAddress <$$> generateAddresses "testnet" (indices allocations)
+        addresses <- toInvestorAddress <$$> generateAddresses "1" (indices allocations)
         pure PrivateSale{allocationByAddress=NEMap.fromList $ NEList.zip addresses allocations,..}
   where
     indices :: NonEmpty a -> NonEmpty Integer
@@ -360,7 +360,7 @@ propertiesInvestorAddressPubKeyHash =
                 monadicIO $
                     all isRight <$>
                         do
-                            addresses <- toInvestorAddress <$$> generateAddresses "testnet" [0..5]
+                            addresses <- toInvestorAddress <$$> generateAddresses "1" [0..5]
                             traverse (runExceptT . investorAddressPubKeyHash) addresses
         ]
 
@@ -398,7 +398,7 @@ propertiesTrancheNativeScriptInfos =
                 withMaxSuccess 1 $ mapSize (const 7)
                     ( \(Restricted ps :: Restricted PrivateSale) ->
                             monadicIO $ do
-                                env <- getTestnetEnvironmment 1097911063
+                                env <- getPreprodEnvironmment 1
                                 validPrivateSale <- useValidAddresses ps
                                 and <$>
                                     traverse
@@ -498,7 +498,7 @@ propertiesToDatabaseOutput =
                 withMaxSuccess 1 $ mapSize (const 7)
                     ( \(Restricted ps :: Restricted PrivateSale) ->
                             monadicIO $ do
-                                env <- getTestnetEnvironmment 1097911063
+                                env <- getPreprodEnvironmment 1
                                 validPrivateSale <- useValidAddresses ps
                                 let tranches = splitInTranches validPrivateSale
                                 runToDatabaseOutput env tranches
@@ -527,7 +527,7 @@ propertiesToDistribution =
                 withMaxSuccess 1 $ mapSize (const 7)
                     ( \(Restricted ps :: Restricted PrivateSale) ->
                             monadicIO $ do
-                                env <- getTestnetEnvironmment 1097911063
+                                env <- getPreprodEnvironmment 1
                                 validPrivateSale <- useValidAddresses ps
                                 let tranches = splitInTranches validPrivateSale
                                 runToDistribution env tranches
@@ -563,7 +563,7 @@ properties = testGroup "Properties"
 --         [ testProperty "toJSON" $ withMaxSuccess 1 $ mapSize (const 7)
 --              ( \(Restricted ps :: Restricted PrivateSale) ->
 --                     monadicIO $ do
---                         env <- getTestnetEnvironmment 1097911063
+--                         env <- getPreprodEnvironmment 1
 --                         networkId <- runReaderT getNetworkId env
 --                         validPrivateSale <- useValidAddresses ps
 --                         let privateSaleTranches = splitInTranches validPrivateSale

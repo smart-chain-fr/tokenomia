@@ -45,7 +45,7 @@ runTest ::
 runTest test =
     monadicIO $
         do
-            env <- getTestnetEnvironmment 1097911063
+            env <- getTestnetEnvironmment 1
             fromRight' <$> runExceptT (runReaderT test env)
 
 propertiesQueryWallclockToSlot' :: [TestTree]
