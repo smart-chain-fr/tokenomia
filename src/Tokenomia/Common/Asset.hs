@@ -22,7 +22,7 @@ newtype Assets
     deriving (Show)
 
 class ToValue a where
-    toValue :: a -> Value 
+    toValue :: a -> Value
 
 instance ToValue Asset where
     toValue Asset{..}

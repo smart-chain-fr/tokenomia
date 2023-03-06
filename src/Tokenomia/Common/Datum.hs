@@ -12,7 +12,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Tokenomia.Common.Datum 
+module Tokenomia.Common.Datum
   ( getDataHash
   , registerDatum
   ) where
@@ -20,12 +20,12 @@ module Tokenomia.Common.Datum
 import           Data.Aeson as Json ( encode )
 import           Data.String
 import qualified Data.ByteString.Lazy.Char8 as C
-import           Data.ByteString.Lazy.UTF8 as BLU ( toString ) 
+import           Data.ByteString.Lazy.UTF8 as BLU ( toString )
 import           Data.Coerce
 
 import qualified PlutusTx
 import           PlutusTx.IsData.Class ( ToData )
- 
+
 import           Control.Monad.Reader
 
 import           Shh.Internal
@@ -57,7 +57,7 @@ getDataHash a = do
     liftIO $ echo  (dataToJSONString a) &> (Truncate . fromString) filePath
     liftIO $ Hash . init . C.unpack  <$>  (cardano_cli "transaction" "hash-script-data" "--script-data-file" filePath |> capture)
 
-registerDatum 
+registerDatum
   :: ( MonadIO m
      , MonadReader Environment m
      , ToData a) => a -> m FilePath
@@ -67,5 +67,3 @@ registerDatum a = do
     let filePath = datumFolder <> coerce datumHash <> ".datum"
     liftIO $ echo  (dataToJSONString a) &> (Truncate . fromString) filePath
     return filePath
-
-    

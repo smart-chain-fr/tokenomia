@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Tokenomia.Common.TxOutRef 
+module Tokenomia.Common.TxOutRef
     ( showTxOutRef
     , TxOutRef (..)
     ) where

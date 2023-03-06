@@ -52,8 +52,7 @@ fetchCollateral
      => ChildAddressRef
     -> m (Maybe WalletUTxO)
 fetchCollateral childAddressRef =
-    queryUTxOsFilterBy childAddressRef (containsCollateral . value . utxo)  
+    queryUTxOsFilterBy childAddressRef (containsCollateral . value . utxo)
     >>= \case
          [] -> return Nothing
          (x : _) -> (return . Just) x
-    

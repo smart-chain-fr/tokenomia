@@ -143,10 +143,10 @@ toPosixTime slot = do
     byronDurationInS <- getTotalByronDurationInS
     return $ systemStart environment + ExternalPosix.secondsToNominalDiffTime (fromIntegral (byronDurationInS + shelleyDurationInS))
 
-toSlot :: MonadReader Environment m  => ExternalPosix.UTCTime  -> m Slot 
+toSlot :: MonadReader Environment m  => ExternalPosix.UTCTime  -> m Slot
 toSlot timeGiven = do
     firstShelleyTime <- getFirstShelleySlotTime
-    let posixTime = ExternalPosix.utcTimeToPOSIXSeconds timeGiven 
+    let posixTime = ExternalPosix.utcTimeToPOSIXSeconds timeGiven
     let timeSpentInShelley  = truncate $ posixTime - firstShelleyTime
     return $ Slot timeSpentInShelley
 

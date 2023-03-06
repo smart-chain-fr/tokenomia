@@ -32,13 +32,13 @@ import           Tokenomia.Common.Environment
 
 load SearchPath ["mkdir","cardano-cli" ]
 
-data Folder  
-    = Transactions 
-    | Wallets 
-    | Parameters 
-    | MonetaryPolicies 
+data Folder
+    = Transactions
+    | Wallets
+    | Parameters
+    | MonetaryPolicies
     | Validators
-    | Datum 
+    | Datum
     | TMP
 
 getFolderPath :: (MonadIO m, MonadReader Environment m) => Folder -> m FilePath

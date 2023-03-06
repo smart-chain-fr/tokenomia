@@ -25,7 +25,7 @@ import Plutus.V1.Ledger.Value ( singleton )
 import Ledger.Ada ( lovelaceValueOf )
 
 import Tokenomia.Common.Value ()
-import Tokenomia.Common.Serialise ( FromCLI(fromCLI) ) 
+import Tokenomia.Common.Serialise ( FromCLI(fromCLI) )
 
 tests :: TestTree
 tests = testGroup "Value" [unitTests]

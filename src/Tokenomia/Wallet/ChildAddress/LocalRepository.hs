@@ -144,8 +144,8 @@ fetchByAddressStrict
     => WalletName
     -> Address
     -> m IndexedAddress
-fetchByAddressStrict walletName address = 
-    fetchByAddress walletName address 
+fetchByAddressStrict walletName address =
+    fetchByAddress walletName address
     >>= whenNothingThrow (ChildAddressNotIndexed walletName address)
 
 
@@ -156,7 +156,7 @@ retrieveAddressesFromWallet
     -> NEL.NonEmpty Address
     -> m (Maybe (NEL.NonEmpty Address))
 retrieveAddressesFromWallet walletName addresses = do
-    maybeAddresses  <- mapM (\address ->  
+    maybeAddresses  <- mapM (\address ->
         fetchByAddress walletName address
          >>= (\case
                 Just _ -> (return . Just) address
@@ -173,7 +173,7 @@ fetchByAddress walletName address = do
     addressIndexPath <- getAddressIndexPath walletName address
     (liftIO $ doesFileExist addressIndexPath)
      >>= \case
-            False -> return Nothing 
+            False -> return Nothing
             True  -> do
                 index <- read @Integer . C.unpack <$> (liftIO $ cat addressIndexPath |> captureTrim)
                 return . Just $ IndexedAddress
@@ -184,24 +184,24 @@ fetchByAddress walletName address = do
 
 fetchByWalletIndexedAddress
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> m (NEL.NonEmpty IndexedAddress  )
-fetchByWalletIndexedAddress a = (fmap . fmap) toIndexedAddress (toAscList <$> fetchByWallet a) 
+fetchByWalletIndexedAddress a = (fmap . fmap) toIndexedAddress (toAscList <$> fetchByWallet a)
 
 
-fetchDerivedChildAddressIndexes 
+fetchDerivedChildAddressIndexes
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> m (NEL.NonEmpty ChildAddressIndex)
-fetchDerivedChildAddressIndexes  name = do 
+fetchDerivedChildAddressIndexes  name = do
     childAddressesPath <- getChildAddressesPath name
     liftIO $
         (fmap.fmap.fmap) (ChildAddressIndex . read @Integer . last . splitOn "/" . C.unpack)
-        NEL.nonEmpty . tail <$>  -- remove ./    
+        NEL.nonEmpty . tail <$>  -- remove ./
         (find childAddressesPath "-type" "d" |> captureWords) -- return ./ ./0 ./1
     >>= \case
         Nothing -> throwError NoDerivedChildAddress
@@ -210,24 +210,24 @@ fetchDerivedChildAddressIndexes  name = do
 
 fetchByWalletWithinIndexRange
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
-    => Int 
+    => Int
     -> Int
     -> WalletName
     -> m (Set.Set ChildAddress)
 fetchByWalletWithinIndexRange from to name = do
     indexes <- Prelude.take (to - from + 1) . NEL.drop from <$> fetchDerivedChildAddressIndexes name
     Set.fromList <$> mapM fetchById (ChildAddressRef name <$> indexes)
-    
+
 fetchByWallet
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> m (NESet ChildAddress)
 fetchByWallet name = do
-    fetchDerivedChildAddressIndexes name 
+    fetchDerivedChildAddressIndexes name
     >>= \indexes -> fromList <$> mapM fetchById (ChildAddressRef name <$> indexes)
 
 

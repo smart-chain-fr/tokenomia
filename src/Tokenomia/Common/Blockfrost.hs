@@ -24,10 +24,10 @@ import Prelude hiding (head)
 
 import Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
 
-projectFromEnv'' 
+projectFromEnv''
     :: ( MonadIO m
        , MonadReader Environment m) => m B.Project
-projectFromEnv'' = do 
+projectFromEnv'' = do
     environmentPath <- asks (\case
                                 Testnet {} -> "BLOCKFROST_TOKEN_TESTNET_PATH"
                                 Mainnet {} -> "BLOCKFROST_TOKEN_MAINNET_PATH")

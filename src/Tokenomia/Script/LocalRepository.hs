@@ -23,7 +23,6 @@ module Tokenomia.Script.LocalRepository
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Lazy as LB
- 
 
 import           Control.Monad.Reader
 
@@ -81,7 +80,7 @@ getScriptLocation :: ( MonadIO m , MonadReader Environment m )
     => Validator
     -> m ScriptLocation
 getScriptLocation validator = do
-    networkOption <- asks (\case 
+    networkOption <- asks (\case
                         Mainnet {} -> asArg ["--mainnet"]
                         Testnet {magicNumber} ->  asArg ["--testnet-magic", show magicNumber])
     scFolder <- getFolderPath Validators

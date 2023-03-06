@@ -36,27 +36,27 @@ import           Tokenomia.Wallet.ChildAddress.LocalRepository
 burn
     :: (  MonadIO m
         , MonadReader Environment m
-        , MonadError TokenomiaError m)  
+        , MonadError TokenomiaError m)
     => m ()
-burn = do 
-    Wallet{name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral 
+burn = do
+    Wallet{name} <- fetchWalletsWithCollateral >>= whenNullThrow NoWalletWithCollateral
         >>= \wallets -> do
             printLn "Select the burner wallet : "
-            askToChooseAmongGivenWallets wallets 
-    printLn "- Select the utxo containing the tokens to burn :" 
+            askToChooseAmongGivenWallets wallets
+    printLn "- Select the utxo containing the tokens to burn :"
     utxoWithTokensToBurn <- askUTxOFilterBy (containingOneToken . UTxO.value . utxo ) (ChildAddressRef name 0) >>= whenNothingThrow NoUTxOWithOnlyOneToken
     amountToBurn  <- ask @Integer "- Amount to burn : "
     burn' name utxoWithTokensToBurn amountToBurn
 
-burn' 
+burn'
     :: (  MonadIO m
         , MonadReader Environment m
-        , MonadError TokenomiaError m)  
-    => WalletName 
+        , MonadError TokenomiaError m)
+    => WalletName
     -> WalletUTxO
     -> Integer
     -> m ()
-burn' walletName walletUTxO@WalletUTxO {utxo = UTxO {value = totalAmountBurnable}} amountToBurn = do 
+burn' walletName walletUTxO@WalletUTxO {utxo = UTxO {value = totalAmountBurnable}} amountToBurn = do
 
     let (tokenPolicyHash,tokenNameSelected,_) = getTokenFrom totalAmountBurnable
         valueToBurn = singleton tokenPolicyHash tokenNameSelected amountToBurn
@@ -72,11 +72,8 @@ burn' walletName walletUTxO@WalletUTxO {utxo = UTxO {value = totalAmountBurnable
       TxBuild
         { inputsFromWallet =  FromWallet walletUTxO :| []
         , inputsFromScript =  Nothing
-        , outputs = ToWallet address (change + lovelaceValueOf 1379280) Nothing:| [] 
+        , outputs = ToWallet address (change + lovelaceValueOf 1379280) Nothing:| []
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Just $ Burn { amount = valueToBurn, script = monetaryScript} :| []
-        , metadataMaybe = Nothing 
+        , metadataMaybe = Nothing
         , ..}
-
- 
-

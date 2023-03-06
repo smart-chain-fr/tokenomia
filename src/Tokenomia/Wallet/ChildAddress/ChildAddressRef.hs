@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Tokenomia.Wallet.ChildAddress.ChildAddressRef 
+module Tokenomia.Wallet.ChildAddress.ChildAddressRef
     ( ChildAddressIndex (..)
     , ChildAddressRef (..)
     , IndexedAddress (..)
@@ -24,13 +24,12 @@ data IndexedAddress
           , childAddressRef :: ChildAddressRef} deriving (Eq)
 
 instance Show IndexedAddress where
-    show IndexedAddress 
+    show IndexedAddress
          { address = Address address
          , childAddressRef = ChildAddressRef {index = ChildAddressIndex index, name = name}}
         =  name <> " | " <> show index <> " | " <> address
-       
 
 newtype CollateralAddressRef = CollateralAddressRef ChildAddressRef
-newtype FeeAddressRef = FeeAddressRef ChildAddressRef 
+newtype FeeAddressRef = FeeAddressRef ChildAddressRef
 
 

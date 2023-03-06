@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-module Tokenomia.Common.Value 
+module Tokenomia.Common.Value
   ( getTokenFrom
   , getTokensFrom
   , assetClassValueOfWith
@@ -49,10 +49,10 @@ import Tokenomia.Common.Data.Convertible ( convert )
 
 
 getTokenFrom :: Value -> (CurrencySymbol,TokenName,Integer)
-getTokenFrom  = head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
+getTokenFrom  = head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs)
 
 getTokensFrom :: Value -> Value
-getTokensFrom = mkValue . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
+getTokensFrom = mkValue . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs)
 
 
 mkValue :: [(CurrencySymbol, TokenName, Integer)] -> Value
@@ -93,11 +93,11 @@ maximumByAssetClassValueOf' value xs assetClass =
     maximumBy (compare `on` flip assetClassValueOf assetClass . value) xs
 
 containsCollateral :: Value -> Bool
-containsCollateral = (adaValueOf 2.0 ==) 
+containsCollateral = (adaValueOf 2.0 ==)
 
 containingStrictlyADAs :: Value -> Bool
-containingStrictlyADAs value 
-    = symbols value == [adaSymbol] 
+containingStrictlyADAs value
+    = symbols value == [adaSymbol]
 
 instance ToCLI Value where
   toCLI =

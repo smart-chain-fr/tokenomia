@@ -16,12 +16,11 @@ import Tokenomia.Common.Shell.InteractiveMenu
 import qualified Data.Text as T
 import           Data.Text (Text)
 import           Data.List as L
-           
 import           Data.String
 import           Tokenomia.Common.Serialise
-import           Tokenomia.Common.Value 
+import           Tokenomia.Common.Value
 import           Ledger.Value
-import           Tokenomia.Common.TxOutRef 
+import           Tokenomia.Common.TxOutRef
 import           Tokenomia.Common.Hash
 
 data ScriptUTxO = ScriptUTxO

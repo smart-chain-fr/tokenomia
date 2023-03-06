@@ -1,11 +1,11 @@
-module Tokenomia.Common.Serialise 
+module Tokenomia.Common.Serialise
    ( FromCLI (..)
    , ToCLI (..)) where
 
 import Data.Text ( Text )
 
-class FromCLI a where 
+class FromCLI a where
    fromCLI :: Text -> a
 
-class ToCLI a where 
+class ToCLI a where
    toCLI :: a -> Text

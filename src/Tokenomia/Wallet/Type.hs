@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Tokenomia.Wallet.Type 
+module Tokenomia.Wallet.Type
     ( WalletName
     , Wallet (..)) where
 

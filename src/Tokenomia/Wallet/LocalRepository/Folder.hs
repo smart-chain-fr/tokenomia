@@ -53,6 +53,3 @@ getWalletFilePath walletName file
         RootPrivateKeyTxt ->  (<> "root-private-key.txt")
         MnemonicsTxt      ->  (<> "mnemonics.txt")
     <$> getWalletPath walletName
-
-
-

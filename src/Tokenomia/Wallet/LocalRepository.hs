@@ -37,7 +37,7 @@ import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 import           Tokenomia.Common.Address
 
 import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.LocalRepository.Folder 
+import           Tokenomia.Wallet.LocalRepository.Folder
 
 import           Tokenomia.Wallet.ChildAddress.LocalRepository hiding (fetchById)
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
@@ -60,7 +60,7 @@ fetchById ::
 fetchById name =
     Wallet name
         <$> (getWalletFilePath name StakeAddressTxt >>= (\path -> Address . C.unpack  <$> liftIO (cat path |> captureTrim)))
-        
+
 
 register ::
     ( MonadIO m
@@ -69,7 +69,7 @@ register ::
     -> m Wallet
 register name = do
     let generateWalletFile' = generateWalletFile name
-        
+
     getWalletPath name         >>= \path -> liftIO $ mkdir "-p" path
     getAddressIndexesPath name >>= \path -> liftIO $ mkdir "-p" path
     getChildAddressesPath name >>= \path -> liftIO $ mkdir "-p" path
@@ -93,7 +93,7 @@ restoreByMnemonics name mnemonics = do
     getWalletPath name                  >>= \path -> liftIO $ mkdir "-p" path
     getAddressIndexesPath name          >>= \path -> liftIO $ mkdir "-p" path
     getChildAddressesPath name          >>= \path -> liftIO $ mkdir "-p" path
-    
+
     getWalletFilePath name MnemonicsTxt >>= \path -> liftIO $ echo (unwords  mnemonics) &> (Truncate . fromString) path
     generateWalletFile' RootPrivateKeyTxt
     generateWalletFile' StakePublicKeyTxt

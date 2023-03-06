@@ -99,14 +99,13 @@ buildAndSubmit
 buildAndSubmit txBalance collateralMaybe txBuild = do
     builtTx <- build txBalance collateralMaybe txBuild
     printLn "Submitting Tx" >> submitAndWait builtTx
- 
 
 build
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
     => TxBalance
-    -> Maybe CollateralAddressRef 
+    -> Maybe CollateralAddressRef
     -> TxBuild
     -> m BuiltTx
 build txBalance collateralMaybe txBuild@TxBuild {..}  = do
@@ -115,8 +114,8 @@ build txBalance collateralMaybe txBuild@TxBuild {..}  = do
     extendedPrivateKeyJSONPaths <-  fmap extendedPrivateKeyJSONPath <$> sequence (fetchById <$> childAddressRefs)
     collateralOptions <- getCollateralCardanoCLIOptions collateralMaybe
     feesOptions <- getFeesCardanoCLIOptions txBalance
-    (txBuiltPath,txSignedPath,estimatedFees) 
-        <- build' 
+    (txBuiltPath,txSignedPath,estimatedFees)
+        <- build'
             txBalance
             extendedPrivateKeyJSONPaths
             (toCardanoCLIOptions txBuild <> collateralOptions <> feesOptions)
@@ -137,37 +136,37 @@ mockBuild txBalance collateralMaybe txBuild =
         liftIO $ rm txSignedPath
         return estimatedFees
 
-getCollateralCardanoCLIOptions 
- :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) 
- => Maybe CollateralAddressRef 
+getCollateralCardanoCLIOptions
+ :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m)
+ => Maybe CollateralAddressRef
  -> m [String]
 getCollateralCardanoCLIOptions (Just collateralRef)  = do
     WalletUTxO {utxo = UTxO {txOutRef = collateral}}
         <- fetchCollateral (coerce collateralRef) >>= whenNothingThrow WalletWithoutCollateral
-    return [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]  
-getCollateralCardanoCLIOptions Nothing = return []     
-        
-getFeesCardanoCLIOptions 
- :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m) 
- => TxBalance 
- -> m [String] 
+    return [ "--tx-in-collateral" , (T.unpack . toCLI) collateral]
+getCollateralCardanoCLIOptions Nothing = return []
+
+getFeesCardanoCLIOptions
+ :: ( MonadIO m, MonadReader Environment m, MonadError TokenomiaError m)
+ => TxBalance
+ -> m [String]
 getFeesCardanoCLIOptions Balanced {..} = return ["--fee", show $ getLovelace txFees ]
 getFeesCardanoCLIOptions (Unbalanced feeAddressRef) = do
     WalletUTxO {utxo = UTxO {txOutRef = fees }, childAddressRef = feesChildAddressRef }
         <- selectBiggestStrictlyADAsNotCollateral (coerce feeAddressRef) >>= whenNothingThrow NoADAsOnChildAddress
     feesChildAddress <- ChildAddress.address <$>  fetchById feesChildAddressRef
     magicN <- asks magicNumber
-    return $ [ "--tx-in"  , (T.unpack . toCLI) fees] 
+    return $ [ "--tx-in"  , (T.unpack . toCLI) fees]
           <> [ "--change-address"   , coerce feesChildAddress]
           <> ["--testnet-magic" , show magicN]
 
 
-getTxChildAddressRefs  :: TxBalance -> TxBuild -> Maybe CollateralAddressRef-> NonEmpty ChildAddressRef 
-getTxChildAddressRefs a TxBuild {..} c 
+getTxChildAddressRefs  :: TxBalance -> TxBuild -> Maybe CollateralAddressRef-> NonEmpty ChildAddressRef
+getTxChildAddressRefs a TxBuild {..} c
     = let childaddressesFromInputWallet = Wallet.childAddressRef . walletUTxO <$> inputsFromWallet
-      in case (a, c) of 
+      in case (a, c) of
         (Balanced {},  Nothing) -> childaddressesFromInputWallet
-        (Balanced {}, Just collateralRef) -> childaddressesFromInputWallet <> (coerce collateralRef :| [])   
+        (Balanced {}, Just collateralRef) -> childaddressesFromInputWallet <> (coerce collateralRef :| [])
         (Unbalanced feeAddressRef , Just collateralRef) -> childaddressesFromInputWallet <> (coerce collateralRef :| [coerce feeAddressRef])
         (Unbalanced feeAddressRef , Nothing) -> childaddressesFromInputWallet <> (coerce feeAddressRef :| [])
 
@@ -176,9 +175,9 @@ getTxChildAddressRefs a TxBuild {..} c
 data TxBalance = Unbalanced { feeAddressRef :: FeeAddressRef} | Balanced { txFees :: Fees}
 
 
-getBuildMode :: TxBalance -> String 
+getBuildMode :: TxBalance -> String
 getBuildMode (Unbalanced _) = "build"
-getBuildMode Balanced {}  = "build-raw"   
+getBuildMode Balanced {}  = "build-raw"
 
 calculateMinRequiredUTxO ::
     ( MonadIO m
@@ -216,7 +215,7 @@ build' buildMode extendedPrivateKeyJSONPaths buildTxBody = do
                 (asArg buildTxBody)
                 (asArg $ requiredSigners extendedPrivateKeyJSONPaths)
                 "--protocol-params-file" protocolParametersPath
-                "--out-file" rawTx |> captureWords) 
+                "--out-file" rawTx |> captureWords)
                 >>= whenLeftThrow InvalidTransaction . translate buildMode . ( fmap C.unpack)
 
     (builtTxPath,signedTxPath) <- (\txHash -> ( txFolder <> txHash <> ".raw"
@@ -225,15 +224,15 @@ build' buildMode extendedPrivateKeyJSONPaths buildTxBody = do
     liftIO $ mv rawTx builtTxPath
 
     printLn "> Signing Tx"    >> sign_tx   builtTxPath signedTxPath extendedPrivateKeyJSONPaths
-    printLn "> Tx Built and Signed" 
+    printLn "> Tx Built and Signed"
     return (builtTxPath,signedTxPath,fees)
 
     where requiredSigners :: NonEmpty FilePath -> [String]
           requiredSigners xs = foldMap (\a -> ["--required-signer" ,  a ] ) xs
-          
+
           translate :: TxBalance ->  [String] -> Either String Ada
           translate Unbalanced {} ["Estimated" , "transaction","fee:","Lovelace",feesAsString] = (Right . fromIntegral . read @Integer) feesAsString
-          translate Balanced {txFees} [] = Right txFees 
+          translate Balanced {txFees} [] = Right txFees
           translate _ issue = (Left . unwords) issue
 
 submitWithoutWaitingConfimation

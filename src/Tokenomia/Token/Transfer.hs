@@ -75,7 +75,7 @@ transfer' ::
     -> m ()
 transfer' feesWalletName sourceTokenWalletName receiverAddr utxoWithToken amount labelMaybe = do
     let firstChildAddressSourceToken = ChildAddressRef sourceTokenWalletName 0
-        firstChildAddressFees = ChildAddressRef feesWalletName 0 
+        firstChildAddressFees = ChildAddressRef feesWalletName 0
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
     ChildAddress {address = senderWalletChildAddress} <- fetchById firstChildAddressSourceToken
     let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom . UTxO.value  . utxo $ utxoWithToken
@@ -94,5 +94,3 @@ transfer' feesWalletName sourceTokenWalletName receiverAddr utxoWithToken amount
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}
-
-    
