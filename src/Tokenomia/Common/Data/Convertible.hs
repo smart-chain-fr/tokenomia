@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE FunctionalDependencies     #-}
 
 module Tokenomia.Common.Data.Convertible             ( Convertible(..) ) where
 

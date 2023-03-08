@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE ImportQualifiedPost          #-}
 {-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use void" #-}
 
 module Tokenomia.TokenDistribution.PreValidation
     ( preValidation
@@ -40,7 +42,7 @@ data DistributionError
     | AddressDuplicate
     | NoProvisionedAdaSource
     | NoProvisionedTokenSource
-    deriving (Show)
+    deriving stock (Show)
 
 hasRecipient :: Parameters -> Distribution -> Either DistributionError ()
 hasRecipient _ distribution

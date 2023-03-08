@@ -1,4 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost        #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Tokenomia.Common.Parser.TxOutDatumHash

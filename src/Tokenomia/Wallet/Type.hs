@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DerivingStrategies #-}
 module Tokenomia.Wallet.Type
     ( WalletName
     , Wallet (..)) where
@@ -12,7 +13,7 @@ type WalletName = String
 
 data Wallet = Wallet
               { name :: WalletName
-              , stakeAddress :: Address} deriving Eq
+              , stakeAddress :: Address} deriving stock Eq
 
 
 instance Show Wallet where

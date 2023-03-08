@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -183,7 +182,7 @@ verifyTxs sendings =
             filter
               ((== sendingsRecipientAddress sendings) . (^. address))
               (bfTxUtxos ^. outputs)
-          bfAmts = concat ((^. amount) <$> treasAddrOutputs)
+          bfAmts = concatMap (^. amount) treasAddrOutputs
           bfVals = amountToAssetValue <$> bfAmts
 
           flatVal = fmap (\(c, t, i) -> (assetClass c t, i)) . flattenValue $ txValue

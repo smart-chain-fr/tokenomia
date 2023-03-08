@@ -10,6 +10,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 
 module Tokenomia.Script.LocalRepository
@@ -74,7 +75,7 @@ registerMintingScriptFile mp = do
             Right () -> return filePath)
 
 
-data ScriptLocation = ScriptLocation {onChain :: Address , offChain::FilePath} deriving (Eq,Show)
+data ScriptLocation = ScriptLocation {onChain :: Address , offChain::FilePath} deriving stock (Eq,Show)
 
 getScriptLocation :: ( MonadIO m , MonadReader Environment m )
     => Validator

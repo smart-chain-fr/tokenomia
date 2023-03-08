@@ -1,9 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-
-{-# LANGUAGE QuasiQuotes, ExtendedDefaultRules #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DerivingVia #-}

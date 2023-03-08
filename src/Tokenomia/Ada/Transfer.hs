@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
@@ -18,7 +17,7 @@ import           Tokenomia.Common.Transacting
 import Data.List.NonEmpty as NEL
 import           Ledger.Ada as Ada
 import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO
+import           Tokenomia.Wallet.WalletUTxO hiding (value)
 import           Tokenomia.Wallet.LocalRepository
 import           Tokenomia.Common.Error
 import           Tokenomia.Wallet.Collateral.Read

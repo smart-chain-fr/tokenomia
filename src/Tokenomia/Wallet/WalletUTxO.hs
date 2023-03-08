@@ -1,35 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Tokenomia.Wallet.WalletUTxO
     ( WalletUTxO (..)
     , getAdas
     , value
+    , getDatumHashAndAdaMaybe
     ) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
     ( DisplayMenuItem(..) )
 
 import           Prelude as P
-import           Data.Maybe
 import           Data.List ( intercalate )
 import           Ledger.Ada
-import           Control.Monad.Except
-import           Tokenomia.Common.Error
 import           Ledger.Value ( Value )
 import           Tokenomia.Common.TxOutRef ( showTxOutRef )
 import           Tokenomia.Wallet.Type ()
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Common.Hash
 import           Tokenomia.Common.Value
-import qualified Data.List.NonEmpty as NEL
 import           Tokenomia.Wallet.UTxO hiding  ( value )
 import qualified Tokenomia.Wallet.UTxO as UTxO ( value )
 
@@ -37,7 +33,7 @@ data  WalletUTxO
     = WalletUTxO
     { childAddressRef :: ChildAddressRef
     , utxo :: UTxO
-    } deriving ( Eq )
+    } deriving stock ( Eq )
 
 value :: WalletUTxO -> Value
 value = UTxO.value . utxo

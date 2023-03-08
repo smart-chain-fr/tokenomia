@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 
 module Tokenomia.Common.Transacting
@@ -111,7 +112,7 @@ build
 build txBalance collateralMaybe txBuild@TxBuild {..}  = do
     let childAddressRefs = getTxChildAddressRefs txBalance txBuild collateralMaybe
         firstInputTxOutRef = (txOutRef. utxo . walletUTxO . NEL.head) inputsFromWallet
-    extendedPrivateKeyJSONPaths <-  fmap extendedPrivateKeyJSONPath <$> sequence (fetchById <$> childAddressRefs)
+    extendedPrivateKeyJSONPaths <-  fmap extendedPrivateKeyJSONPath <$> mapM fetchById childAddressRefs
     collateralOptions <- getCollateralCardanoCLIOptions collateralMaybe
     feesOptions <- getFeesCardanoCLIOptions txBalance
     (txBuiltPath,txSignedPath,estimatedFees)
@@ -208,7 +209,7 @@ build' buildMode extendedPrivateKeyJSONPaths buildTxBody = do
     randomInt <- liftIO ( abs <$> randomIO :: IO Int )
     (txFolder, rawTx ) <- (\a-> (a,a <> "tx_" <> show randomInt <> ".raw")) <$> getFolderPath Transactions
     protocolParametersPath <- register_protocol_parameters
-    fees  <- (liftIO $ cardano_cli
+    fees  <- liftIO (cardano_cli
                 "transaction"
                 (getBuildMode buildMode)
                 "--alonzo-era"
@@ -216,7 +217,7 @@ build' buildMode extendedPrivateKeyJSONPaths buildTxBody = do
                 (asArg $ requiredSigners extendedPrivateKeyJSONPaths)
                 "--protocol-params-file" protocolParametersPath
                 "--out-file" rawTx |> captureWords)
-                >>= whenLeftThrow InvalidTransaction . translate buildMode . ( fmap C.unpack)
+                >>= whenLeftThrow InvalidTransaction . translate buildMode . fmap C.unpack
 
     (builtTxPath,signedTxPath) <- (\txHash -> ( txFolder <> txHash <> ".raw"
                                             , txFolder <> txHash <> ".signed" ) )
@@ -228,7 +229,7 @@ build' buildMode extendedPrivateKeyJSONPaths buildTxBody = do
     return (builtTxPath,signedTxPath,fees)
 
     where requiredSigners :: NonEmpty FilePath -> [String]
-          requiredSigners xs = foldMap (\a -> ["--required-signer" ,  a ] ) xs
+          requiredSigners = foldMap (\a -> ["--required-signer" ,  a ] )
 
           translate :: TxBalance ->  [String] -> Either String Ada
           translate Unbalanced {} ["Estimated" , "transaction","fee:","Lovelace",feesAsString] = (Right . fromIntegral . read @Integer) feesAsString
@@ -309,7 +310,7 @@ sign_tx body_file outFile extendedPrivateKeyJSONPaths = do
                 "--testnet-magic" magicN
                 "--out-file" outFile
     where signingKeyFiles :: NonEmpty FilePath -> [String]
-          signingKeyFiles xs = foldMap (\a -> ["--signing-key-file" ,  a ] ) xs
+          signingKeyFiles = foldMap (\a -> ["--signing-key-file" ,  a ] )
 
 
 register_protocol_parameters
@@ -346,11 +347,11 @@ data BuiltTx
       { oneTxInput :: TxOutRef
       , txBuiltPath :: FilePath
       , txSignedPath :: FilePath
-      , estimatedFees :: Ada} deriving (Show)
+      , estimatedFees :: Ada} deriving stock (Show)
 
-newtype Metadata = Metadata FilePath deriving (Eq,Show)
+newtype Metadata = Metadata FilePath deriving stock (Eq,Show)
 
-data ValiditySlotRange = ValiditySlotRange Slot Slot deriving (Eq,Show)
+data ValiditySlotRange = ValiditySlotRange Slot Slot deriving stock (Eq,Show)
 
 data TxBuild
         = TxBuild
@@ -359,20 +360,20 @@ data TxBuild
             , outputs :: NonEmpty TxOut
             , validitySlotRangeMaybe :: Maybe ValiditySlotRange
             , metadataMaybe :: Maybe Metadata
-            , tokenSupplyChangesMaybe :: Maybe (NonEmpty MonetaryAction)} deriving (Eq,Show)
+            , tokenSupplyChangesMaybe :: Maybe (NonEmpty MonetaryAction)} deriving stock (Eq,Show)
 
 
 data MonetaryAction
         = Mint {script :: FilePath , amount :: Value}
-        | Burn {script :: FilePath , amount :: Value} deriving (Eq,Show)
+        | Burn {script :: FilePath , amount :: Value} deriving stock (Eq,Show)
 
 
-data TxInFromScript = FromScript { utxoRef :: TxOutRef, script :: FilePath ,datum :: FilePath,redeemer :: FilePath } deriving (Eq,Show)
+data TxInFromScript = FromScript { utxoRef :: TxOutRef, script :: FilePath ,datum :: FilePath,redeemer :: FilePath } deriving stock (Eq,Show)
 
-newtype TxInFromWallet = FromWallet { walletUTxO :: WalletUTxO} deriving (Eq,Show)
+newtype TxInFromWallet = FromWallet { walletUTxO :: WalletUTxO} deriving stock (Eq,Show)
 
 data TxOut = ToScript  { address :: Address , value :: Value, datumHash :: Hash}
-           | ToWallet  { address :: Address , value :: Value, datumMaybe :: Maybe FilePath} deriving (Eq,Show)
+           | ToWallet  { address :: Address , value :: Value, datumMaybe :: Maybe FilePath} deriving stock (Eq,Show)
 
 
 class ToCardanoCLIOptions a where

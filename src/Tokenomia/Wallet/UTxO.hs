@@ -2,6 +2,7 @@
 {-# LANGUAGE ImportQualifiedPost          #-}
 {-# LANGUAGE OverloadedStrings            #-}
 {-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Tokenomia.Wallet.UTxO
     ( UTxO (..)
@@ -25,7 +26,7 @@ data UTxO = UTxO
     { txOutRef :: TxOutRef
     , value :: Value
     , maybeDatumHash :: Maybe Hash
-    } deriving (Show,Eq)
+    } deriving stock (Show,Eq)
 
 instance Ord UTxO where
     compare x y = compare (txOutRef x) (txOutRef y)

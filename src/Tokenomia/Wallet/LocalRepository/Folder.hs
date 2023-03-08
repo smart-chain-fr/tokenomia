@@ -1,16 +1,10 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 
@@ -39,7 +33,7 @@ getWalletPath
     :: (MonadIO m, MonadReader Environment m)
     =>  WalletName
     ->  m FilePath
-getWalletPath name = (<> name <>"/" ) <$> getFolderPath Wallets
+getWalletPath walletName = (<> walletName <>"/" ) <$> getFolderPath Wallets
 
 getWalletFilePath
     :: (MonadIO m, MonadReader Environment m)

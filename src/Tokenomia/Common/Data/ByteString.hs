@@ -1,5 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost        #-}
-
 module Tokenomia.Common.Data.ByteString
     ( unsafeDecodeHex
     , encode

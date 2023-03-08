@@ -59,10 +59,7 @@ import           Plutus.Contract.Wallet (getUnspentOutput)
 import Ledger
     ( CardanoAddress,
       TxOutRef(..),
-      pubKeyHashAddress,
       mkMintingPolicyScript,
-      PaymentPubKeyHash(..),
-      PubKeyHash,
       MintingPolicy,
       CurrencySymbol,
       getCardanoTxId )

@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Tokenomia.Script.UTxO
     ( ScriptUTxO (..)
@@ -15,7 +15,7 @@ import Tokenomia.Common.Shell.InteractiveMenu
 
 import qualified Data.Text as T
 import           Data.Text (Text)
-import           Data.List as L
+import qualified Data.List as L
 import           Data.String
 import           Tokenomia.Common.Serialise
 import           Tokenomia.Common.Value
@@ -26,7 +26,7 @@ import           Tokenomia.Common.Hash
 data ScriptUTxO = ScriptUTxO
               { txOutRef :: TxOutRef
               , value :: Value
-              , datumHash :: Hash} deriving (Eq)
+              , datumHash :: Hash} deriving stock (Eq)
 
 
 instance Show ScriptUTxO where
@@ -53,12 +53,10 @@ instance FromCLI [ScriptUTxO] where
 
       tokenize :: Text ->  [(Text,Text,[Text])]
       tokenize
-          =  map (\a ->
+          =  map ((\a ->
                   ( L.head a
                   , a L.!! 1
-                  , (filterEmptyLines . L.drop 2) a ))
-          .  map T.words
-          .  (removeHeader . filterEmptyLines . T.lines)
+                  , (filterEmptyLines . L.drop 2) a )) . T.words) . removeHeader . filterEmptyLines . T.lines
 
       removeHeader :: [Text] -> [Text]
       removeHeader = L.drop 2

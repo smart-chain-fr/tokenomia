@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -18,7 +17,7 @@ module Tokenomia.Common.Value
   , containsCollateral
   , showValueUtf8) where
 
-import Tokenomia.Common.Serialise
+import Tokenomia.Common.Serialise ( FromCLI(..), ToCLI(..) )
 
 import Data.Function            ( on )
 import Data.List                ( intersperse )

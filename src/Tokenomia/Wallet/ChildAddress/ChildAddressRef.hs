@@ -1,5 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DerivingVia #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Tokenomia.Wallet.ChildAddress.ChildAddressRef
     ( ChildAddressIndex (..)
     , ChildAddressRef (..)
@@ -10,9 +10,9 @@ module Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import Tokenomia.Wallet.Type ( WalletName )
 import Tokenomia.Common.Address ( Address(..) )
 
-newtype ChildAddressIndex = ChildAddressIndex Integer deriving (Eq,Ord,Num,Real,Integral,Enum,Read,Show)
+newtype ChildAddressIndex = ChildAddressIndex Integer deriving (Eq,Ord,Num,Real,Integral,Enum,Read,Show) via Integer
 
-data ChildAddressRef = ChildAddressRef {name :: WalletName, index :: ChildAddressIndex } deriving (Eq,Show)
+data ChildAddressRef = ChildAddressRef {name :: WalletName, index :: ChildAddressIndex } deriving stock (Eq,Show)
 
 instance Ord ChildAddressRef where
     compare ChildAddressRef {index = x} ChildAddressRef {index = y} = compare x y
@@ -21,7 +21,7 @@ instance Ord ChildAddressRef where
 data IndexedAddress
         = IndexedAddress
           { address         :: Address
-          , childAddressRef :: ChildAddressRef} deriving (Eq)
+          , childAddressRef :: ChildAddressRef} deriving stock (Eq)
 
 instance Show IndexedAddress where
     show IndexedAddress

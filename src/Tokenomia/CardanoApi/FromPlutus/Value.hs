@@ -24,16 +24,16 @@ import Cardano.Api
     )
 
 import PlutusTx.Builtins                    ( fromBuiltin )
-import Plutus.V1.Ledger.Value               ( adaSymbol, adaToken )
+import Plutus.V1.Ledger.Value
+    ( adaSymbol,
+      adaToken,
+      AssetClass(..),
+      CurrencySymbol(..),
+      TokenName(..),
+      flattenValue,
+      assetClass )
 import Plutus.V1.Ledger.Value qualified
     as Plutus                               ( Value )
-import Plutus.V1.Ledger.Value
-    ( AssetClass(..)
-    , CurrencySymbol(..)
-    , TokenName(..)
-    , flattenValue
-    , assetClass
-    )
 
 import Tokenomia.CardanoApi.FromPlutus.Error
     ( FromPlutusError(..) )
@@ -66,7 +66,7 @@ assetClassAsAssetId (AssetClass (cs, tn))
 -- | Convert a Plutus Value to a Cardano.Api Value
 fromPlutusValue :: Plutus.Value -> Either FromPlutusError Value
 fromPlutusValue value =
-    valueFromList <$> sequence (fromPlutusSingleton <$> flattenValue value)
+    valueFromList <$> mapM fromPlutusSingleton (flattenValue value)
   where
     fromPlutusSingleton (cs, tn, x) =
         assetClassAsAssetId (assetClass cs tn) <&> (, Quantity x)

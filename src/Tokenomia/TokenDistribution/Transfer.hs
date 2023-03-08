@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE ImportQualifiedPost          #-}
 {-# LANGUAGE RecordWildCards              #-}
 
 module Tokenomia.TokenDistribution.Transfer

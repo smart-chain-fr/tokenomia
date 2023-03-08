@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
 
 module Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     ( deriveMissingChildAddresses
@@ -75,16 +74,16 @@ fetchAddressByChildAddressRef ::
     , MonadReader Environment m
     )
     => ChildAddressRef -> m Address
-fetchAddressByChildAddressRef childAddressRef =
-    address <$> fetchById childAddressRef
+fetchAddressByChildAddressRef ref =
+    address <$> fetchById ref
 
 fetchAddressByWalletAtIndex ::
     ( MonadIO m
     , MonadReader Environment m
     )
     => ChildAddressIndex -> WalletName -> m (Maybe Address)
-fetchAddressByWalletAtIndex index walletName =
-    listToMaybe <$> fetchAddressesByWalletAtIndexes [index] walletName
+fetchAddressByWalletAtIndex walletIndex walletName =
+    listToMaybe <$> fetchAddressesByWalletAtIndexes [walletIndex] walletName
 
 fetchAddressesByWalletAtIndexes ::
     ( MonadIO m

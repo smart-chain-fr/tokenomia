@@ -1,6 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost          #-}
 {-# LANGUAGE FlexibleInstances            #-}
-{-# LANGUAGE TypeApplications             #-}
 {-# OPTIONS_GHC -Wno-orphans              #-}
 
 module Tokenomia.Common.Arbitrary.Value

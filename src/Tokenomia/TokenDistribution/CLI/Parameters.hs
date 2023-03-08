@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 module Tokenomia.TokenDistribution.CLI.Parameters ( Parameters (..) ) where
 
 import Cardano.Api              ( NetworkId )
@@ -15,4 +16,4 @@ data  Parameters
     , metadataFilePath :: Maybe FilePath
     , dryRun :: Bool
     , verbose :: Bool
-    } deriving (Show)
+    } deriving stock (Show)

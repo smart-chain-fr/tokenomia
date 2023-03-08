@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts               #-}
-{-# LANGUAGE RecordWildCards                #-}
 
 module Tokenomia.Common.Environment.Query
     ( evalQuery
@@ -15,7 +14,7 @@ import Control.Monad.Trans.Except           ( ExceptT, runExceptT )
 import Cardano.Api.Shelley                  ( LocalNodeConnectInfo, CardanoMode )
 import Cardano.Slotting.Time                ( SystemStart )
 
-import Tokenomia.Common.Environment         ( Environment(..) )
+import Tokenomia.Common.Environment ( Environment(localNodeConnectInfo, systemStart') )
 
 
 -- | Lift an ExceptT into a MonadError

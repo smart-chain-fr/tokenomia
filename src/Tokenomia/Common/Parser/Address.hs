@@ -9,7 +9,7 @@ module Tokenomia.Common.Parser.Address
     , unsafeSerialiseCardanoAddress
     ) where
 
-import Ledger.Address           ( Address(..) )
+import Ledger.Address           ( Address(..), toPlutusAddress )
 import Ledger.Credential        ( Credential(..) )
 import Ledger.Crypto            ( PubKeyHash(PubKeyHash) )
 
@@ -26,7 +26,6 @@ import Prelude           hiding ( length )
 
 import Plutus.Contract.CardanoAPI
     ( ToCardanoError
-    , fromCardanoAddressInEra
     , toCardanoAddressInEra
     )
 
@@ -53,7 +52,7 @@ deserialiseAddressInEra
     :: forall (era :: Type). IsCardanoEra era
     => AsType era -> Text -> Either Text Address
 deserialiseAddressInEra era address =
-    maybeToRight "deserialisation failed" $ fromCardanoAddressInEra
+    maybeToRight "deserialisation failed" $ toPlutusAddress
         <$> deserialiseAddress (AsAddressInEra era) address
 
 deserialiseCardanoAddress :: Text -> Either Text Address

@@ -1,5 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost            #-}
-
 module Tokenomia.CardanoApi.FromPlutus.Time
     ( fromPlutusSlot
     , posixTimeToNominalDiffTime

@@ -19,11 +19,10 @@ import           Control.Monad.Reader hiding (ask)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as E
 import           Data.List.NonEmpty
-import qualified Data.ByteString.UTF8 as BSU
 
 import           Control.Monad.Except
 
-import           Ledger hiding (mint, Address, Mint, Params, scriptCurrencySymbol)
+import           Ledger hiding (mint, Address, Mint, scriptCurrencySymbol)
 import           Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
 import qualified Ledger.Value as L
 import           Ledger.Ada
@@ -47,7 +46,6 @@ import           Tokenomia.Common.Shell.InteractiveMenu (ask,askString)
 import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import           Tokenomia.Wallet.Type
 import           Tokenomia.Wallet.ChildAddress.LocalRepository
-import            Data.Text.Encoding as TSE
 
 mint ::
     ( MonadIO m

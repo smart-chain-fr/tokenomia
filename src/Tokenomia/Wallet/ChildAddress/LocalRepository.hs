@@ -12,6 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 
 module Tokenomia.Wallet.ChildAddress.LocalRepository
@@ -65,7 +66,7 @@ data ChildAddress = ChildAddress
               { childAddressRef :: ChildAddressRef
               , address :: Address
               , extendedPrivateKeyJSONPath :: FilePath
-              , publicKeyHash :: PubKeyHash  } deriving Eq
+              , publicKeyHash :: PubKeyHash  } deriving  stock Eq
 
 
 toIndexedAddress :: ChildAddress -> IndexedAddress
@@ -171,11 +172,11 @@ fetchByAddress
     -> m (Maybe IndexedAddress)
 fetchByAddress walletName address = do
     addressIndexPath <- getAddressIndexPath walletName address
-    (liftIO $ doesFileExist addressIndexPath)
+    liftIO (doesFileExist addressIndexPath)
      >>= \case
             False -> return Nothing
             True  -> do
-                index <- read @Integer . C.unpack <$> (liftIO $ cat addressIndexPath |> captureTrim)
+                index <- read @Integer . C.unpack <$> liftIO (cat addressIndexPath |> captureTrim)
                 return . Just $ IndexedAddress
                     { address = address
                     , childAddressRef = ChildAddressRef walletName (coerce index)}

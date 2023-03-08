@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE DerivingStrategies #-}
 module Tokenomia.Common.Asset
     ( Asset(..)
     , Assets(..)
@@ -13,13 +14,13 @@ data    Asset
     =   Asset
     { assetClass :: AssetClass
     , amount :: Integer
-    } deriving (Show)
+    } deriving stock (Show)
 
 type NonEmptySet = NESet
 
 newtype Assets
     =   Assets (NonEmptySet Asset)
-    deriving (Show)
+    deriving stock (Show)
 
 class ToValue a where
     toValue :: a -> Value

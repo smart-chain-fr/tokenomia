@@ -102,7 +102,7 @@ getRootPrivateKey ::
     => Mnemonics -> m RootPrivateKey
 getRootPrivateKey (Mnemonics mnemonics) =
     RootPrivateKey <$> liftIO
-        ( (ByteString.unwords mnemonics) >>> cardano_address "key" "from-recovery-phrase" "Shelley"
+        ( ByteString.unwords mnemonics >>> cardano_address "key" "from-recovery-phrase" "Shelley"
             |> captureTrim
         )
 

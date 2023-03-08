@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Tokenomia.Common.Error
     ( TokenomiaError (..)
@@ -39,7 +40,7 @@ data TokenomiaError
     | MalformedAddress
     | InvalidPrivateSale String
     | QueryFailure String
-    deriving Show
+    deriving stock Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)
 whenNullThrow err =

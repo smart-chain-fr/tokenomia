@@ -1,7 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 
 
 module Tokenomia.Wallet.Collateral.Write
@@ -83,4 +81,4 @@ assertCollateralNotAlreadyCreated ::
     , MonadError TokenomiaError m )
     => ChildAddressRef
     -> m ()
-assertCollateralNotAlreadyCreated childAddressRef = fetchCollateral childAddressRef >>=  whenSomethingThrow (const AlreadyACollateral)
+assertCollateralNotAlreadyCreated ref = fetchCollateral ref >>=  whenSomethingThrow (const AlreadyACollateral)
