@@ -1,10 +1,10 @@
 module Tokenomia.Common.Data.ByteString
-    ( unsafeDecodeHex
-    , encode
+    ( encode
+    , unsafeDecodeHex
     ) where
 
-import Data.ByteString                      ( ByteString )
-import Data.ByteString.Base16               ( decode, encode )
+import Data.ByteString                                 ( ByteString )
+import Data.ByteString.Base16                          ( decode, encode )
 
 
 unsafeDecodeHex :: ByteString -> ByteString

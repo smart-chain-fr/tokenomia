@@ -1,36 +1,34 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# OPTIONS_GHC -Wno-name-shadowing                    #-}
+{-# OPTIONS_GHC -Wno-orphans                           #-}
 
 module Tokenomia.Wallet.WalletUTxO
-    ( WalletUTxO (..)
+    ( WalletUTxO(..)
     , getAdas
-    , value
     , getDatumHashAndAdaMaybe
+    , value
     ) where
 
-import Tokenomia.Common.Shell.InteractiveMenu
-    ( DisplayMenuItem(..) )
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..) )
 
-import           Prelude as P
-import           Data.List ( intercalate )
-import Ledger.Ada ( Ada, fromValue )
-import           Ledger.Value ( Value )
-import           Tokenomia.Common.TxOutRef ( showTxOutRef )
-import           Tokenomia.Wallet.Type ()
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressRef )
-import Tokenomia.Common.Hash ( Hash )
-import Tokenomia.Common.Value
-    ( containingStrictlyADAs, showValueUtf8 )
-import Tokenomia.Wallet.UTxO
-    ( UTxO(UTxO, txOutRef, maybeDatumHash) )
-import qualified Tokenomia.Wallet.UTxO as UTxO ( value )
+import Data.List                                       ( intercalate )
+import Ledger.Ada                                      ( Ada, fromValue )
+import Ledger.Value                                    ( Value )
+import Prelude as P
+import Tokenomia.Common.Hash                           ( Hash )
+import Tokenomia.Common.TxOutRef                       ( showTxOutRef )
+import Tokenomia.Common.Value                          ( containingStrictlyADAs, showValueUtf8 )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef )
+import Tokenomia.Wallet.Type                           ()
+import Tokenomia.Wallet.UTxO                           ( UTxO(UTxO, maybeDatumHash, txOutRef) )
+import Tokenomia.Wallet.UTxO qualified
+    as UTxO                                            ( value )
 
 data  WalletUTxO
     = WalletUTxO

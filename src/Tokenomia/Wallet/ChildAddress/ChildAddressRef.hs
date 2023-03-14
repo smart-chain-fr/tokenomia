@@ -1,15 +1,16 @@
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# LANGUAGE DerivingVia                               #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving                #-}
+{-# OPTIONS_GHC -Wno-name-shadowing                    #-}
 module Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressIndex (..)
-    , ChildAddressRef (..)
-    , IndexedAddress (..)
-    , CollateralAddressRef (..)
-    , FeeAddressRef (..)) where
+    ( ChildAddressIndex(..)
+    , ChildAddressRef(..)
+    , CollateralAddressRef(..)
+    , FeeAddressRef(..)
+    , IndexedAddress(..)
+    ) where
 
-import Tokenomia.Wallet.Type ( WalletName )
-import Tokenomia.Common.Address ( Address(..) )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 newtype ChildAddressIndex = ChildAddressIndex Integer deriving newtype (Eq,Ord,Num,Real,Integral,Enum,Read,Show)
 

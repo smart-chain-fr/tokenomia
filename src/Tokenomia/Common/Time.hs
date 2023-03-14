@@ -4,21 +4,20 @@ module Tokenomia.Common.Time
     , toNextBeginRelativeTime
     ) where
 
-import Data.Time.Clock                      ( NominalDiffTime )
+import Data.Time.Clock                                 ( NominalDiffTime )
 
-import Control.Monad.Reader                 ( MonadIO(..) )
-import Control.Monad.Trans.Except           ( ExceptT )
-import Control.Monad.Trans.Except.Extra     ( secondExceptT )
+import Control.Monad.Reader                            ( MonadIO(..) )
+import Control.Monad.Trans.Except                      ( ExceptT )
+import Control.Monad.Trans.Except.Extra                ( secondExceptT )
 
-import Cardano.Api                          ( SlotNo(..) )
-import Cardano.Api.Shelley                  ( CardanoMode, LocalNodeConnectInfo )
-import Cardano.Slotting.Time                ( SystemStart )
+import Cardano.Api                                     ( SlotNo(..) )
+import Cardano.Api.Shelley                             ( CardanoMode, LocalNodeConnectInfo )
+import Cardano.Slotting.Time                           ( SystemStart )
 
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types
-    ( RelativeTime(..) )
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( RelativeTime(..) )
 
-import Tokenomia.CardanoApi.Query           ( QueryFailure, querySlotToWallclock', queryWallclockToSlot' )
-import Tokenomia.CardanoApi.Time            ( relativeTimeToNominalDiffTime, nominalDiffTimeToRelativeTime )
+import Tokenomia.CardanoApi.Query                      ( QueryFailure, querySlotToWallclock', queryWallclockToSlot' )
+import Tokenomia.CardanoApi.Time                       ( nominalDiffTimeToRelativeTime, relativeTimeToNominalDiffTime )
 
 
 -- | Smallest slot whose starting time is greater or equal than the given time

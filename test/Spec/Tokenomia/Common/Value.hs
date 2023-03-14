@@ -1,26 +1,29 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE QuasiQuotes, ExtendedDefaultRules #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE NamedFieldPuns #-}
-module Spec.Tokenomia.Common.Value (tests) where
+{-# LANGUAGE DeriveFunctor                             #-}
+{-# LANGUAGE DeriveGeneric                             #-}
+{-# LANGUAGE DerivingVia                               #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE QuasiQuotes                               #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TypeApplications                          #-}
+module Spec.Tokenomia.Common.Value
+    ( tests
+    ) where
 
-import Test.Tasty ( TestTree, testGroup )
-import Test.Tasty.HUnit ( testCase, (@?=) )
-import Text.InterpolatedString.Perl6 (qc)
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.HUnit                                ( testCase, (@?=) )
+import Text.InterpolatedString.Perl6                   ( qc )
 
-import Plutus.V1.Ledger.Value ( singleton )
+import Plutus.V1.Ledger.Value                          ( singleton )
 
-import Ledger.Ada ( lovelaceValueOf )
+import Ledger.Ada                                      ( lovelaceValueOf )
 
-import Tokenomia.Common.Value ()
-import Tokenomia.Common.Serialise ( FromCLI(fromCLI) )
+import Tokenomia.Common.Serialise                      ( FromCLI(fromCLI) )
+import Tokenomia.Common.Value                          ()
 
 tests :: TestTree
 tests = testGroup "Value" [unitTests]

@@ -1,56 +1,57 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Wallet.LocalRepository
-    ( register
-    , remove
-    , exists
-    , restoreByMnemonics
+    ( exists
     , fetchAll
     , fetchById
+    , register
+    , remove
+    , restoreByMnemonics
     ) where
 
-import Data.String ( IsString(fromString) )
-import qualified Data.ByteString.Lazy.Char8 as C
-import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
+import Data.ByteString.Lazy.Char8 qualified as C
+import Data.String                                     ( IsString(fromString) )
 import Shh.Internal
-    ( (&>),
-      captureTrim,
-      load,
-      (|>),
-      ExecReference(SearchPath),
-      Stream(Truncate),
-      captureWords )
-import           System.Directory ( doesDirectoryExist )
+    ( ExecReference(SearchPath)
+    , Stream(Truncate)
+    , captureTrim
+    , captureWords
+    , load
+    , (&>)
+    , (|>)
+    )
+import System.Directory                                ( doesDirectoryExist )
 
 
-import Tokenomia.Common.Environment
-    ( Environment(Mainnet, Testnet) )
+import Tokenomia.Common.Environment                    ( Environment(Mainnet, Testnet) )
 
-import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-import Tokenomia.Common.Address ( Address(Address) )
+import Tokenomia.Common.Address                        ( Address(Address) )
+import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
 
-import Tokenomia.Wallet.Type ( Wallet(Wallet), WalletName )
-import Tokenomia.Wallet.LocalRepository.Folder
-    ( getWalletFilePath, getWalletPath, WalletFile(..) )
+import Tokenomia.Wallet.LocalRepository.Folder         ( WalletFile(..), getWalletFilePath, getWalletPath )
+import Tokenomia.Wallet.Type                           ( Wallet(Wallet), WalletName )
 
 import Tokenomia.Wallet.ChildAddress.LocalRepository
-    ( deriveChildAddressesWithingRange,
-      getAddressIndexesPath,
-      getChildAddressesPath )
+    ( deriveChildAddressesWithingRange
+    , getAddressIndexesPath
+    , getChildAddressesPath
+    )
 
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
 

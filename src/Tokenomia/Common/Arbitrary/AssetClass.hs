@@ -1,33 +1,28 @@
-{-# LANGUAGE DerivingStrategies             #-}
-{-# LANGUAGE FlexibleInstances              #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving     #-}
-{-# LANGUAGE StandaloneDeriving             #-}
-{-# OPTIONS_GHC -Wno-orphans                #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving                #-}
+{-# LANGUAGE StandaloneDeriving                        #-}
+{-# OPTIONS_GHC -Wno-orphans                           #-}
 
 module Tokenomia.Common.Arbitrary.AssetClass
-    () where
+    (
+    ) where
 
-import Data.String                          ( fromString )
+import Data.String                                     ( fromString )
 import Plutus.V1.Ledger.Value
     ( AssetClass(..)
-    , CurrencySymbol (..)
-    , TokenName (..)
+    , CurrencySymbol(..)
+    , TokenName(..)
     , adaSymbol
     , adaToken
     , assetClass
     )
 
-import Test.Tasty.QuickCheck
-    ( Arbitrary
-    , arbitrary
-    , frequency
-    , resize
-    , shrink
-    )
+import Test.Tasty.QuickCheck                           ( Arbitrary, arbitrary, frequency, resize, shrink )
 
-import Tokenomia.Common.AssetClass          ( adaAssetClass )
-import Tokenomia.Common.Arbitrary.Builtins  ( vectorOfHexBytes )
-import Tokenomia.Common.Arbitrary.Modifiers ( Restricted(..) )
+import Tokenomia.Common.Arbitrary.Builtins             ( vectorOfHexBytes )
+import Tokenomia.Common.Arbitrary.Modifiers            ( Restricted(..) )
+import Tokenomia.Common.AssetClass                     ( adaAssetClass )
 
 
 instance Arbitrary CurrencySymbol where

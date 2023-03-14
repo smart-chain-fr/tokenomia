@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields                  #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
 
 
 module Tokenomia.Wallet.Collateral.Read
@@ -10,29 +10,24 @@ module Tokenomia.Wallet.Collateral.Read
     , filterWalletsWithCollateral
     ) where
 
-import Control.Monad.Reader
-    ( MonadIO,
-      filterM,
-      MonadReader )
+import Control.Monad.Reader                            ( MonadIO, MonadReader, filterM )
 
 
-import Data.Maybe ( isJust, isNothing )
-import Data.List.NonEmpty ( NonEmpty, nonEmpty, toList )
+import Data.List.NonEmpty                              ( NonEmpty, nonEmpty, toList )
+import Data.Maybe                                      ( isJust, isNothing )
 
 
-import Tokenomia.Common.Value ( containsCollateral )
+import Tokenomia.Common.Value                          ( containsCollateral )
 
-import Tokenomia.Common.Environment ( Environment )
+import Tokenomia.Common.Environment                    ( Environment )
 
-import Tokenomia.Wallet.LocalRepository ( fetchAll )
-import           Tokenomia.Wallet.Type (Wallet (Wallet, name))
-import Tokenomia.Wallet.UTxO ( UTxO(value) )
-import Tokenomia.Wallet.WalletUTxO ( WalletUTxO(utxo) )
-import Tokenomia.Wallet.ChildAddress.ChainIndex
-    ( queryUTxOsFilterBy )
-import           Prelude hiding (print)
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressRef(ChildAddressRef) )
+import Prelude hiding                                  ( print )
+import Tokenomia.Wallet.ChildAddress.ChainIndex        ( queryUTxOsFilterBy )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef(ChildAddressRef) )
+import Tokenomia.Wallet.LocalRepository                ( fetchAll )
+import Tokenomia.Wallet.Type                           ( Wallet(Wallet, name) )
+import Tokenomia.Wallet.UTxO                           ( UTxO(value) )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO(utxo) )
 
 
 filterWalletsWithCollateral

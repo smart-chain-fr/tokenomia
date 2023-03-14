@@ -1,55 +1,54 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
 
 module Tokenomia.Common.Environment
-    ( getTestnetEnvironmment
-    , getMainnetEnvironmment
-    , getPreprodEnvironmment
-    , getNetworkEnvironmment
-    , readNetworkMagic
-    , Environment (..)
-    , toPosixTime
-    , toSlot
+    ( Environment(..)
+    , convertToExternalPosix
+    , convertToInternalPosix
+    , formatISO8601
     , getFirstShelleySlot
     , getFirstShelleySlotTime
-    , convertToInternalPosix
-    , convertToExternalPosix
-    , formatISO8601
-     ) where
+    , getMainnetEnvironmment
+    , getNetworkEnvironmment
+    , getPreprodEnvironmment
+    , getTestnetEnvironmment
+    , readNetworkMagic
+    , toPosixTime
+    , toSlot
+    ) where
 
-import Control.Monad.Reader ( MonadIO(..), MonadReader(ask) )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader(ask) )
 
 
-import           System.Environment (getEnv)
+import System.Environment                              ( getEnv )
 
 
 import Cardano.Api
-    ( executeLocalStateQueryExpr,
-      queryExpr,
-      LocalNodeConnectInfo(..),
-      CardanoMode,
-      ConsensusModeParams(CardanoModeParams),
-      QueryInMode(QuerySystemStart),
-      EpochSlots(EpochSlots),
-      NetworkMagic(NetworkMagic, unNetworkMagic),
-      NetworkId,
-      toNetworkMagic
+    ( CardanoMode
+    , ConsensusModeParams(CardanoModeParams)
+    , EpochSlots(EpochSlots)
+    , LocalNodeConnectInfo(..)
+    , NetworkId
+    , NetworkMagic(NetworkMagic, unNetworkMagic)
+    , QueryInMode(QuerySystemStart)
+    , executeLocalStateQueryExpr
+    , queryExpr
+    , toNetworkMagic
     )
 
-import Cardano.Api qualified
-    ( NetworkId (Testnet, Mainnet) )
+import Cardano.Api qualified                           ( NetworkId(Mainnet, Testnet) )
 
-import qualified Cardano.Api.Shelley  as Shelley
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types (SystemStart (..) )
-import Ledger ( Slot(Slot), POSIXTime(POSIXTime) )
+import Cardano.Api.Shelley qualified as Shelley
+import Ledger                                          ( POSIXTime(POSIXTime), Slot(Slot) )
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( SystemStart(..) )
 
-import Data.Coerce ( coerce )
-import qualified Data.Time.ISO8601 as ExternalPosix
-import qualified Data.Time.Clock.POSIX as ExternalPosix
-import qualified Data.Time.Clock as ExternalPosix
+import Data.Coerce                                     ( coerce )
+import Data.Time.Clock qualified as ExternalPosix
+import Data.Time.Clock.POSIX qualified as ExternalPosix
+import Data.Time.ISO8601 qualified as ExternalPosix
 
 data Environment = Testnet
                     { magicNumber :: Integer

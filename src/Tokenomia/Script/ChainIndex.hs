@@ -1,39 +1,38 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
 
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# OPTIONS_GHC -Wno-orphans                           #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 module Tokenomia.Script.ChainIndex
     ( queryUTxO
     ) where
 
 
-import qualified Data.Text.Lazy as TL
-import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Encoding
+    as TLE                                             ( decodeUtf8 )
 
-import           Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
-import Shh.Internal
-    ( capture, load, (|>), ExecReference(SearchPath) )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
+import Shh.Internal                                    ( ExecReference(SearchPath), capture, load, (|>) )
 
 
-import Tokenomia.Common.Serialise ( FromCLI(fromCLI) )
-import Tokenomia.Common.Environment ( Environment(magicNumber) )
-import           Tokenomia.Common.Value ()
-import Tokenomia.Script.UTxO ( ScriptUTxO )
-import Tokenomia.Common.Address ( Address(..) )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.Environment                    ( Environment(magicNumber) )
+import Tokenomia.Common.Serialise                      ( FromCLI(fromCLI) )
+import Tokenomia.Common.Value                          ()
+import Tokenomia.Script.UTxO                           ( ScriptUTxO )
 
 
 load SearchPath ["cardano-cli"]

@@ -1,11 +1,11 @@
-{-# LANGUAGE OverloadedStrings              #-}
+{-# LANGUAGE OverloadedStrings                         #-}
 
 module Spec.Tokenomia.CardanoApi.Fees
     ( tests
     ) where
 
-import Test.Tasty                           ( TestTree, testGroup )
-import Test.Tasty.HUnit                     ( Assertion, testCase, (@?=) )
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.HUnit                                ( Assertion, testCase, (@?=) )
 
 import Cardano.Api
     ( AssetId(..)
@@ -14,14 +14,14 @@ import Cardano.Api
     , PolicyId(..)
     , Quantity
     , ShelleyBasedEra(..)
-    , valueFromList
     , lovelaceToValue
+    , valueFromList
     )
 
 import Tokenomia.CardanoApi.Fees
     ( HasDatumHash(..)
-    , calculateDefaultMinimumUTxOFromValue
     , calculateDefaultMinimumUTxOFromAssetId
+    , calculateDefaultMinimumUTxOFromValue
     , utxoEntrySize
     )
 

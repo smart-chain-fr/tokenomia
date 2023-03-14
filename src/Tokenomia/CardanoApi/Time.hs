@@ -3,13 +3,12 @@ module Tokenomia.CardanoApi.Time
     , relativeTimeToNominalDiffTime
     ) where
 
-import Cardano.Slotting.Time                ( SystemStart, fromRelativeTime, toRelativeTime )
-import Data.Time.Clock                      ( NominalDiffTime )
-import Data.Time.Clock.POSIX                ( posixSecondsToUTCTime, utcTimeToPOSIXSeconds )
-import Data.Composition                     ( (.:) )
+import Cardano.Slotting.Time                           ( SystemStart, fromRelativeTime, toRelativeTime )
+import Data.Composition                                ( (.:) )
+import Data.Time.Clock                                 ( NominalDiffTime )
+import Data.Time.Clock.POSIX                           ( posixSecondsToUTCTime, utcTimeToPOSIXSeconds )
 
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types
-    ( RelativeTime(..) )
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( RelativeTime(..) )
 
 
 -- | Convert a relative time to POSIX time

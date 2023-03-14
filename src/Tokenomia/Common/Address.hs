@@ -1,10 +1,11 @@
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingVia                               #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving                #-}
 module Tokenomia.Common.Address
-    ( Address (..)) where
+    ( Address(..)
+    ) where
 
-import      Data.String (IsString)
-import      Data.Aeson  (FromJSON, ToJSON)
+import Data.Aeson                                      ( FromJSON, ToJSON )
+import Data.String                                     ( IsString )
 
 newtype Address = Address String deriving stock (Eq,Ord)
                                  deriving (Show,IsString) via String

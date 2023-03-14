@@ -1,52 +1,50 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TypeApplications                          #-}
 
-module Tokenomia.Token.CLAPStyle.Burn (burn) where
+module Tokenomia.Token.CLAPStyle.Burn
+    ( burn
+    ) where
 
-import           Prelude hiding ((+),(-),print)
-import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
+import PlutusTx.Prelude                                ( AdditiveGroup((-)), AdditiveSemigroup((+)) )
+import Prelude hiding                                  ( print, (+), (-) )
 
-import Control.Monad.Reader ( MonadIO, MonadReader )
-import Control.Monad.Except ( MonadError )
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
 
-import Data.List.NonEmpty ( NonEmpty((:|)) )
-import Ledger.Value ( singleton )
-import Ledger.Ada ( lovelaceValueOf )
+import Data.List.NonEmpty                              ( NonEmpty((:|)) )
+import Ledger.Ada                                      ( lovelaceValueOf )
+import Ledger.Value                                    ( singleton )
 
-import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Wallet.UTxO as UTxO ( UTxO(..) )
-import Tokenomia.Wallet.WalletUTxO ( WalletUTxO(..) )
+import Tokenomia.Common.Environment                    ( Environment )
 import Tokenomia.Common.Transacting
-    ( buildAndSubmit,
-      MonetaryAction(..),
-      TxBalance(Unbalanced),
-      TxBuild(..),
-      TxInFromWallet(FromWallet),
-      TxOut(ToWallet) )
-import Tokenomia.Script.LocalRepository ( getMonetaryPolicyPath )
+    ( MonetaryAction(..)
+    , TxBalance(Unbalanced)
+    , TxBuild(..)
+    , TxInFromWallet(FromWallet)
+    , TxOut(ToWallet)
+    , buildAndSubmit
+    )
+import Tokenomia.Script.LocalRepository                ( getMonetaryPolicyPath )
+import Tokenomia.Wallet.UTxO
+    as UTxO                                            ( UTxO(..) )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO(..) )
 
-import Tokenomia.Wallet.Collateral.Read
-    ( fetchWalletsWithCollateral )
-import Tokenomia.Wallet.CLI
-    ( askToChooseAmongGivenWallets, askUTxOFilterBy )
-import Tokenomia.Common.Error
-    ( whenNothingThrow,
-      whenNullThrow,
-      TokenomiaError(..) )
-import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu (ask)
-import Tokenomia.Common.Value ( containingOneToken, getTokenFrom )
+import Tokenomia.Common.Error                          ( TokenomiaError(..), whenNothingThrow, whenNullThrow )
+import Tokenomia.Common.Shell.Console                  ( printLn )
+import Tokenomia.Common.Shell.InteractiveMenu          ( ask )
+import Tokenomia.Common.Value                          ( containingOneToken, getTokenFrom )
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressRef(..),
-      CollateralAddressRef(..),
-      FeeAddressRef(..) )
-import Tokenomia.Wallet.Type ( Wallet(..), WalletName )
-import Tokenomia.Wallet.ChildAddress.LocalRepository
-    ( fetchById,
-      ChildAddress(..) )
+    ( ChildAddressRef(..)
+    , CollateralAddressRef(..)
+    , FeeAddressRef(..)
+    )
+import Tokenomia.Wallet.ChildAddress.LocalRepository   ( ChildAddress(..), fetchById )
+import Tokenomia.Wallet.CLI                            ( askToChooseAmongGivenWallets, askUTxOFilterBy )
+import Tokenomia.Wallet.Collateral.Read                ( fetchWalletsWithCollateral )
+import Tokenomia.Wallet.Type                           ( Wallet(..), WalletName )
 
 burn
     :: (  MonadIO m

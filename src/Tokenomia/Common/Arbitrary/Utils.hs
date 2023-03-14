@@ -5,7 +5,7 @@ module Tokenomia.Common.Arbitrary.Utils
     , shrinkListStructure
     ) where
 
-import Test.Tasty.QuickCheck    ( Gen, frequency, shrinkList )
+import Test.Tasty.QuickCheck                           ( Gen, frequency, shrinkList )
 
 -- | Helper generator to choose element from a list with increasing frequency
 growingFrequency :: [a] -> Gen a

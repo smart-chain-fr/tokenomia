@@ -1,70 +1,57 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE RecordWildCards                           #-}
 
 module Tokenomia.TokenDistribution.Transfer
     ( distributionOutputs
     , transferTokenInParallel
     ) where
 
-import Control.Monad            ( void )
-import Control.Monad.Reader     ( MonadIO, MonadReader, liftIO )
-import Control.Monad.Except     ( MonadError )
+import Control.Monad                                   ( void )
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader, liftIO )
 
-import Data.List.NonEmpty       ( NonEmpty((:|)), (<|), fromList, toList )
-import Data.Functor.Syntax      ( (<$$>) )
-import Data.Maybe               ( fromJust )
+import Data.Functor.Syntax                             ( (<$$>) )
+import Data.List.NonEmpty                              ( NonEmpty((:|)), fromList, toList, (<|) )
+import Data.Maybe                                      ( fromJust )
 
-import Prelude hiding           ( mapM )
+import Prelude hiding                                  ( mapM )
 
-import Ledger.Value             ( Value, assetClassValue )
-import Ledger.Ada               ( lovelaceValueOf )
+import Ledger.Ada                                      ( lovelaceValueOf )
+import Ledger.Value                                    ( Value, assetClassValue )
 
-import Streamly.Prelude
-    ( MonadAsync
-    , drain
-    , fromAsync
-    , fromFoldable
-    , mapM
-    )
+import Streamly.Prelude                                ( MonadAsync, drain, fromAsync, fromFoldable, mapM )
 
-import Tokenomia.Common.Address     ( Address(..) )
-import Tokenomia.Common.AssetClass  ( adaAssetClass )
-import Tokenomia.Common.Error       ( TokenomiaError )
-import Tokenomia.Common.Environment ( Environment )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.AssetClass                     ( adaAssetClass )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Error                          ( TokenomiaError )
 
-import Tokenomia.Common.Data.Convertible            ( convert )
+import Tokenomia.Common.Data.Convertible               ( convert )
 
-import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), Recipient(..), countRecipients )
+import Tokenomia.TokenDistribution.CLI.Parameters      ( Parameters(..) )
+import Tokenomia.TokenDistribution.Distribution        ( Distribution(..), Recipient(..), countRecipients )
 
 
 import Tokenomia.Common.Transacting
-    ( TxOut(ToWallet)
-    , TxInFromWallet(FromWallet)
-    , TxBuild(..)
-    , TxBalance(..)
+    ( Fees
     , Metadata(..)
-    , Fees
+    , TxBalance(..)
+    , TxBuild(..)
+    , TxInFromWallet(FromWallet)
+    , TxOut(ToWallet)
     , build
     , submitWithoutWaitingConfimation
     )
 
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressIndex(..)
-    , ChildAddressRef(..)
-    )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressIndex(..), ChildAddressRef(..) )
 
-import Tokenomia.TokenDistribution.Parser.Address
-    ( unsafeSerialiseCardanoAddress )
+import Tokenomia.TokenDistribution.Parser.Address      ( unsafeSerialiseCardanoAddress )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( defaultCollateralAddressRef )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef ( defaultCollateralAddressRef )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
-    ( fetchProvisionedUTxO )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex ( fetchProvisionedUTxO )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-    ( fetchAddressByWalletAtIndex )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository ( fetchAddressByWalletAtIndex )
 
 
 transferTokenInParallel ::

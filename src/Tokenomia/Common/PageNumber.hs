@@ -1,8 +1,9 @@
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingVia                               #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving                #-}
 
 module Tokenomia.Common.PageNumber
-    ( PageNumber (..)) where
+    ( PageNumber(..)
+    ) where
 
 
 newtype PageNumber = PageNumber Int

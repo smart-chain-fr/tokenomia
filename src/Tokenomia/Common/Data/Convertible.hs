@@ -1,23 +1,34 @@
-{-# LANGUAGE ImportQualifiedPost        #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE MultiParamTypeClasses                     #-}
+{-# LANGUAGE TypeApplications                          #-}
 
-module Tokenomia.Common.Data.Convertible             ( Convertible(..) ) where
+module Tokenomia.Common.Data.Convertible
+    ( Convertible(..)
+    ) where
 
-import Data.Text                    qualified as TS  ( Text, pack, unpack )
-import Data.Text.Lazy               qualified as TL  ( Text, pack, unpack, fromStrict, toStrict )
+import Data.Text qualified
+    as TS                                              ( Text, pack, unpack )
+import Data.Text.Lazy qualified
+    as TL                                              ( Text, fromStrict, pack, toStrict, unpack )
 
-import Data.ByteString              qualified as BS  ( ByteString )
-import Data.ByteString.Lazy         qualified as BL  ( ByteString, fromStrict, toStrict )
+import Data.ByteString qualified
+    as BS                                              ( ByteString )
+import Data.ByteString.Lazy qualified
+    as BL                                              ( ByteString, fromStrict, toStrict )
 
-import Data.Text.Encoding           qualified as TSE ( encodeUtf8, decodeUtf8 )
-import Data.Text.Lazy.Encoding      qualified as TLE ( encodeUtf8, decodeUtf8 )
+import Data.Text.Encoding qualified
+    as TSE                                             ( decodeUtf8, encodeUtf8 )
+import Data.Text.Lazy.Encoding qualified
+    as TLE                                             ( decodeUtf8, encodeUtf8 )
 
-import Data.ByteString.UTF8         qualified as BSU ( fromString, toString )
-import Data.ByteString.Lazy.UTF8    qualified as BLU ( fromString, toString )
+import Data.ByteString.Lazy.UTF8 qualified
+    as BLU                                             ( fromString, toString )
+import Data.ByteString.UTF8 qualified
+    as BSU                                             ( fromString, toString )
 
-import PlutusTx.Prelude             qualified as P   ( BuiltinByteString, fromBuiltin, toBuiltin )
+import PlutusTx.Prelude qualified
+    as P                                               ( BuiltinByteString, fromBuiltin, toBuiltin )
 
 
 class Convertible a b where

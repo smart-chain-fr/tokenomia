@@ -1,30 +1,37 @@
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-type-defaults #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults                #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
-module Tokenomia.CLI (main) where
+module Tokenomia.CLI
+    ( main
+    ) where
 
-import Control.Monad.Except
-import Control.Monad.Reader
+import Control.Monad.Except                            ( MonadError(catchError), MonadIO(liftIO), runExceptT )
+import Control.Monad.Reader                            ( MonadReader, ReaderT(runReaderT) )
 import Data.List.NonEmpty
-    as NonEmpty                                               ( NonEmpty, fromList )
-import Shh
+    as NonEmpty                                        ( NonEmpty, fromList )
+import Shh                                             ( ExecReference(SearchPath), load )
 import Streamly.Prelude qualified as S
-import Tokenomia.Common.Error
 import Tokenomia.Ada.Transfer qualified as Ada
 import Tokenomia.Common.Environment
-import Tokenomia.Common.Shell.Console                         (printLn, clearConsole, printOpt)
-import Tokenomia.Common.Shell.InteractiveMenu
+    ( Environment
+    , getMainnetEnvironmment
+    , getPreprodEnvironmment
+    , getTestnetEnvironmment
+    )
+import Tokenomia.Common.Error                          ( TokenomiaError(..) )
+import Tokenomia.Common.Shell.Console                  ( clearConsole, printLn, printOpt )
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..), askMenu )
 import Tokenomia.Node.Status qualified as Node
 import Tokenomia.Token.CLAPStyle.Burn qualified as Token
 import Tokenomia.Token.CLAPStyle.Mint qualified as Token

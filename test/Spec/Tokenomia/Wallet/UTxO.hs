@@ -1,25 +1,28 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE QuasiQuotes, ExtendedDefaultRules #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DeriveFunctor                             #-}
+{-# LANGUAGE DeriveGeneric                             #-}
+{-# LANGUAGE DerivingVia                               #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE QuasiQuotes                               #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TypeApplications                          #-}
 
-module Spec.Tokenomia.Wallet.UTxO (tests) where
+module Spec.Tokenomia.Wallet.UTxO
+    ( tests
+    ) where
 
-import Test.Tasty ( TestTree, testGroup )
-import Test.Tasty.HUnit ( testCase, (@?=) )
-import Text.InterpolatedString.Perl6 (qc)
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.HUnit                                ( testCase, (@?=) )
+import Text.InterpolatedString.Perl6                   ( qc )
 
-import Ledger ( TxOutRef (..) )
-import Plutus.V1.Ledger.Value ( singleton )
-import           Tokenomia.Common.Hash
-import Ledger.Ada ( lovelaceValueOf )
+import Ledger                                          ( TxOutRef(..) )
+import Ledger.Ada                                      ( lovelaceValueOf )
+import Plutus.V1.Ledger.Value                          ( singleton )
+import Tokenomia.Common.Hash
 
 import Tokenomia.Wallet.UTxO
 

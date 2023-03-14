@@ -1,13 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# OPTIONS_GHC -fno-warn-orphans                      #-}
 
 module Tokenomia.Common.Token
-  ( Token (..)
-  , getMinimumUTxOAdaRequired) where
+    ( Token(..)
+    , getMinimumUTxOAdaRequired
+    ) where
 
-import Plutus.V1.Ledger.Value ( AssetClass )
-import Ledger.Ada ( Ada )
+import Ledger.Ada                                      ( Ada )
+import Plutus.V1.Ledger.Value                          ( AssetClass )
 
 data Token
     = Token

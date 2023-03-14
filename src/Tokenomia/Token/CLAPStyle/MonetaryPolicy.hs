@@ -1,82 +1,87 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE MonoLocalBinds     #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE NoImplicitPrelude  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE ViewPatterns       #-}
+{-# LANGUAGE DataKinds                                 #-}
+{-# LANGUAGE DeriveAnyClass                            #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE MonoLocalBinds                            #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE NoImplicitPrelude                         #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# LANGUAGE TypeOperators                             #-}
+{-# LANGUAGE ViewPatterns                              #-}
 
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
+{-# LANGUAGE DeriveGeneric                             #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE MultiParamTypeClasses                     #-}
+{-# LANGUAGE NumericUnderscores                        #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# OPTIONS_GHC -fno-ignore-interface-pragmas          #-}
 
-module Tokenomia.Token.CLAPStyle.MonetaryPolicy(
-    MonetaryPolicySchema
+module Tokenomia.Token.CLAPStyle.MonetaryPolicy
+    ( AsCLAPMonetaryPolicyError(..)
     , CLAPMonetaryPolicyError(..)
-    , AsCLAPMonetaryPolicyError(..)
-    , Params (..)
-    , mkMonetaryPolicyScript
-    , mintContract
+    , MonetaryPolicySchema
+    , Params(..)
     , burnContract
+    , mintContract
+    , mkMonetaryPolicyScript
     ) where
 
 
-import Control.Lens ( makeClassyPrisms, review )
+import Control.Lens                                    ( makeClassyPrisms, review )
 import PlutusTx.Prelude
-    ( (>>),
-      (>>=),
-      (<),
-      Bool(..),
-      (.),
-      Eq((==)),
-      Applicative(pure),
-      (&&),
-      (||),
-      ($),
-      traceIfFalse )
+    ( Applicative(pure)
+    , Bool(..)
+    , Eq((==))
+    , traceIfFalse
+    , ($)
+    , (&&)
+    , (.)
+    , (<)
+    , (>>)
+    , (>>=)
+    , (||)
+    )
 
-import Plutus.Contract as Contract
-    ( awaitTxConfirmed,
-      submitTxConstraintsWith,
-      mapError,
-      utxosAt,
-      Endpoint,
-      type (.\/),
-      Contract,
-      AsContractError(_ContractError),
-      ContractError )
-import           Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Contract
+    as Contract
+    ( AsContractError(_ContractError)
+    , Contract
+    , ContractError
+    , Endpoint
+    , awaitTxConfirmed
+    , mapError
+    , submitTxConstraintsWith
+    , type (.\/)
+    , utxosAt
+    )
+import Plutus.Contract.Wallet                          ( getUnspentOutput )
 
 import Ledger
-    ( CardanoAddress,
-      TxOutRef(..),
-      mkMintingPolicyScript,
-      MintingPolicy,
-      CurrencySymbol,
-      getCardanoTxId )
-import qualified Ledger.Constraints     as Constraints
-import qualified Plutus.V1.Ledger.Contexts        as V
-import Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol)
-import PlutusTx ( BuiltinData, applyCode, liftCode, compile )
+    ( CardanoAddress
+    , CurrencySymbol
+    , MintingPolicy
+    , TxOutRef(..)
+    , getCardanoTxId
+    , mkMintingPolicyScript
+    )
+import Ledger.Constraints qualified as Constraints
+import Plutus.Script.Utils.V1.Scripts                  ( scriptCurrencySymbol )
+import Plutus.V1.Ledger.Contexts qualified as V
+import PlutusTx                                        ( BuiltinData, applyCode, compile, liftCode )
 
-import qualified Ledger.Typed.Scripts   as Scripts
-import           Ledger.Value           (singleton,TokenName (..), valueOf)
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value                                    ( TokenName(..), singleton, valueOf )
 
-import           Data.Aeson             (FromJSON, ToJSON)
-import           GHC.Generics           (Generic)
-import           Prelude                (Semigroup (..),Integer)
-import qualified Prelude                as Haskell
-import qualified PlutusTx
-import PlutusTx.Builtins.Internal ()
+import Data.Aeson                                      ( FromJSON, ToJSON )
+import GHC.Generics                                    ( Generic )
+import PlutusTx qualified
+import PlutusTx.Builtins.Internal                      ()
+import Prelude                                         ( Integer, Semigroup(..) )
+import Prelude qualified as Haskell
 
 
 

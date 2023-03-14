@@ -1,79 +1,86 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Wallet.ChildAddress.LocalRepository
-    ( fetchById
+    ( ChildAddress(..)
+    , Wallet(..)
+    , deriveChildAddress
+    , deriveChildAddressesWithingRange
+    , fetchByAddressStrict
+    , fetchByAddresses
+    , fetchById
     , fetchByWallet
+    , fetchByWalletIndexedAddress
     , fetchByWalletWithinIndexRange
     , fetchDerivedChildAddressIndexes
-    , deriveChildAddressesWithingRange
-    , deriveChildAddress
+    , getAddressIndexesPath
     , getChildAddressPath
     , getChildAddressesPath
-    , getAddressIndexesPath
-    , Wallet (..)
-    , ChildAddress (..)
-    , fetchByAddresses
-    , toIndexedAddress
-    , fetchByWalletIndexedAddress
     , retrieveAddressesFromWallet
-    , fetchByAddressStrict
+    , toIndexedAddress
     ) where
 
-import Data.String ( IsString(fromString) )
-import           Data.List.Split (splitOn)
-import qualified Data.ByteString.Lazy.Char8 as C
-import qualified Data.ByteString.Lazy.UTF8 as BLU
-import Data.Set.NonEmpty as NES ( NESet, toAscList, fromList )
-import qualified Data.Set as Set
-import qualified Data.List.NonEmpty as NEL
-import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
+import Data.ByteString.Lazy.Char8 qualified as C
+import Data.ByteString.Lazy.UTF8 qualified as BLU
+import Data.List.NonEmpty qualified as NEL
+import Data.List.Split                                 ( splitOn )
+import Data.Set qualified as Set
+import Data.Set.NonEmpty
+    as NES                                             ( NESet, fromList, toAscList )
+import Data.String                                     ( IsString(fromString) )
 import Shh.Internal
-    ( (&>),
-      capture,
-      captureTrim,
-      load,
-      (|>),
-      ExecReference(SearchPath),
-      Stream(Truncate),
-      captureWords )
+    ( ExecReference(SearchPath)
+    , Stream(Truncate)
+    , capture
+    , captureTrim
+    , captureWords
+    , load
+    , (&>)
+    , (|>)
+    )
 
-import Ledger.Crypto ( PubKeyHash )
+import Ledger.Crypto                                   ( PubKeyHash )
 
-import Tokenomia.Common.Environment
-    ( Environment(Mainnet, Testnet) )
+import Tokenomia.Common.Environment                    ( Environment(Mainnet, Testnet) )
 
-import Tokenomia.Common.Address ( Address(..) )
+import Tokenomia.Common.Address                        ( Address(..) )
 
-import Tokenomia.Wallet.Type ( Wallet(..), WalletName )
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressIndex(..), ChildAddressRef(..), IndexedAddress(..) )
-import Tokenomia.Wallet.LocalRepository.Folder
-    ( getWalletFilePath,
-      getWalletPath,
-      WalletFile(RootPrivateKeyTxt, StakePublicKeyTxt) )
-import Data.Coerce ( coerce )
-import System.Directory ( doesFileExist )
+import Control.Monad.Except                            ( MonadError(throwError) )
+import Data.Coerce                                     ( coerce )
+import System.Directory                                ( doesFileExist )
 import Tokenomia.Common.Error
-    ( whenNothingThrow,
-      TokenomiaError(NoDerivedChildAddress, ChildAddressNotIndexed) )
-import Control.Monad.Except ( MonadError(throwError) )
+    ( TokenomiaError(ChildAddressNotIndexed, NoDerivedChildAddress)
+    , whenNothingThrow
+    )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressIndex(..)
+    , ChildAddressRef(..)
+    , IndexedAddress(..)
+    )
+import Tokenomia.Wallet.LocalRepository.Folder
+    ( WalletFile(RootPrivateKeyTxt, StakePublicKeyTxt)
+    , getWalletFilePath
+    , getWalletPath
+    )
+import Tokenomia.Wallet.Type                           ( Wallet(..), WalletName )
 
-import           Data.Maybe
+import Data.Maybe
 
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
 

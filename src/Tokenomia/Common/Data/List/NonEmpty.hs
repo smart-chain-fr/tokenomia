@@ -1,4 +1,4 @@
-{-# LANGUAGE ImportQualifiedPost          #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
 
 module Tokenomia.Common.Data.List.NonEmpty
     ( prependMaybe
@@ -6,9 +6,10 @@ module Tokenomia.Common.Data.List.NonEmpty
     , zipWith3
     ) where
 
-import Data.List.NonEmpty       ( NonEmpty((:|)), (<|) )
-import Data.List qualified as L ( zipWith3 )
-import Prelude           hiding ( zipWith3 )
+import Data.List qualified
+    as L                                               ( zipWith3 )
+import Data.List.NonEmpty                              ( NonEmpty((:|)), (<|) )
+import Prelude hiding                                  ( zipWith3 )
 
 
 prependMaybe :: Maybe a -> NonEmpty a -> NonEmpty a

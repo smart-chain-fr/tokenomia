@@ -1,100 +1,99 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Common.Transacting
-    ( TxBalance (..)
-    , TxBuild (..)
-    , TxInFromWallet (..)
-    , TxInFromScript (..)
-    , TxOut (..)
-    , Metadata (..)
-    , ValiditySlotRange (..)
-    , MonetaryAction (..)
-    , calculateMinRequiredUTxO
-    , createMetadataFile
+    ( BuiltTx(..)
+    , Fees
+    , Metadata(..)
+    , MonetaryAction(..)
+    , TxBalance(..)
+    , TxBuild(..)
+    , TxInFromScript(..)
+    , TxInFromWallet(..)
+    , TxOut(..)
+    , ValiditySlotRange(..)
     , build
     , buildAndSubmit
-    , submitAndWait
-    , waitConfirmation
-    , submitWithoutWaitingConfimation
+    , calculateMinRequiredUTxO
+    , createMetadataFile
     , mockBuild
-    , BuiltTx (..)
-    , Fees
+    , submitAndWait
+    , submitWithoutWaitingConfimation
+    , waitConfirmation
     ) where
 
-import Prelude hiding (head)
-import qualified Prelude
-import Data.Coerce ( coerce )
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
-import qualified Data.ByteString.Lazy.Char8 as C
-import Data.List.NonEmpty as NEL ( NonEmpty(..), head )
-import           Data.String (fromString)
+import Data.ByteString.Lazy.Char8 qualified as C
+import Data.Coerce                                     ( coerce )
+import Data.List.NonEmpty
+    as NEL                                             ( NonEmpty(..), head )
+import Data.String                                     ( fromString )
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Encoding
+    as TLE                                             ( decodeUtf8 )
+import Prelude hiding                                  ( head )
+import Prelude qualified
 
 
-import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
-import Control.Monad.Except ( MonadError )
-import Control.Concurrent ( threadDelay )
-import System.Random ( randomIO )
+import Control.Concurrent                              ( threadDelay )
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
+import System.Random                                   ( randomIO )
 
 import Shh.Internal
-    ( (&>),
-      capture,
-      load,
-      (|>),
-      ExecArg(asArg),
-      ExecReference(SearchPath),
-      Stream(Truncate),
-      captureWords )
+    ( ExecArg(asArg)
+    , ExecReference(SearchPath)
+    , Stream(Truncate)
+    , capture
+    , captureWords
+    , load
+    , (&>)
+    , (|>)
+    )
 
-import           Ledger ( TxOutRef (..),Value,Slot (..) )
+import Ledger                                          ( Slot(..), TxOutRef(..), Value )
 
-import           Tokenomia.Common.Shell.Console (printLn)
-import Tokenomia.Common.Environment ( Environment(magicNumber) )
-
-
-import           Tokenomia.Common.Data.Convertible          ( convert )
-import           Tokenomia.Common.Parser                    ( unsafeParseOnly )
-import           Tokenomia.Common.Parser.MinRequiredUTxO    ( minRequiredUTxO )
-import           Tokenomia.Common.Serialise (toCLI, fromCLI)
-import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-
-import qualified Tokenomia.Wallet.UTxO as Wallet
-import qualified Tokenomia.Wallet.WalletUTxO as Wallet
+import Tokenomia.Common.Environment                    ( Environment(magicNumber) )
+import Tokenomia.Common.Shell.Console                  ( printLn )
 
 
-import Tokenomia.Common.Address ( Address(..) )
-import Tokenomia.Wallet.Collateral.Read ( fetchCollateral )
-import Tokenomia.Common.Error
-    ( whenLeftThrow,
-      whenNothingThrow,
-      TokenomiaError(..) )
-import Tokenomia.Wallet.CLI
-    ( selectBiggestStrictlyADAsNotCollateral )
-import Tokenomia.Wallet.UTxO
-    ( UTxO(..) )
-import           Tokenomia.Wallet.WalletUTxO ( WalletUTxO(..) )
-import Tokenomia.Common.Hash ( Hash(..) )
-import Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
-    ( fetchById, ChildAddress(..) )
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressRef, CollateralAddressRef(..), FeeAddressRef(..) )
-import Ledger.Ada as Ada ( Ada(getLovelace) )
+import Tokenomia.Common.Data.Convertible               ( convert )
+import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
+import Tokenomia.Common.Parser                         ( unsafeParseOnly )
+import Tokenomia.Common.Parser.MinRequiredUTxO         ( minRequiredUTxO )
+import Tokenomia.Common.Serialise                      ( fromCLI, toCLI )
+
+import Tokenomia.Wallet.UTxO qualified as Wallet
+import Tokenomia.Wallet.WalletUTxO qualified as Wallet
+
+
+import Ledger.Ada
+    as Ada                                             ( Ada(getLovelace) )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.Error                          ( TokenomiaError(..), whenLeftThrow, whenNothingThrow )
+import Tokenomia.Common.Hash                           ( Hash(..) )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef, CollateralAddressRef(..), FeeAddressRef(..) )
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    as ChildAddress                                    ( ChildAddress(..), fetchById )
+import Tokenomia.Wallet.CLI                            ( selectBiggestStrictlyADAsNotCollateral )
+import Tokenomia.Wallet.Collateral.Read                ( fetchCollateral )
+import Tokenomia.Wallet.UTxO                           ( UTxO(..) )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO(..) )
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}

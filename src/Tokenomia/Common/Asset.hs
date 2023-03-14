@@ -1,13 +1,13 @@
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE RecordWildCards                           #-}
 module Tokenomia.Common.Asset
     ( Asset(..)
     , Assets(..)
     , ToValue(..)
     ) where
 
-import Data.Set.NonEmpty        ( NESet )
-import Ledger.Value             ( AssetClass, Value, assetClassValue)
+import Data.Set.NonEmpty                               ( NESet )
+import Ledger.Value                                    ( AssetClass, Value, assetClassValue )
 
 
 data    Asset

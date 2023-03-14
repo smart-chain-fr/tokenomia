@@ -1,30 +1,34 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# OPTIONS_GHC -fno-warn-orphans                      #-}
 module Tokenomia.Common.Value
-  ( getTokenFrom
-  , getTokensFrom
-  , assetClassValueOfWith
-  , containsAssetClass
-  , maximumAssetClassValueOf
-  , maximumByAssetClassValueOf
-  , maximumByAssetClassValueOf'
-  , containingOneToken
-  , containingGivenNativeToken
-  , containingOnlyGivenAssetClass
-  , containingStrictlyADAs
-  , containsCollateral
-  , showValueUtf8) where
+    ( assetClassValueOfWith
+    , containingGivenNativeToken
+    , containingOneToken
+    , containingOnlyGivenAssetClass
+    , containingStrictlyADAs
+    , containsAssetClass
+    , containsCollateral
+    , getTokenFrom
+    , getTokensFrom
+    , maximumAssetClassValueOf
+    , maximumByAssetClassValueOf
+    , maximumByAssetClassValueOf'
+    , showValueUtf8
+    ) where
 
-import Tokenomia.Common.Serialise ( FromCLI(..), ToCLI(..) )
+import Tokenomia.Common.Serialise                      ( FromCLI(..), ToCLI(..) )
 
-import Data.Function            ( on )
-import Data.List                ( intersperse )
-import Data.List.NonEmpty       ( NonEmpty )
+import Data.Function                                   ( on )
+import Data.List                                       ( intersperse )
+import Data.List.NonEmpty                              ( NonEmpty )
 
-import Text.Hex                 ( encodeHex )
+import Text.Hex                                        ( encodeHex )
 
+import Data.Foldable                                   ( Foldable(fold), maximumBy )
+import Data.Text qualified as Text
+import Ledger.Ada                                      ( adaSymbol, adaValueOf )
 import Plutus.V1.Ledger.Value
     ( AssetClass
     , CurrencySymbol
@@ -36,15 +40,14 @@ import Plutus.V1.Ledger.Value
     , symbols
     , toString
     )
-import Plutus.V1.Ledger.Value qualified as Ledger ( assetClass )
-import Ledger.Ada ( adaSymbol, adaValueOf )
-import Data.Foldable ( Foldable(fold), maximumBy )
-import qualified Data.Text                        as Text
+import Plutus.V1.Ledger.Value qualified
+    as Ledger                                          ( assetClass )
 
-import Data.Attoparsec.Text (parseOnly)
+import Data.Attoparsec.Text                            ( parseOnly )
 
-import Tokenomia.Common.Parser.Value qualified as Parser ( value )
-import Tokenomia.Common.Data.Convertible ( convert )
+import Tokenomia.Common.Data.Convertible               ( convert )
+import Tokenomia.Common.Parser.Value qualified
+    as Parser                                          ( value )
 
 
 getTokenFrom :: Value -> (CurrencySymbol,TokenName,Integer)

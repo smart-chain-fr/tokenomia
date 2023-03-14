@@ -1,29 +1,28 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -Wno-orphans                           #-}
 
 module Tokenomia.Script.UTxO
-    ( ScriptUTxO (..)
+    ( ScriptUTxO(..)
     ) where
 
-import Tokenomia.Common.Shell.InteractiveMenu
-    ( DisplayMenuItem(..) )
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..) )
 
-import qualified Data.Text as T
-import           Data.Text (Text)
-import qualified Data.List as L
-import Data.String ( IsString(fromString) )
-import Tokenomia.Common.Serialise ( FromCLI(..), ToCLI(..) )
-import Tokenomia.Common.Value ( showValueUtf8 )
-import Ledger.Value ( Value )
-import Tokenomia.Common.TxOutRef
-    ( TxOutRef(TxOutRef), showTxOutRef )
-import Tokenomia.Common.Hash ( Hash(..) )
+import Data.List qualified as L
+import Data.String                                     ( IsString(fromString) )
+import Data.Text                                       ( Text )
+import Data.Text qualified as T
+import Ledger.Value                                    ( Value )
+import Tokenomia.Common.Hash                           ( Hash(..) )
+import Tokenomia.Common.Serialise                      ( FromCLI(..), ToCLI(..) )
+import Tokenomia.Common.TxOutRef                       ( TxOutRef(TxOutRef), showTxOutRef )
+import Tokenomia.Common.Value                          ( showValueUtf8 )
 
 data ScriptUTxO = ScriptUTxO
               { txOutRef :: TxOutRef

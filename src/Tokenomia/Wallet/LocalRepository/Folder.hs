@@ -1,26 +1,26 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Wallet.LocalRepository.Folder
-    ( WalletFile (..)
-    , getWalletPath
+    ( WalletFile(..)
     , getWalletFilePath
+    , getWalletPath
     ) where
 
-import Control.Monad.Reader ( MonadIO, MonadReader )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
-import Tokenomia.Common.Environment ( Environment )
+import Tokenomia.Common.Environment                    ( Environment )
 
-import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
+import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
 
-import Tokenomia.Wallet.Type ( WalletName )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 
 data WalletFile

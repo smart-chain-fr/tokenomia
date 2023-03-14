@@ -1,16 +1,10 @@
 module Tokenomia.Common.Arbitrary.Slot
-    () where
+    (
+    ) where
 
-import Ledger
-    ( Slot(..) )
+import Ledger                                          ( Slot(..) )
 
-import Test.Tasty.QuickCheck
-    ( Arbitrary
-    , arbitrary
-    , genericShrink
-    , getNonNegative
-    , shrink
-    )
+import Test.Tasty.QuickCheck                           ( Arbitrary, arbitrary, genericShrink, getNonNegative, shrink )
 
 
 instance Arbitrary Slot where

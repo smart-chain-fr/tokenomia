@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingStrategies             #-}
+{-# LANGUAGE DerivingStrategies                        #-}
 
 module Tokenomia.Common.Arbitrary.Modifiers
     ( Restricted(..)

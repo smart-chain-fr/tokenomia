@@ -1,13 +1,13 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE RecordWildCards                           #-}
 module Tokenomia.Wallet.Type
-    ( WalletName
-    , Wallet (..)) where
+    ( Wallet(..)
+    , WalletName
+    ) where
 
-import Data.Coerce ( coerce )
-import Tokenomia.Common.Address ( Address(..) )
-import Tokenomia.Common.Shell.InteractiveMenu
-    ( DisplayMenuItem(..) )
+import Data.Coerce                                     ( coerce )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..) )
 
 
 type WalletName = String

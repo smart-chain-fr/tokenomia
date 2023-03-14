@@ -1,21 +1,23 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
 
 module Tokenomia.Common.Error
-    ( TokenomiaError (..)
+    ( TokenomiaError(..)
+    , whenLeftThrow
+    , whenNothingThrow
     , whenNullThrow
     , whenSomethingThrow
-    , whenNothingThrow
-    , whenLeftThrow) where
+    ) where
 
 
-import Control.Monad.Except ( MonadError(throwError) )
-import           Data.List.NonEmpty (nonEmpty, NonEmpty)
-import           Tokenomia.Common.Address ( Address(..) )
-import qualified Blockfrost.Client as B
-import Tokenomia.Wallet.Type ( WalletName )
-import           Blockfrost.Types (TxHash)
-import           Ledger.Value (Value)
+import Blockfrost.Client qualified as B
+import Blockfrost.Types                                ( TxHash )
+import Control.Monad.Except                            ( MonadError(throwError) )
+import Data.List.NonEmpty                              ( NonEmpty, nonEmpty )
+import Ledger.Value                                    ( Value )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 data TokenomiaError
     = NoWalletRegistered

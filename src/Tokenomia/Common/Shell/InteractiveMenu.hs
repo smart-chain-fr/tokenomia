@@ -1,34 +1,35 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -Wno-unused-do-bind #-}
-{-# OPTIONS_GHC -Wno-deferred-type-errors #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -Wno-deferred-type-errors              #-}
+{-# OPTIONS_GHC -Wno-missing-signatures                #-}
+{-# OPTIONS_GHC -Wno-type-defaults                     #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind                    #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds                  #-}
 
 
 module Tokenomia.Common.Shell.InteractiveMenu
-    ( askString
+    ( DisplayMenuItem(..)
     , ask
     , askFilterM
-    , askStringFilterM
-    , askMenu
     , askLeaveBlankOption
+    , askMenu
+    , askString
+    , askStringFilterM
     , askStringLeaveBlankOption
-    , DisplayMenuItem (..)) where
+    ) where
 
-import Data.List.NonEmpty (NonEmpty, toList, (!!))
-import Prelude hiding ((!!), print)
-import Text.Read (readEither)
-import Shh ( load, ExecReference(SearchPath) )
-import Control.Monad.Reader ( MonadIO(..) )
-import Tokenomia.Common.Shell.Console (print, printLn, clearConsole)
+import Control.Monad.Reader                            ( MonadIO(..) )
+import Data.List.NonEmpty                              ( NonEmpty, toList, (!!) )
+import Prelude hiding                                  ( print, (!!) )
+import Shh                                             ( ExecReference(SearchPath), load )
+import Text.Read                                       ( readEither )
+import Tokenomia.Common.Shell.Console                  ( clearConsole, print, printLn )
 
 load SearchPath ["echo"]
 

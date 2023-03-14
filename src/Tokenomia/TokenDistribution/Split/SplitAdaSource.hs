@@ -1,44 +1,45 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE RecordWildCards                           #-}
 
 module Tokenomia.TokenDistribution.Split.SplitAdaSource
     ( splitAdaSource
     ) where
 
-import Prelude           hiding ( repeat, head, zipWith3 )
+import Prelude hiding                                  ( head, repeat, zipWith3 )
 
-import Control.Monad.Reader     ( MonadIO, MonadReader )
-import Control.Monad.Except     ( MonadError )
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
-import Data.List.NonEmpty       ( NonEmpty((:|)), fromList, repeat )
+import Data.List.NonEmpty                              ( NonEmpty((:|)), fromList, repeat )
 
-import Ledger.Ada               ( Ada, lovelaceValueOf, toValue )
-import Ledger.Value             ( Value )
+import Ledger.Ada                                      ( Ada, lovelaceValueOf, toValue )
+import Ledger.Value                                    ( Value )
 
-import Tokenomia.Common.AssetClass  ( adaAssetClass )
-import Tokenomia.Common.Error       ( TokenomiaError )
-import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO )
+import Tokenomia.Common.AssetClass                     ( adaAssetClass )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Error                          ( TokenomiaError )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO )
 
 import Tokenomia.Common.Transacting
-    ( TxInFromWallet(..)
-    , TxOut(..)
-    , TxBuild(..)
+    ( Metadata(..)
     , TxBalance(..)
-    , Metadata(..)
+    , TxBuild(..)
+    , TxInFromWallet(..)
+    , TxOut(..)
     , buildAndSubmit
     )
 
-import Tokenomia.Common.Data.List.NonEmpty          ( singleton, zipWith3 )
+import Tokenomia.Common.Data.List.NonEmpty             ( singleton, zipWith3 )
 
-import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), countRecipients )
+import Tokenomia.TokenDistribution.CLI.Parameters      ( Parameters(..) )
+import Tokenomia.TokenDistribution.Distribution        ( Distribution(..), countRecipients )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-    ( fetchAddressesByWalletWithIndexInRange )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository ( fetchAddressesByWalletWithIndexInRange )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( defaultFeeAddressRef, defaultCollateralAddressRef )
+    ( defaultCollateralAddressRef
+    , defaultFeeAddressRef
+    )
 
 
 splitAdaSource ::

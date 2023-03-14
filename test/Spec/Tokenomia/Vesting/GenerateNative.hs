@@ -1,40 +1,40 @@
-{-# LANGUAGE DerivingStrategies             #-}
-{-# LANGUAGE ScopedTypeVariables            #-}
-{-# LANGUAGE RecordWildCards                #-}
-{-# LANGUAGE ImportQualifiedPost            #-}
-{-# LANGUAGE FlexibleContexts               #-}
-{-# LANGUAGE FlexibleInstances              #-}
-{-# LANGUAGE TupleSections                  #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TupleSections                             #-}
 
 module Spec.Tokenomia.Vesting.GenerateNative
     ( tests
     ) where
 
-import Control.Applicative                  ( ZipList(..) )
-import Control.Monad.Except                 ( MonadError, runExceptT )
-import Control.Monad.IO.Class               ( MonadIO(..) )
-import Control.Monad.Reader                 ( MonadReader, runReaderT )
-import Data.List.NonEmpty                   ( NonEmpty(..), (<|) )
+import Control.Applicative                             ( ZipList(..) )
+import Control.Monad.Except                            ( MonadError, runExceptT )
+import Control.Monad.IO.Class                          ( MonadIO(..) )
+import Control.Monad.Reader                            ( MonadReader, runReaderT )
+import Data.List.NonEmpty                              ( NonEmpty(..), (<|) )
 import Data.List.NonEmpty qualified
-    as NEList                               ( fromList, toList, zip, zipWith )
+    as NEList                                          ( fromList, toList, zip, zipWith )
 
-import Data.Map                             ( unionsWith )
-import Data.Map.NonEmpty                    ( NEMap )
+import Data.Map                                        ( unionsWith )
+import Data.Map.NonEmpty                               ( NEMap )
 import Data.Map.NonEmpty qualified
-    as NEMap                                ( fromList, toList, toMap, keys, elems )
+    as NEMap                                           ( elems, fromList, keys, toList, toMap )
 
-import Data.Either                          ( isRight )
-import Data.Either.Combinators              ( fromRight' )
-import Data.Functor                         ( (<&>) )
-import Data.Functor.Syntax                  ( (<$$>) )
-import Data.Ratio                           ( (%) )
+import Data.Either                                     ( isRight )
+import Data.Either.Combinators                         ( fromRight' )
+import Data.Functor                                    ( (<&>) )
+import Data.Functor.Syntax                             ( (<$$>) )
+import Data.Ratio                                      ( (%) )
 
-import GHC.Natural                          ( Natural, naturalFromInteger )
+import GHC.Natural                                     ( Natural, naturalFromInteger )
 
-import Test.Tasty                           ( TestTree, testGroup )
-import Test.Tasty.HUnit                     ( testCase, (@?=) )
-import Test.QuickCheck.Modifiers            ( NonEmptyList(..), Positive(..) )
-import Test.QuickCheck.Monadic              ( monadicIO )
+import Test.QuickCheck.Modifiers                       ( NonEmptyList(..), Positive(..) )
+import Test.QuickCheck.Monadic                         ( monadicIO )
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.HUnit                                ( testCase, (@?=) )
 
 import Test.Tasty.QuickCheck
     ( Arbitrary
@@ -53,28 +53,25 @@ import Test.Tasty.QuickCheck
     , withMaxSuccess
     )
 
-import Tokenomia.Common.Arbitrary.AssetClass( )
-import Tokenomia.Common.Arbitrary.Modifiers ( Restricted(..) )
-import Tokenomia.Common.Arbitrary.POSIXTime ( )
-import Tokenomia.Common.Arbitrary.Wallet    ( PaymentAddress(..), generateAddresses )
+import Tokenomia.Common.Arbitrary.AssetClass           ()
+import Tokenomia.Common.Arbitrary.Modifiers            ( Restricted(..) )
+import Tokenomia.Common.Arbitrary.POSIXTime            ()
+import Tokenomia.Common.Arbitrary.Wallet               ( PaymentAddress(..), generateAddresses )
 
-import Tokenomia.Common.Data.Convertible    ( convert )
-import Tokenomia.Common.Data.List.Extra     ( transpose )
-import Tokenomia.Common.Environment         ( Environment(..), getPreprodEnvironmment )
-import Tokenomia.Common.Environment.Query   ( evalQueryWithSystemStart )
-import Tokenomia.Common.Error               ( TokenomiaError )
-import Tokenomia.Common.Time                ( toNextBeginNominalDiffTime )
+import Tokenomia.Common.Data.Convertible               ( convert )
+import Tokenomia.Common.Data.List.Extra                ( transpose )
+import Tokenomia.Common.Environment                    ( Environment(..), getPreprodEnvironmment )
+import Tokenomia.Common.Environment.Query              ( evalQueryWithSystemStart )
+import Tokenomia.Common.Error                          ( TokenomiaError )
+import Tokenomia.Common.Time                           ( toNextBeginNominalDiffTime )
 
-import Tokenomia.TokenDistribution.Distribution
-    ( Distribution(recipients)
-    , Recipient(..)
-    )
+import Tokenomia.TokenDistribution.Distribution        ( Distribution(recipients), Recipient(..) )
 
 import Tokenomia.Vesting.GenerateNative
     ( DatabaseOutput(..)
     , InvestorAddress(..)
-    , NativeScript (..)
-    , NativeScriptInfo (..)
+    , NativeScript(..)
+    , NativeScriptInfo(..)
     , PrivateSale(..)
     , PrivateSaleTranche(..)
     , TrancheProperties(..)

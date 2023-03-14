@@ -1,15 +1,15 @@
-{-# LANGUAGE ScopedTypeVariables            #-}
-{-# LANGUAGE TypeApplications               #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TypeApplications                          #-}
 
 module Spec.Tokenomia.Common.Arbitrary.Utils
     ( tests
     ) where
 
-import Data.Char                            ( toUpper, toLower )
-import Test.Tasty.QuickCheck                ( testProperty, expectFailure )
-import Test.Tasty                           ( TestTree, testGroup )
+import Data.Char                                       ( toLower, toUpper )
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.QuickCheck                           ( expectFailure, testProperty )
 
-import Tokenomia.Common.Arbitrary.Utils     ( isIdentity, inBijection )
+import Tokenomia.Common.Arbitrary.Utils                ( inBijection, isIdentity )
 
 
 tests :: TestTree

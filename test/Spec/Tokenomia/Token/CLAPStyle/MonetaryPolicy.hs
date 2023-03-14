@@ -1,22 +1,25 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE TypeApplications                          #-}
 
-module Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy (tests) where
+module Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
+    ( tests
+    ) where
 
-import           Control.Monad             (void)
-import qualified Ledger
-import           Plutus.Contract hiding (throwError)
-import           Plutus.Contract.Test
-import           Ledger.Value           (CurrencySymbol,TokenName (..))
-import           Tokenomia.Token.CLAPStyle.MonetaryPolicy
-import qualified Plutus.Trace.Emulator     as Trace
-import qualified Ledger.Ada                           as Ada
-import           Test.Tasty
-import           Data.Semigroup         (Last (..))
-import           Plutus.Trace.Emulator             (EmulatorRuntimeError (GenericError))
-import           Control.Monad.Freer.Error         (throwError)
+import Control.Monad                                   ( void )
+import Control.Monad.Freer.Error                       ( throwError )
+import Data.Semigroup                                  ( Last(..) )
+import Ledger qualified
+import Ledger.Ada qualified as Ada
+import Ledger.Value                                    ( CurrencySymbol, TokenName(..) )
+import Plutus.Contract hiding                          ( throwError )
+import Plutus.Contract.Test
+import Plutus.Trace.Emulator                           ( EmulatorRuntimeError(GenericError) )
+import Plutus.Trace.Emulator qualified as Trace
+import Test.Tasty
+import Tokenomia.Token.CLAPStyle.MonetaryPolicy
 
 --- WARNING : WORK IN PROGRESS
 

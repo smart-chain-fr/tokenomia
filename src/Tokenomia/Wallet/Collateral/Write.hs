@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields                  #-}
+{-# LANGUAGE FlexibleContexts                          #-}
 
 
 module Tokenomia.Wallet.Collateral.Write
@@ -7,41 +7,46 @@ module Tokenomia.Wallet.Collateral.Write
     , createCollateral'
     ) where
 
-import Control.Monad.Reader ( MonadIO, MonadReader )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
 
-import Data.List.NonEmpty ( NonEmpty((:|)) )
-import Control.Monad.Except ( MonadError )
+import Control.Monad.Except                            ( MonadError )
+import Data.List.NonEmpty                              ( NonEmpty((:|)) )
 
-import Ledger.Ada ( adaValueOf )
+import Ledger.Ada                                      ( adaValueOf )
 
+import Tokenomia.Common.Environment                    ( Environment )
 import Tokenomia.Common.Transacting
-    ( buildAndSubmit,
-      TxBalance(Unbalanced),
-      TxBuild(..),
-      TxInFromWallet(FromWallet),
-      TxOut(ToWallet) )
-import Tokenomia.Common.Environment ( Environment )
+    ( TxBalance(Unbalanced)
+    , TxBuild(..)
+    , TxInFromWallet(FromWallet)
+    , TxOut(ToWallet)
+    , buildAndSubmit
+    )
 
-import Tokenomia.Wallet.CLI as Wallet
-    ( askToChooseAmongGivenWallets,
-      selectBiggestStrictlyADAsNotCollateral )
-import Tokenomia.Wallet.LocalRepository ( fetchAll )
+import Tokenomia.Wallet.CLI
+    as Wallet
+    ( askToChooseAmongGivenWallets
+    , selectBiggestStrictlyADAsNotCollateral
+    )
+import Tokenomia.Wallet.LocalRepository                ( fetchAll )
 
+import Prelude hiding                                  ( print )
 import Tokenomia.Common.Error
-    ( whenNothingThrow,
-      whenNullThrow,
-      whenSomethingThrow,
-      TokenomiaError(..) )
-import           Tokenomia.Common.Shell.Console (printLn)
-import           Prelude hiding (print)
-import Tokenomia.Wallet.Collateral.Read
-    ( fetchCollateral, filterWalletsWithCollateral )
-import Tokenomia.Wallet.Type as Wallet ( Wallet(name), WalletName )
+    ( TokenomiaError(..)
+    , whenNothingThrow
+    , whenNullThrow
+    , whenSomethingThrow
+    )
+import Tokenomia.Common.Shell.Console                  ( printLn )
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressRef(ChildAddressRef), FeeAddressRef(FeeAddressRef) )
-import Tokenomia.Wallet.ChildAddress.LocalRepository
-    ( fetchById, ChildAddress(ChildAddress, address) )
+    ( ChildAddressRef(ChildAddressRef)
+    , FeeAddressRef(FeeAddressRef)
+    )
+import Tokenomia.Wallet.ChildAddress.LocalRepository   ( ChildAddress(ChildAddress, address), fetchById )
+import Tokenomia.Wallet.Collateral.Read                ( fetchCollateral, filterWalletsWithCollateral )
+import Tokenomia.Wallet.Type
+    as Wallet                                          ( Wallet(name), WalletName )
 
 createCollateral ::
     ( MonadIO m

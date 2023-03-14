@@ -1,43 +1,42 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE RecordWildCards                           #-}
 
 module Tokenomia.TokenDistribution.Split.EstimateFees
     ( estimateFees
-    )
-    where
+    ) where
 
-import Control.Monad.Reader     ( MonadIO, MonadReader )
-import Control.Monad.Except     ( MonadError )
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
-import Data.Maybe               ( fromJust )
-import Data.List.NonEmpty       ( NonEmpty, head )
+import Data.List.NonEmpty                              ( NonEmpty, head )
+import Data.Maybe                                      ( fromJust )
 
-import Ledger.Ada               ( Ada(..) )
+import Ledger.Ada                                      ( Ada(..) )
 
-import Tokenomia.Common.Error       ( TokenomiaError )
-import Tokenomia.Common.Environment ( Environment )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Error                          ( TokenomiaError )
 
-import Tokenomia.Common.Data.List.NonEmpty              ( singleton )
-import Tokenomia.TokenDistribution.CLI.Parameters       ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution         ( Distribution(..) )
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef    ( ChildAddressRef(..) )
+import Tokenomia.Common.Data.List.NonEmpty             ( singleton )
+import Tokenomia.TokenDistribution.CLI.Parameters      ( Parameters(..) )
+import Tokenomia.TokenDistribution.Distribution        ( Distribution(..) )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef(..) )
 
 import Tokenomia.Common.Transacting
-    ( TxInFromWallet(FromWallet)
-    , TxBuild(..)
+    ( Metadata(..)
     , TxBalance(..)
-    , Metadata(..)
+    , TxBuild(..)
+    , TxInFromWallet(FromWallet)
     , mockBuild
     )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( defaultFeeAddressRef, defaultCollateralAddressRef )
+    ( defaultCollateralAddressRef
+    , defaultFeeAddressRef
+    )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
-    ( fetchProvisionedUTxO )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex ( fetchProvisionedUTxO )
 
-import Tokenomia.TokenDistribution.Transfer
-    ( distributionOutputs )
+import Tokenomia.TokenDistribution.Transfer            ( distributionOutputs )
 
 estimateFees ::
     ( MonadIO m

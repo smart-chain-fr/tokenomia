@@ -3,10 +3,7 @@ module Tokenomia.CardanoApi.Value
     , unQuantity
     ) where
 
-import Cardano.Api
-    ( Lovelace(..)
-    , Quantity(..)
-    )
+import Cardano.Api                                     ( Lovelace(..), Quantity(..) )
 
 
 unLovelace :: Lovelace -> Integer
