@@ -34,29 +34,44 @@ module Tokenomia.Wallet.ChildAddress.LocalRepository
     , fetchByAddressStrict
     ) where
 
-import           Data.String
+import Data.String ( IsString(fromString) )
 import           Data.List.Split (splitOn)
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.ByteString.Lazy.UTF8 as BLU
-import           Data.Set.NonEmpty as NES
+import Data.Set.NonEmpty as NES ( NESet, toAscList, fromList )
 import qualified Data.Set as Set
 import qualified Data.List.NonEmpty as NEL
-import           Control.Monad.Reader
-import           Shh.Internal
+import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
+import Shh.Internal
+    ( (&>),
+      capture,
+      captureTrim,
+      load,
+      (|>),
+      ExecReference(SearchPath),
+      Stream(Truncate),
+      captureWords )
 
-import           Ledger.Crypto
+import Ledger.Crypto ( PubKeyHash )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment
+    ( Environment(Mainnet, Testnet) )
 
-import           Tokenomia.Common.Address
+import Tokenomia.Common.Address ( Address(..) )
 
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.LocalRepository.Folder
-import           Data.Coerce
-import           System.Directory
-import           Tokenomia.Common.Error
-import           Control.Monad.Except
+import Tokenomia.Wallet.Type ( Wallet(..), WalletName )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressIndex(..), ChildAddressRef(..), IndexedAddress(..) )
+import Tokenomia.Wallet.LocalRepository.Folder
+    ( getWalletFilePath,
+      getWalletPath,
+      WalletFile(RootPrivateKeyTxt, StakePublicKeyTxt) )
+import Data.Coerce ( coerce )
+import System.Directory ( doesFileExist )
+import Tokenomia.Common.Error
+    ( whenNothingThrow,
+      TokenomiaError(NoDerivedChildAddress, ChildAddressNotIndexed) )
+import Control.Monad.Except ( MonadError(throwError) )
 
 import           Data.Maybe
 

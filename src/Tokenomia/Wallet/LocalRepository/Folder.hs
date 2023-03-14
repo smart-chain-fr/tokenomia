@@ -14,13 +14,13 @@ module Tokenomia.Wallet.LocalRepository.Folder
     , getWalletFilePath
     ) where
 
-import           Control.Monad.Reader
+import Control.Monad.Reader ( MonadIO, MonadReader )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment ( Environment )
 
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
 
-import           Tokenomia.Wallet.Type
+import Tokenomia.Wallet.Type ( WalletName )
 
 
 data WalletFile

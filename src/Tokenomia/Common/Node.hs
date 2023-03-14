@@ -8,8 +8,12 @@ module Tokenomia.Common.Node
 import Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
 
 import Cardano.Api
-import Ledger
+    ( SlotNo(SlotNo),
+      getLocalChainTip,
+      ChainTip(ChainTip, ChainTipAtGenesis) )
+import Ledger ( Slot(Slot) )
 import Tokenomia.Common.Environment
+    ( Environment(localNodeConnectInfo) )
 
 getCurrentSlotSynced
     :: ( MonadIO m

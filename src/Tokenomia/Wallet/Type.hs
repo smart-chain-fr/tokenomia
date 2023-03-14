@@ -4,9 +4,10 @@ module Tokenomia.Wallet.Type
     ( WalletName
     , Wallet (..)) where
 
-import           Data.Coerce
-import           Tokenomia.Common.Address
-import           Tokenomia.Common.Shell.InteractiveMenu
+import Data.Coerce ( coerce )
+import Tokenomia.Common.Address ( Address(..) )
+import Tokenomia.Common.Shell.InteractiveMenu
+    ( DisplayMenuItem(..) )
 
 
 type WalletName = String

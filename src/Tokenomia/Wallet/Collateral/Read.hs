@@ -10,23 +10,29 @@ module Tokenomia.Wallet.Collateral.Read
     , filterWalletsWithCollateral
     ) where
 
-import           Control.Monad.Reader
+import Control.Monad.Reader
+    ( MonadIO,
+      filterM,
+      MonadReader )
 
 
-import           Data.Maybe
-import           Data.List.NonEmpty
+import Data.Maybe ( isJust, isNothing )
+import Data.List.NonEmpty ( NonEmpty, nonEmpty, toList )
 
 
-import           Tokenomia.Common.Value
+import Tokenomia.Common.Value ( containsCollateral )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment ( Environment )
 
-import           Tokenomia.Wallet.LocalRepository
-import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO hiding ( value )
-import           Tokenomia.Wallet.ChildAddress.ChainIndex
+import Tokenomia.Wallet.LocalRepository ( fetchAll )
+import           Tokenomia.Wallet.Type (Wallet (Wallet, name))
+import Tokenomia.Wallet.UTxO ( UTxO(value) )
+import Tokenomia.Wallet.WalletUTxO ( WalletUTxO(utxo) )
+import Tokenomia.Wallet.ChildAddress.ChainIndex
+    ( queryUTxOsFilterBy )
 import           Prelude hiding (print)
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef(ChildAddressRef) )
 
 
 filterWalletsWithCollateral

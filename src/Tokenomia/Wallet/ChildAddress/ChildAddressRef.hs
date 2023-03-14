@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Tokenomia.Wallet.ChildAddress.ChildAddressRef
     ( ChildAddressIndex (..)
@@ -10,7 +11,7 @@ module Tokenomia.Wallet.ChildAddress.ChildAddressRef
 import Tokenomia.Wallet.Type ( WalletName )
 import Tokenomia.Common.Address ( Address(..) )
 
-newtype ChildAddressIndex = ChildAddressIndex Integer deriving (Eq,Ord,Num,Real,Integral,Enum,Read,Show) via Integer
+newtype ChildAddressIndex = ChildAddressIndex Integer deriving newtype (Eq,Ord,Num,Real,Integral,Enum,Read,Show)
 
 data ChildAddressRef = ChildAddressRef {name :: WalletName, index :: ChildAddressIndex } deriving stock (Eq,Show)
 

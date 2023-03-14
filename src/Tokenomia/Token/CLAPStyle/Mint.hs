@@ -35,7 +35,6 @@ import           Tokenomia.Wallet.UTxO
 import           Tokenomia.Wallet.WalletUTxO
 import           Tokenomia.Common.Transacting
 
-import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
 import           Tokenomia.Script.LocalRepository
 import           Tokenomia.Wallet.Collateral.Read
 import           Tokenomia.Common.Error

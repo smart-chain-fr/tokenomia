@@ -19,14 +19,17 @@ import Tokenomia.Common.Shell.InteractiveMenu
 
 import           Prelude as P
 import           Data.List ( intercalate )
-import           Ledger.Ada
+import Ledger.Ada ( Ada, fromValue )
 import           Ledger.Value ( Value )
 import           Tokenomia.Common.TxOutRef ( showTxOutRef )
 import           Tokenomia.Wallet.Type ()
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Common.Hash
-import           Tokenomia.Common.Value
-import           Tokenomia.Wallet.UTxO hiding  ( value )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef )
+import Tokenomia.Common.Hash ( Hash )
+import Tokenomia.Common.Value
+    ( containingStrictlyADAs, showValueUtf8 )
+import Tokenomia.Wallet.UTxO
+    ( UTxO(UTxO, txOutRef, maybeDatumHash) )
 import qualified Tokenomia.Wallet.UTxO as UTxO ( value )
 
 data  WalletUTxO

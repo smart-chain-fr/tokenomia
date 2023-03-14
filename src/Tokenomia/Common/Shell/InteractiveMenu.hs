@@ -26,8 +26,8 @@ module Tokenomia.Common.Shell.InteractiveMenu
 import Data.List.NonEmpty (NonEmpty, toList, (!!))
 import Prelude hiding ((!!), print)
 import Text.Read (readEither)
-import Shh
-import Control.Monad.Reader hiding (ask)
+import Shh ( load, ExecReference(SearchPath) )
+import Control.Monad.Reader ( MonadIO(..) )
 import Tokenomia.Common.Shell.Console (print, printLn, clearConsole)
 
 load SearchPath ["echo"]

@@ -9,7 +9,7 @@ import qualified Data.Text as T
 
 import Ledger ( TxOutRef (..) )
 
-import Tokenomia.Common.Serialise
+import Tokenomia.Common.Serialise ( ToCLI(..) )
 
 
 instance ToCLI TxOutRef where

@@ -7,7 +7,7 @@ module Tokenomia.Common.Token
   , getMinimumUTxOAdaRequired) where
 
 import Plutus.V1.Ledger.Value ( AssetClass )
-import Ledger.Ada
+import Ledger.Ada ( Ada )
 
 data Token
     = Token

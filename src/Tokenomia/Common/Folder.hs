@@ -18,11 +18,12 @@ module Tokenomia.Common.Folder
     , Folder (..)
     ) where
 
-import           Control.Monad.Reader
+import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
 import           System.Environment (getEnv)
-import           Shh.Internal
+import Shh.Internal ( load, ExecReference(SearchPath) )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment
+    ( Environment(Mainnet, Testnet) )
 
 
 

@@ -25,26 +25,33 @@ import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Lazy as LB
 
-import           Control.Monad.Reader
+import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
 
-import           System.Directory
+import System.Directory ( doesFileExist )
 
-import           Shh.Internal
+import Shh.Internal
+    ( capture, load, (|>), ExecArg(asArg), ExecReference(SearchPath) )
 
 import           Codec.Serialise ( serialise )
 
-import           Cardano.Api hiding (Testnet,Mainnet,Address,Hash)
+import Cardano.Api ( writeFileTextEnvelope, Error(displayError) )
 import qualified Cardano.Api.Shelley  as Shelley
 
 
-import           Ledger hiding (Address, scriptCurrencySymbol, validatorHash)
+import Ledger
+    ( CurrencySymbol,
+      MintingPolicy,
+      unMintingPolicyScript,
+      unValidatorScript,
+      Validator )
 
 import qualified Plutus.V1.Ledger.Scripts as Script
 import           Plutus.Script.Utils.V1.Scripts (scriptCurrencySymbol, validatorHash)
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment
+    ( Environment(Testnet, Mainnet, magicNumber) )
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Address
+import Tokenomia.Common.Address ( Address(..) )
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 

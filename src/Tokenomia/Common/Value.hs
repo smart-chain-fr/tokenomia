@@ -37,8 +37,8 @@ import Plutus.V1.Ledger.Value
     , toString
     )
 import Plutus.V1.Ledger.Value qualified as Ledger ( assetClass )
-import Ledger.Ada
-import Data.Foldable
+import Ledger.Ada ( adaSymbol, adaValueOf )
+import Data.Foldable ( Foldable(fold), maximumBy )
 import qualified Data.Text                        as Text
 
 import Data.Attoparsec.Text (parseOnly)

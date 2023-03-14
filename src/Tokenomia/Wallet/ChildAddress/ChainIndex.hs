@@ -26,17 +26,20 @@ import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 
 import           Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
-import           Shh.Internal
+import Shh.Internal
+    ( capture, load, (|>), ExecReference(SearchPath) )
 
 
-import           Tokenomia.Common.Address
-import           Tokenomia.Common.Serialise
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Address ( Address(Address) )
+import Tokenomia.Common.Serialise ( FromCLI(fromCLI) )
+import Tokenomia.Common.Environment ( Environment(magicNumber) )
 import           Tokenomia.Common.Value ()
 
-import           Tokenomia.Wallet.WalletUTxO
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.ChildAddress.LocalRepository
+import Tokenomia.Wallet.WalletUTxO ( WalletUTxO(WalletUTxO) )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef )
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    ( fetchById, ChildAddress(ChildAddress, address) )
 
 load SearchPath ["cardano-cli"]
 

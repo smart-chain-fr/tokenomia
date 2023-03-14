@@ -14,29 +14,47 @@ module Tokenomia.Token.Transfer
 import           Prelude hiding ((+),(-))
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
 
-import           Data.List.NonEmpty
-import           Control.Monad.Reader hiding (ask)
-import           Control.Monad.Except
+import Data.List.NonEmpty ( NonEmpty((:|)) )
+import Control.Monad.Reader ( MonadIO, MonadReader )
+import Control.Monad.Except ( MonadError )
 
-import           Ledger.Value
-import           Tokenomia.Common.Environment
+import Ledger.Value ( singleton )
+import Tokenomia.Common.Environment ( Environment )
 
-import           Ledger.Ada
-import           Tokenomia.Wallet.UTxO as UTxO
-import           Tokenomia.Wallet.WalletUTxO
-import           Tokenomia.Common.Transacting
-import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
-import           Tokenomia.Common.Error
-import           Tokenomia.Wallet.Collateral.Read
-import           Tokenomia.Wallet.CLI
+import Ledger.Ada ( toValue )
+import Tokenomia.Wallet.UTxO as UTxO ( UTxO(value) )
+import Tokenomia.Wallet.WalletUTxO ( WalletUTxO(utxo) )
+import Tokenomia.Common.Transacting
+    ( buildAndSubmit,
+      createMetadataFile,
+      Metadata(Metadata),
+      TxBalance(Unbalanced),
+      TxBuild(..),
+      TxInFromWallet(FromWallet),
+      TxOut(ToWallet) )
+import Tokenomia.Common.Error
+    ( whenNothingThrow,
+      whenNullThrow,
+      TokenomiaError(..) )
+import Tokenomia.Wallet.Collateral.Read
+    ( fetchWalletsWithCollateral )
+import Tokenomia.Wallet.CLI
+    ( askToChooseAmongGivenWallets, askUTxOFilterBy )
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu  (ask,askString, askStringLeaveBlankOption)
-import           Tokenomia.Common.Value
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.ChildAddress.LocalRepository
-import           Tokenomia.Common.Address
-import           Tokenomia.Common.Token
+import Tokenomia.Common.Value ( containingOneToken, getTokenFrom )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef(..),
+      CollateralAddressRef(..),
+      FeeAddressRef(..) )
+import Tokenomia.Wallet.Type ( Wallet(..), WalletName )
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    ( fetchById,
+      ChildAddress(..) )
+import Tokenomia.Common.Address ( Address(..) )
+import Tokenomia.Common.Token ( getMinimumUTxOAdaRequired )
+
+
 transfer ::
     ( MonadIO m
     , MonadReader Environment m

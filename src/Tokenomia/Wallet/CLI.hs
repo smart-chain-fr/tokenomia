@@ -26,30 +26,41 @@ module Tokenomia.Wallet.CLI
   where
 
 import           Prelude hiding (filter,head,last)
-import           Tokenomia.Common.Error
-import           Control.Monad.Except
+import Tokenomia.Common.Error
+    ( whenNullThrow, TokenomiaError(NoWalletRegistered) )
+import Control.Monad.Except ( MonadIO, MonadError )
 import qualified Prelude as P
-import           Data.Set.NonEmpty
+import Data.Set.NonEmpty ( toAscList, size )
 import qualified Data.Set as S
-import           Data.Coerce
-import           Data.List.NonEmpty
-import           Control.Monad.Reader hiding (ask)
+import Data.Coerce ( coerce )
+import Data.List.NonEmpty
+    ( NonEmpty, head, last, nonEmpty, sortWith )
+import Control.Monad.Reader ( MonadReader )
 
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Plutus.V1.Ledger.Value (flattenValue)
 
 import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, askStringFilterM, askFilterM,askString)
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment ( Environment )
 import qualified Tokenomia.Wallet.LocalRepository as Repository
-import           Tokenomia.Wallet.ChildAddress.ChainIndex
-import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO hiding ( value )
+import Tokenomia.Wallet.ChildAddress.ChainIndex
+    ( queryUTxO, queryUTxOsFilterBy )
+import Tokenomia.Wallet.UTxO ( UTxO(UTxO, value) )
+import Tokenomia.Wallet.WalletUTxO ( WalletUTxO(WalletUTxO, utxo) )
 
-import           Tokenomia.Common.Value
-import           Tokenomia.Common.Address
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.ChildAddress.LocalRepository
+import Tokenomia.Common.Value
+    ( containingStrictlyADAs, containsCollateral )
+import Tokenomia.Common.Address ( Address(Address) )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressIndex(..),
+      ChildAddressRef(..) )
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    ( Wallet(..),
+      deriveChildAddress,
+      fetchByWallet,
+      fetchByWalletWithinIndexRange,
+      ChildAddress(..) )
 
 
 askWalletName :: (MonadIO m) => m String

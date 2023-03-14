@@ -18,26 +18,34 @@ module Tokenomia.Common.Datum
   ) where
 
 import           Data.Aeson as Json ( encode )
-import           Data.String
+import Data.String ( IsString(fromString) )
 import qualified Data.ByteString.Lazy.Char8 as C
 import           Data.ByteString.Lazy.UTF8 as BLU ( toString )
-import           Data.Coerce
+import Data.Coerce ( coerce )
 
 import qualified PlutusTx
 import           PlutusTx.IsData.Class ( ToData )
 
-import           Control.Monad.Reader
+import Control.Monad.Reader ( MonadIO(..), MonadReader )
 
-import           Shh.Internal
+import Shh.Internal
+    ( (&>),
+      capture,
+      load,
+      (|>),
+      ExecReference(SearchPath),
+      Stream(Truncate) )
 
 
 import           Cardano.Api.Shelley ( fromPlutusData )
-import           Cardano.Api hiding (Testnet,Mainnet,Address,Hash)
+import Cardano.Api
+    ( scriptDataToJson,
+      ScriptDataJsonSchema(ScriptDataJsonDetailedSchema) )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment ( Environment )
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Hash
-import           System.Random
+import Tokenomia.Common.Hash ( Hash(..) )
+import System.Random ( randomIO )
 
 load SearchPath ["cat","cardano-cli", "echo" ]
 

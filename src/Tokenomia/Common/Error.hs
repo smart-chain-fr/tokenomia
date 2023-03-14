@@ -9,11 +9,11 @@ module Tokenomia.Common.Error
     , whenLeftThrow) where
 
 
-import           Control.Monad.Except
+import Control.Monad.Except ( MonadError(throwError) )
 import           Data.List.NonEmpty (nonEmpty, NonEmpty)
 import           Tokenomia.Common.Address ( Address(..) )
 import qualified Blockfrost.Client as B
-import           Tokenomia.Wallet.Type
+import Tokenomia.Wallet.Type ( WalletName )
 import           Blockfrost.Types (TxHash)
 import           Ledger.Value (Value)
 

@@ -21,25 +21,37 @@ module Tokenomia.Wallet.LocalRepository
     , restoreByMnemonics
     , fetchAll
     , fetchById
-    , Wallet (..)
     ) where
 
-import           Data.String
+import Data.String ( IsString(fromString) )
 import qualified Data.ByteString.Lazy.Char8 as C
-import           Control.Monad.Reader
-import           Shh.Internal
+import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
+import Shh.Internal
+    ( (&>),
+      captureTrim,
+      load,
+      (|>),
+      ExecReference(SearchPath),
+      Stream(Truncate),
+      captureWords )
 import           System.Directory ( doesDirectoryExist )
 
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment
+    ( Environment(Mainnet, Testnet) )
 
 import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Address
+import Tokenomia.Common.Address ( Address(Address) )
 
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.LocalRepository.Folder
+import Tokenomia.Wallet.Type ( Wallet(Wallet), WalletName )
+import Tokenomia.Wallet.LocalRepository.Folder
+    ( getWalletFilePath, getWalletPath, WalletFile(..) )
 
-import           Tokenomia.Wallet.ChildAddress.LocalRepository hiding (fetchById)
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    ( deriveChildAddressesWithingRange,
+      getAddressIndexesPath,
+      getChildAddressesPath )
+
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
 
 

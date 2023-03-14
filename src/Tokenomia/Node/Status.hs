@@ -6,19 +6,22 @@ module Tokenomia.Node.Status
   ( displayStatus,translateSlotToTime,translateTimeToSlot)
   where
 
-import Data.Time.Clock.POSIX
+import Data.Time.Clock.POSIX ( getPOSIXTime )
 
 import Control.Monad.Reader
+    ( MonadIO(..), MonadReader )
 
-import Ledger hiding (getPOSIXTime)
+import Ledger ( Slot(Slot) )
 import Prelude hiding (print)
 
 import Tokenomia.Common.Environment
-import Tokenomia.Common.Node
-import Tokenomia.Common.Shell.Console
+    ( formatISO8601, toPosixTime, toSlot, Environment )
+import Tokenomia.Common.Node ( getCurrentSlotSynced )
+import Tokenomia.Common.Shell.Console ( printLn )
 import Tokenomia.Common.Shell.InteractiveMenu as I
+    ( ask, askStringFilterM )
 import Data.Time.ISO8601 (parseISO8601)
-import Data.Maybe
+import Data.Maybe ( isJust, fromJust )
 displayStatus
   ::( MonadIO m
     , MonadReader Environment m)

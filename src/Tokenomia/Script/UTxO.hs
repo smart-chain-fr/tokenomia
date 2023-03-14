@@ -12,16 +12,18 @@ module Tokenomia.Script.UTxO
     ) where
 
 import Tokenomia.Common.Shell.InteractiveMenu
+    ( DisplayMenuItem(..) )
 
 import qualified Data.Text as T
 import           Data.Text (Text)
 import qualified Data.List as L
-import           Data.String
-import           Tokenomia.Common.Serialise
-import           Tokenomia.Common.Value
-import           Ledger.Value
-import           Tokenomia.Common.TxOutRef
-import           Tokenomia.Common.Hash
+import Data.String ( IsString(fromString) )
+import Tokenomia.Common.Serialise ( FromCLI(..), ToCLI(..) )
+import Tokenomia.Common.Value ( showValueUtf8 )
+import Ledger.Value ( Value )
+import Tokenomia.Common.TxOutRef
+    ( TxOutRef(TxOutRef), showTxOutRef )
+import Tokenomia.Common.Hash ( Hash(..) )
 
 data ScriptUTxO = ScriptUTxO
               { txOutRef :: TxOutRef

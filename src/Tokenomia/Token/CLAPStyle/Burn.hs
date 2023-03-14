@@ -8,30 +8,45 @@ module Tokenomia.Token.CLAPStyle.Burn (burn) where
 import           Prelude hiding ((+),(-),print)
 import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
 
-import           Control.Monad.Reader hiding (ask)
-import           Control.Monad.Except
+import Control.Monad.Reader ( MonadIO, MonadReader )
+import Control.Monad.Except ( MonadError )
 
 
-import           Data.List.NonEmpty
-import           Ledger.Value
-import           Ledger.Ada
+import Data.List.NonEmpty ( NonEmpty((:|)) )
+import Ledger.Value ( singleton )
+import Ledger.Ada ( lovelaceValueOf )
 
-import           Tokenomia.Common.Environment
-import           Tokenomia.Wallet.UTxO as UTxO
-import           Tokenomia.Wallet.WalletUTxO
-import           Tokenomia.Common.Transacting
-import           Tokenomia.Script.LocalRepository
+import Tokenomia.Common.Environment ( Environment )
+import Tokenomia.Wallet.UTxO as UTxO ( UTxO(..) )
+import Tokenomia.Wallet.WalletUTxO ( WalletUTxO(..) )
+import Tokenomia.Common.Transacting
+    ( buildAndSubmit,
+      MonetaryAction(..),
+      TxBalance(Unbalanced),
+      TxBuild(..),
+      TxInFromWallet(FromWallet),
+      TxOut(ToWallet) )
+import Tokenomia.Script.LocalRepository ( getMonetaryPolicyPath )
 
-import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
-import           Tokenomia.Wallet.Collateral.Read
-import           Tokenomia.Wallet.CLI
-import           Tokenomia.Common.Error
+import Tokenomia.Wallet.Collateral.Read
+    ( fetchWalletsWithCollateral )
+import Tokenomia.Wallet.CLI
+    ( askToChooseAmongGivenWallets, askUTxOFilterBy )
+import Tokenomia.Common.Error
+    ( whenNothingThrow,
+      whenNullThrow,
+      TokenomiaError(..) )
 import           Tokenomia.Common.Shell.Console (printLn)
 import           Tokenomia.Common.Shell.InteractiveMenu (ask)
-import           Tokenomia.Common.Value
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.ChildAddress.LocalRepository
+import Tokenomia.Common.Value ( containingOneToken, getTokenFrom )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef(..),
+      CollateralAddressRef(..),
+      FeeAddressRef(..) )
+import Tokenomia.Wallet.Type ( Wallet(..), WalletName )
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    ( fetchById,
+      ChildAddress(..) )
 
 burn
     :: (  MonadIO m

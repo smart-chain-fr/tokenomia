@@ -38,26 +38,34 @@ module Tokenomia.Common.Transacting
 
 import Prelude hiding (head)
 import qualified Prelude
-import           Data.Coerce
+import Data.Coerce ( coerce )
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Encoding as TLE ( decodeUtf8 )
 import qualified Data.ByteString.Lazy.Char8 as C
-import           Data.List.NonEmpty as NEL
+import Data.List.NonEmpty as NEL ( NonEmpty(..), head )
 import           Data.String (fromString)
 
 
-import           Control.Monad.Reader
-import           Control.Monad.Except
-import           Control.Concurrent
-import           System.Random
+import Control.Monad.Reader ( MonadIO(..), MonadReader, asks )
+import Control.Monad.Except ( MonadError )
+import Control.Concurrent ( threadDelay )
+import System.Random ( randomIO )
 
-import           Shh.Internal
+import Shh.Internal
+    ( (&>),
+      capture,
+      load,
+      (|>),
+      ExecArg(asArg),
+      ExecReference(SearchPath),
+      Stream(Truncate),
+      captureWords )
 
 import           Ledger ( TxOutRef (..),Value,Slot (..) )
 
 import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment ( Environment(magicNumber) )
 
 
 import           Tokenomia.Common.Data.Convertible          ( convert )
@@ -70,16 +78,23 @@ import qualified Tokenomia.Wallet.UTxO as Wallet
 import qualified Tokenomia.Wallet.WalletUTxO as Wallet
 
 
-import           Tokenomia.Common.Address
-import           Tokenomia.Wallet.Collateral.Read
-import           Tokenomia.Common.Error
-import           Tokenomia.Wallet.CLI
-import           Tokenomia.Wallet.UTxO
+import Tokenomia.Common.Address ( Address(..) )
+import Tokenomia.Wallet.Collateral.Read ( fetchCollateral )
+import Tokenomia.Common.Error
+    ( whenLeftThrow,
+      whenNothingThrow,
+      TokenomiaError(..) )
+import Tokenomia.Wallet.CLI
+    ( selectBiggestStrictlyADAsNotCollateral )
+import Tokenomia.Wallet.UTxO
+    ( UTxO(..) )
 import           Tokenomia.Wallet.WalletUTxO ( WalletUTxO(..) )
-import           Tokenomia.Common.Hash
-import           Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Ledger.Ada as Ada
+import Tokenomia.Common.Hash ( Hash(..) )
+import Tokenomia.Wallet.ChildAddress.LocalRepository as ChildAddress
+    ( fetchById, ChildAddress(..) )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef, CollateralAddressRef(..), FeeAddressRef(..) )
+import Ledger.Ada as Ada ( Ada(getLovelace) )
 
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}

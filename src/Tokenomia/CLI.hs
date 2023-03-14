@@ -1,45 +1,38 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Tokenomia.CLI (main) where
 
-
-import           Control.Monad.Reader
-import           Control.Monad.Except
-import           Tokenomia.Common.Error
-
-import Data.List.NonEmpty as NonEmpty ( NonEmpty, fromList )
-
+import Control.Monad.Except
+import Control.Monad.Reader
+import Data.List.NonEmpty
+    as NonEmpty                                               ( NonEmpty, fromList )
 import Shh
-
-import           Tokenomia.Common.Shell.InteractiveMenu
-import           Tokenomia.Common.Shell.Console (printLn, clearConsole, printOpt)
-import           Tokenomia.Common.Environment
-
-import qualified Tokenomia.Wallet.CLI as Wallet
-import qualified Tokenomia.Wallet.Collateral.Write as Wallet
-
-import qualified Tokenomia.Token.CLAPStyle.Mint as Token
-import qualified Tokenomia.Token.CLAPStyle.Burn as Token
-import qualified Tokenomia.Token.Transfer as Token
-
-import qualified Tokenomia.Ada.Transfer as Ada
-
-import qualified Tokenomia.Vesting.Sendings as Vesting
-import qualified Tokenomia.Vesting.GenerateNative as Vesting
-
-import qualified Tokenomia.Node.Status as Node
-import qualified Streamly.Prelude as S
+import Streamly.Prelude qualified as S
+import Tokenomia.Common.Error
+import Tokenomia.Ada.Transfer qualified as Ada
+import Tokenomia.Common.Environment
+import Tokenomia.Common.Shell.Console                         (printLn, clearConsole, printOpt)
+import Tokenomia.Common.Shell.InteractiveMenu
+import Tokenomia.Node.Status qualified as Node
+import Tokenomia.Token.CLAPStyle.Burn qualified as Token
+import Tokenomia.Token.CLAPStyle.Mint qualified as Token
+import Tokenomia.Token.Transfer qualified as Token
+import Tokenomia.Vesting.GenerateNative qualified as Vesting
+import Tokenomia.Vesting.Sendings qualified as Vesting
+import Tokenomia.Wallet.CLI qualified as Wallet
+import Tokenomia.Wallet.Collateral.Write qualified as Wallet
 
 load SearchPath ["cardano-cli"]
 
