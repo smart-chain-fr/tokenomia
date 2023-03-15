@@ -1,7 +1,7 @@
-{-# LANGUAGE OverloadedStrings            #-}
-{-# LANGUAGE ImportQualifiedPost          #-}
-{-# LANGUAGE RankNTypes                   #-}
-{-# LANGUAGE KindSignatures               #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE KindSignatures                            #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RankNTypes                                #-}
 
 module Tokenomia.TokenDistribution.Parser.Address
     ( deserialiseCardanoAddress
@@ -9,71 +9,65 @@ module Tokenomia.TokenDistribution.Parser.Address
     , unsafeSerialiseCardanoAddress
     ) where
 
-import Ledger.Address           ( Address(..) )
-import Ledger.Credential        ( Credential(..) )
-import Ledger.Crypto            ( PubKeyHash(PubKeyHash) )
+import Ledger.Address                                  ( Address(..), toPlutusAddress )
+import Ledger.Credential                               ( Credential(..) )
+import Ledger.Crypto                                   ( PubKeyHash(PubKeyHash) )
 
-import Data.ByteArray           ( length )
-import Data.Text                ( Text, isPrefixOf )
-import Data.Kind                ( Type )
-import Data.Either.Combinators  ( mapLeft, maybeToRight )
+import Data.ByteArray                                  ( length )
+import Data.Either.Combinators                         ( mapLeft, maybeToRight )
+import Data.Kind                                       ( Type )
+import Data.Text                                       ( Text, isPrefixOf )
 
-import PlutusCore.Pretty        ( Pretty(pretty) )
+import PlutusCore.Pretty                               ( Pretty(pretty) )
 
-import PlutusTx.Prelude         ( fromBuiltin )
+import PlutusTx.Prelude                                ( fromBuiltin )
 
-import Prelude           hiding ( length )
+import Prelude hiding                                  ( length )
 
-import Plutus.Contract.CardanoAPI
-    ( ToCardanoError
-    , fromCardanoAddress
-    , toCardanoAddress
-    )
+import Plutus.Contract.CardanoAPI                      ( ToCardanoError, toCardanoAddressInEra )
 
-import Cardano.Chain.Common     ( decodeAddressBase58 )
+import Cardano.Chain.Common                            ( decodeAddressBase58 )
 
-import Cardano.Api.Byron qualified as Bryon
-    ( Address(ByronAddress) )
+import Cardano.Api.Byron qualified
+    as Bryon                                           ( Address(ByronAddress) )
 
 import Cardano.Api
-    ( AsType(AsAddressInEra, AsAlonzoEra, AsByronEra)
+    ( AddressInEra(AddressInEra)
+    , AddressTypeInEra(ByronAddressInAnyEra)
+    , AsType(AsAddressInEra, AsAlonzoEra, AsByronEra)
+    , BabbageEra
     , IsCardanoEra
     , NetworkId
-    , AddressInEra(AddressInEra)
-    , AddressTypeInEra(ByronAddressInAnyEra)
-    , AlonzoEra
     , deserialiseAddress
     , serialiseAddress
     )
 
-import Tokenomia.Common.Data.Convertible ( convert )
+import Tokenomia.Common.Data.Convertible               ( convert )
 
 
 deserialiseAddressInEra
     :: forall (era :: Type). IsCardanoEra era
     => AsType era -> Text -> Either Text Address
 deserialiseAddressInEra era address = do
-    cardanoAddress <- maybeToRight "deserialisation failed" $
-        deserialiseAddress (AsAddressInEra era) address
-    mapLeft (const "not a cardano address") $
-        fromCardanoAddress cardanoAddress
+    maybeToRight "deserialisation failed" $ toPlutusAddress
+        <$> deserialiseAddress (AsAddressInEra era) address
 
 deserialiseCardanoAddress :: Text -> Either Text Address
 deserialiseCardanoAddress address
     | "addr" `isPrefixOf` address = deserialiseAddressInEra AsAlonzoEra address
     | otherwise                   = deserialiseAddressInEra AsByronEra  address
 
-serialiseAlonzoAddress :: NetworkId -> Address -> Either Text (AddressInEra AlonzoEra)
+serialiseAlonzoAddress :: NetworkId -> Address -> Either Text (AddressInEra BabbageEra)
 serialiseAlonzoAddress networdId address =
     mapLeft showError $
-        toCardanoAddress networdId address
+        toCardanoAddressInEra networdId address
   where
     showError :: ToCardanoError -> Text
     showError err =
            (convert . show . pretty $ err)
         <> (convert . show $ address)
 
-serialiseByronAddress :: Address -> Either Text (AddressInEra AlonzoEra)
+serialiseByronAddress :: Address -> Either Text (AddressInEra BabbageEra)
 serialiseByronAddress (Address (PubKeyCredential (PubKeyHash bytes)) _) = do
     base58 <-
         mapLeft (convert . show) $

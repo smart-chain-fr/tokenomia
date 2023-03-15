@@ -1,18 +1,23 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
 
 module Tokenomia.Common.Error
-    ( TokenomiaError (..)
+    ( TokenomiaError(..)
+    , whenLeftThrow
+    , whenNothingThrow
     , whenNullThrow
     , whenSomethingThrow
-    , whenNothingThrow
-    , whenLeftThrow) where
+    ) where
 
 
-import           Control.Monad.Except
-import           Data.List.NonEmpty (nonEmpty, NonEmpty)
-import           Tokenomia.Common.Address ( Address(..) )
-import qualified Blockfrost.Client as B
-import           Tokenomia.Wallet.Type
+import Blockfrost.Client qualified as B
+import Blockfrost.Types                                ( TxHash )
+import Control.Monad.Except                            ( MonadError(throwError) )
+import Data.List.NonEmpty                              ( NonEmpty, nonEmpty )
+import Ledger.Value                                    ( Value )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 data TokenomiaError
     = NoWalletRegistered
@@ -23,24 +28,21 @@ data TokenomiaError
     | NoADAsOnChildAddress
     | NoUTxOWithOnlyOneToken
     | TryingToBurnTokenWithoutScriptRegistered
-    | NoVestingInProgress
-    | NoFundsToBeRetrieved
-    | AllFundsLocked
-    | FundAlreadyRetrieved
     | BlockFrostError B.BlockfrostError
     | NoActiveAddressesOnWallet
     | ChildAddressNotIndexed WalletName Address
     | InconsistenciesBlockFrostVSLocalNode String
-    | NoICOTransactionsToBePerformOnThisWallet
     | NoDerivedChildAddress
     | NoUTxOsFound
-    | ICOExchangeUtxoWithoutHash
-    | ICOTokensDispatchedOnMultipleUTxOs
-    | ICOPaybackAddressNotAvailable String Integer
-    | ICOWhitelistingNotValid Integer Integer
-    | ICONoValidTxs String
     | InvalidTransaction String
-    deriving Show
+    | SendingsContainsZeroValue
+    | SendingsNoSuchTransactions [TxHash]
+    | SendingsJSONDecodingFailure String
+    | SendingsValueMismatch (Value, Value)
+    | MalformedAddress
+    | InvalidPrivateSale String
+    | QueryFailure String
+    deriving stock Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)
 whenNullThrow err =
@@ -56,4 +58,3 @@ whenNothingThrow err = maybe (throwError err) pure
 
 whenLeftThrow :: MonadError e m => (a -> e) -> Either a b ->  m b
 whenLeftThrow toErr = either (throwError . toErr) pure
-

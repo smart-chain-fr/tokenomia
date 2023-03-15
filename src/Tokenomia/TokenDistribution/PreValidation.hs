@@ -1,35 +1,39 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE ImportQualifiedPost          #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# HLINT ignore "Use void"                            #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas              #-}
 
 module Tokenomia.TokenDistribution.PreValidation
     ( preValidation
     , tokenSourceProvisionedUTxO
     ) where
 
-import Control.Monad.Except     ( MonadIO )
-import Control.Monad.Reader     ( MonadReader )
+import Control.Monad.Except                            ( MonadIO )
+import Control.Monad.Reader                            ( MonadReader )
 
-import Control.Arrow            ( left )
-import Data.Composition         ( (.:) )
-import Data.List.Unique         ( allUnique )
-import Data.List.NonEmpty       ( NonEmpty )
-import Data.Either.Combinators  ( maybeToRight )
-import Data.Either.Validation   ( Validation, eitherToValidation )
+import Control.Arrow                                   ( left )
+import Data.Composition                                ( (.:) )
+import Data.Either.Combinators                         ( maybeToRight )
+import Data.Either.Validation                          ( Validation, eitherToValidation )
+import Data.List.NonEmpty                              ( NonEmpty )
+import Data.List.Unique                                ( allUnique )
 
-import Tokenomia.Common.AssetClass          ( adaAssetClass )
-import Tokenomia.Common.Asset               ( Asset(..) )
-import Tokenomia.Common.Environment         ( Environment )
-import Tokenomia.Common.Value               ( assetClassValueOfWith, maximumByAssetClassValueOf' )
-import Tokenomia.Common.Data.List.NonEmpty  ( singleton )
+import Tokenomia.Common.Asset                          ( Asset(..) )
+import Tokenomia.Common.AssetClass                     ( adaAssetClass )
+import Tokenomia.Common.Data.List.NonEmpty             ( singleton )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Value                          ( assetClassValueOfWith, maximumByAssetClassValueOf' )
 
-import Tokenomia.Wallet.CLI                 ( fetchUTxOFilterBy )
-import Tokenomia.Wallet.WalletUTxO          ( WalletUTxO, value )
+import Tokenomia.Wallet.CLI                            ( fetchUTxOFilterBy )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO, value )
 
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef      ( ChildAddressRef(..) )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef(..) )
 
-import Tokenomia.TokenDistribution.CLI.Parameters  as CLI ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution    as CLI ( Distribution(..), Recipient(..) )
+import Tokenomia.TokenDistribution.CLI.Parameters
+    as CLI                                             ( Parameters(..) )
+import Tokenomia.TokenDistribution.Distribution
+    as CLI                                             ( Distribution(..), Recipient(..) )
 
 data DistributionError
     = NoRecipient
@@ -40,7 +44,7 @@ data DistributionError
     | AddressDuplicate
     | NoProvisionedAdaSource
     | NoProvisionedTokenSource
-    deriving (Show)
+    deriving stock (Show)
 
 hasRecipient :: Parameters -> Distribution -> Either DistributionError ()
 hasRecipient _ distribution

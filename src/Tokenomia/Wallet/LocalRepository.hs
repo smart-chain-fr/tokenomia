@@ -1,45 +1,58 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Wallet.LocalRepository
-    ( register
-    , remove
-    , exists
-    , restoreByMnemonics
+    ( exists
     , fetchAll
     , fetchById
-    , Wallet (..)
+    , register
+    , remove
+    , restoreByMnemonics
     ) where
 
-import           Data.String
-import qualified Data.ByteString.Lazy.Char8 as C
-import           Control.Monad.Reader
-import           Shh.Internal
-import           System.Directory ( doesDirectoryExist )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
+import Data.ByteString.Lazy.Char8 qualified as C
+import Data.String                                     ( IsString(fromString) )
+import Shh.Internal
+    ( ExecReference(SearchPath)
+    , Stream(Truncate)
+    , captureTrim
+    , captureWords
+    , load
+    , (&>)
+    , (|>)
+    )
+import System.Directory                                ( doesDirectoryExist )
 
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment                    ( Environment(Mainnet, Testnet) )
 
-import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Address
+import Tokenomia.Common.Address                        ( Address(Address) )
+import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
 
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.LocalRepository.Folder 
+import Tokenomia.Wallet.LocalRepository.Folder         ( WalletFile(..), getWalletFilePath, getWalletPath )
+import Tokenomia.Wallet.Type                           ( Wallet(Wallet), WalletName )
 
-import           Tokenomia.Wallet.ChildAddress.LocalRepository hiding (fetchById)
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    ( deriveChildAddressesWithingRange
+    , getAddressIndexesPath
+    , getChildAddressesPath
+    )
+
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
 
 
@@ -60,7 +73,7 @@ fetchById ::
 fetchById name =
     Wallet name
         <$> (getWalletFilePath name StakeAddressTxt >>= (\path -> Address . C.unpack  <$> liftIO (cat path |> captureTrim)))
-        
+
 
 register ::
     ( MonadIO m
@@ -69,7 +82,7 @@ register ::
     -> m Wallet
 register name = do
     let generateWalletFile' = generateWalletFile name
-        
+
     getWalletPath name         >>= \path -> liftIO $ mkdir "-p" path
     getAddressIndexesPath name >>= \path -> liftIO $ mkdir "-p" path
     getChildAddressesPath name >>= \path -> liftIO $ mkdir "-p" path
@@ -93,7 +106,7 @@ restoreByMnemonics name mnemonics = do
     getWalletPath name                  >>= \path -> liftIO $ mkdir "-p" path
     getAddressIndexesPath name          >>= \path -> liftIO $ mkdir "-p" path
     getChildAddressesPath name          >>= \path -> liftIO $ mkdir "-p" path
-    
+
     getWalletFilePath name MnemonicsTxt >>= \path -> liftIO $ echo (unwords  mnemonics) &> (Truncate . fromString) path
     generateWalletFile' RootPrivateKeyTxt
     generateWalletFile' StakePublicKeyTxt

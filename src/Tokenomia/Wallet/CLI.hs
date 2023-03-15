@@ -1,55 +1,62 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints             #-}
 
 module Tokenomia.Wallet.CLI
-  ( askToChooseAmongGivenWallets
-  , askAmongAllWallets
-  , askUTxO
-  , askUTxOFilterBy
-  , fetchUTxOFilterBy
-  , askToChooseAmongGivenUTxOs
-  , selectBiggestStrictlyADAsNotCollateral
-  , generateChildAddresses
-  -- "UI" for Wallet Repository
-  , displayAll
-  , askDisplayOne
-  , askDisplayOneWithinIndexRange
-  , register
-  , restoreByMnemonics
-  , remove)
-  where
+    ( askAmongAllWallets
+    , askToChooseAmongGivenUTxOs
+    , askToChooseAmongGivenWallets
+    , askUTxO
+    , askUTxOFilterBy
+    , fetchUTxOFilterBy
+    , generateChildAddresses
+    , selectBiggestStrictlyADAsNotCollateral
+      -- "UI" for Wallet Repository
+    , askDisplayOne
+    , askDisplayOneWithinIndexRange
+    , displayAll
+    , register
+    , remove
+    , restoreByMnemonics
+    ) where
 
-import           Prelude hiding (filter,head,last)
-import           Tokenomia.Common.Error
-import           Control.Monad.Except
-import qualified Prelude as P
-import           Data.Set.NonEmpty
-import qualified Data.Set as S
-import           Data.Coerce
-import           Data.List.NonEmpty
-import           Control.Monad.Reader hiding (ask)
+import Control.Monad.Except                            ( MonadError, MonadIO )
+import Control.Monad.Reader                            ( MonadReader )
+import Data.Coerce                                     ( coerce )
+import Data.List.NonEmpty                              ( NonEmpty, head, last, nonEmpty, sortWith )
+import Data.Set qualified as S
+import Data.Set.NonEmpty                               ( size, toAscList )
+import Prelude hiding                                  ( filter, head, last )
+import Prelude qualified as P
+import Tokenomia.Common.Error                          ( TokenomiaError(NoWalletRegistered), whenNullThrow )
 
-import           Tokenomia.Common.Shell.Console (printLn)
-import           Plutus.V1.Ledger.Value (flattenValue)
+import Plutus.V1.Ledger.Value                          ( flattenValue )
+import Tokenomia.Common.Shell.Console                  ( printLn )
 
-import           Tokenomia.Common.Shell.InteractiveMenu (askMenu, askStringFilterM, askFilterM,askString)
+import Tokenomia.Common.Shell.InteractiveMenu          ( askFilterM, askMenu, askString, askStringFilterM )
 
-import           Tokenomia.Common.Environment
-import qualified Tokenomia.Wallet.LocalRepository as Repository
-import           Tokenomia.Wallet.ChildAddress.ChainIndex
-import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO hiding ( value )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Wallet.ChildAddress.ChainIndex        ( queryUTxO, queryUTxOsFilterBy )
+import Tokenomia.Wallet.LocalRepository qualified as Repository
+import Tokenomia.Wallet.UTxO                           ( UTxO(UTxO, value) )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO(WalletUTxO, utxo) )
 
-import           Tokenomia.Common.Value
-import           Tokenomia.Common.Address
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.ChildAddress.LocalRepository
+import Tokenomia.Common.Address                        ( Address(Address) )
+import Tokenomia.Common.Value                          ( containingStrictlyADAs, containsCollateral )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressIndex(..), ChildAddressRef(..) )
+import Tokenomia.Wallet.ChildAddress.LocalRepository
+    ( ChildAddress(..)
+    , Wallet(..)
+    , deriveChildAddress
+    , fetchByWallet
+    , fetchByWalletWithinIndexRange
+    )
 
 
 askWalletName :: (MonadIO m) => m String

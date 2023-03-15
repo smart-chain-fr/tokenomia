@@ -1,31 +1,33 @@
-{-# LANGUAGE FlexibleInstances            #-}
-{-# LANGUAGE ImportQualifiedPost          #-}
-{-# LANGUAGE OverloadedStrings            #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RecordWildCards                           #-}
 
 module Tokenomia.Wallet.UTxO
-    ( UTxO (..)
+    ( UTxO(..)
     ) where
 
-import Prelude           hiding ( lines )
+import Prelude hiding                                  ( lines )
 
-import Data.Attoparsec.Text     ( parseOnly )
-import Data.Either.Combinators  ( rightToMaybe )
-import Data.Maybe               ( mapMaybe )
-import Data.Text                ( lines )
+import Data.Attoparsec.Text                            ( parseOnly )
+import Data.Either.Combinators                         ( rightToMaybe )
+import Data.Maybe                                      ( mapMaybe )
+import Data.Text                                       ( lines )
 
-import Plutus.V1.Ledger.Api     ( DatumHash(..), Value, TxOutRef (..) )
+import Plutus.V1.Ledger.Api                            ( DatumHash(..), TxOutRef(..), Value )
 
-import Tokenomia.Common.Hash                            ( Hash(..) )
-import Tokenomia.Common.Serialise                       ( FromCLI(..) )
-import Tokenomia.Common.Parser.Utxo qualified as Parser ( utxo )
+import Tokenomia.Common.Hash                           ( Hash(..) )
+import Tokenomia.Common.Parser.Utxo qualified
+    as Parser                                          ( utxo )
+import Tokenomia.Common.Serialise                      ( FromCLI(..) )
 
 
 data UTxO = UTxO
     { txOutRef :: TxOutRef
     , value :: Value
     , maybeDatumHash :: Maybe Hash
-    } deriving (Show,Eq)
+    } deriving stock (Show,Eq)
 
 instance Ord UTxO where
     compare x y = compare (txOutRef x) (txOutRef y)

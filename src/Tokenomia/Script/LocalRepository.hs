@@ -1,49 +1,63 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Script.LocalRepository
-    ( registerMintingScriptFile
-    , registerValidatorScriptFile
-    , getScriptLocation
-    , ScriptLocation (..)
+    ( ScriptLocation(..)
     , getMonetaryPolicyPath
+    , getScriptLocation
+    , registerMintingScriptFile
+    , registerValidatorScriptFile
     ) where
 
-import qualified Data.ByteString.Lazy.Char8 as C
-import qualified Data.ByteString.Short as SBS
-import qualified Data.ByteString.Lazy as LB
- 
+import Data.ByteString.Lazy qualified as LB
+import Data.ByteString.Lazy.Char8 qualified as C
+import Data.ByteString.Short qualified as SBS
 
-import           Control.Monad.Reader
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
 
-import           System.Directory
+import System.Directory                                ( doesFileExist )
 
-import           Shh.Internal
+import Shh.Internal
+    ( ExecArg(asArg)
+    , ExecReference(SearchPath)
+    , capture
+    , load
+    , (|>)
+    )
 
-import           Codec.Serialise ( serialise )
+import Codec.Serialise                                 ( serialise )
 
-import           Cardano.Api hiding (Testnet,Mainnet,Address,Hash)
-import qualified Cardano.Api.Shelley  as Shelley
+import Cardano.Api                                     ( Error(displayError), writeFileTextEnvelope )
+import Cardano.Api.Shelley qualified as Shelley
 
 
-import           Ledger hiding (Address)
+import Ledger
+    ( CurrencySymbol
+    , MintingPolicy
+    , Validator
+    , unMintingPolicyScript
+    , unValidatorScript
+    )
 
-import qualified Plutus.V1.Ledger.Scripts as Script
+import Plutus.Script.Utils.V1.Scripts                  ( scriptCurrencySymbol, validatorHash )
+import Plutus.V1.Ledger.Scripts qualified as Script
 
-import           Tokenomia.Common.Environment
-import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Address
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.Environment                    ( Environment(Mainnet, Testnet, magicNumber) )
+import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
 
 {-# ANN module "HLINT: ignore Use camelCase" #-}
 
@@ -74,13 +88,13 @@ registerMintingScriptFile mp = do
             Right () -> return filePath)
 
 
-data ScriptLocation = ScriptLocation {onChain :: Address , offChain::FilePath} deriving (Eq,Show)
+data ScriptLocation = ScriptLocation {onChain :: Address , offChain::FilePath} deriving stock (Eq,Show)
 
 getScriptLocation :: ( MonadIO m , MonadReader Environment m )
     => Validator
     -> m ScriptLocation
 getScriptLocation validator = do
-    networkOption <- asks (\case 
+    networkOption <- asks (\case
                         Mainnet {} -> asArg ["--mainnet"]
                         Testnet {magicNumber} ->  asArg ["--testnet-magic", show magicNumber])
     scFolder <- getFolderPath Validators
@@ -107,4 +121,3 @@ toPlutusScriptV1
   . SBS.toShort
   . LB.toStrict
   . serialise
-

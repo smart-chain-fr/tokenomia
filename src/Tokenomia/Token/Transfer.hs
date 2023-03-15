@@ -1,44 +1,56 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TypeApplications                          #-}
 
 module Tokenomia.Token.Transfer
     ( transfer
     , transfer'
     ) where
 
-import           Prelude hiding ((+),(-))
-import           PlutusTx.Prelude  (AdditiveSemigroup((+)),AdditiveGroup((-)))
+import PlutusTx.Prelude                                ( AdditiveGroup((-)), AdditiveSemigroup((+)) )
+import Prelude hiding                                  ( (+), (-) )
 
-import           Data.List.NonEmpty
-import           Control.Monad.Reader hiding (ask)
-import           Control.Monad.Except
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
+import Data.List.NonEmpty                              ( NonEmpty((:|)) )
 
-import           Ledger.Value
-import           Tokenomia.Common.Environment
+import Ledger.Value                                    ( singleton )
+import Tokenomia.Common.Environment                    ( Environment )
 
-import           Ledger.Ada
-import           Tokenomia.Wallet.UTxO as UTxO
-import           Tokenomia.Wallet.WalletUTxO
-import           Tokenomia.Common.Transacting
-import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
-import           Tokenomia.Common.Error
-import           Tokenomia.Wallet.Collateral.Read
-import           Tokenomia.Wallet.CLI
-import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu  (ask,askString, askStringLeaveBlankOption)
-import           Tokenomia.Common.Value
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.ChildAddress.LocalRepository
-import           Tokenomia.Common.Address
-import           Tokenomia.Common.Token
+import Ledger.Ada                                      ( toValue )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.Error                          ( TokenomiaError(..), whenNothingThrow, whenNullThrow )
+import Tokenomia.Common.Shell.Console                  ( printLn )
+import Tokenomia.Common.Shell.InteractiveMenu          ( ask, askString, askStringLeaveBlankOption )
+import Tokenomia.Common.Token                          ( getMinimumUTxOAdaRequired )
+import Tokenomia.Common.Transacting
+    ( Metadata(Metadata)
+    , TxBalance(Unbalanced)
+    , TxBuild(..)
+    , TxInFromWallet(FromWallet)
+    , TxOut(ToWallet)
+    , buildAndSubmit
+    , createMetadataFile
+    )
+import Tokenomia.Common.Value                          ( containingOneToken, getTokenFrom )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef(..)
+    , CollateralAddressRef(..)
+    , FeeAddressRef(..)
+    )
+import Tokenomia.Wallet.ChildAddress.LocalRepository   ( ChildAddress(..), fetchById )
+import Tokenomia.Wallet.CLI                            ( askToChooseAmongGivenWallets, askUTxOFilterBy )
+import Tokenomia.Wallet.Collateral.Read                ( fetchWalletsWithCollateral )
+import Tokenomia.Wallet.Type                           ( Wallet(..), WalletName )
+import Tokenomia.Wallet.UTxO
+    as UTxO                                            ( UTxO(value) )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO(utxo) )
+
+
 transfer ::
     ( MonadIO m
     , MonadReader Environment m
@@ -75,7 +87,7 @@ transfer' ::
     -> m ()
 transfer' feesWalletName sourceTokenWalletName receiverAddr utxoWithToken amount labelMaybe = do
     let firstChildAddressSourceToken = ChildAddressRef sourceTokenWalletName 0
-        firstChildAddressFees = ChildAddressRef feesWalletName 0 
+        firstChildAddressFees = ChildAddressRef feesWalletName 0
     metadataMaybe <- mapM (fmap Metadata . createMetadataFile)  labelMaybe
     ChildAddress {address = senderWalletChildAddress} <- fetchById firstChildAddressSourceToken
     let (tokenPolicyHash,tokenNameSelected,totalAmount) = getTokenFrom . UTxO.value  . utxo $ utxoWithToken
@@ -94,5 +106,3 @@ transfer' feesWalletName sourceTokenWalletName receiverAddr utxoWithToken amount
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}
-
-    

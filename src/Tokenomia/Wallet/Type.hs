@@ -1,18 +1,20 @@
-{-# LANGUAGE RecordWildCards #-}
-module Tokenomia.Wallet.Type 
-    ( WalletName
-    , Wallet (..)) where
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE RecordWildCards                           #-}
+module Tokenomia.Wallet.Type
+    ( Wallet(..)
+    , WalletName
+    ) where
 
-import           Data.Coerce
-import           Tokenomia.Common.Address
-import           Tokenomia.Common.Shell.InteractiveMenu
+import Data.Coerce                                     ( coerce )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..) )
 
 
 type WalletName = String
 
 data Wallet = Wallet
               { name :: WalletName
-              , stakeAddress :: Address} deriving Eq
+              , stakeAddress :: Address} deriving stock Eq
 
 
 instance Show Wallet where

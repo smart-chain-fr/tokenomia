@@ -1,21 +1,15 @@
-{-# LANGUAGE ImportQualifiedPost          #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
 
-module Tokenomia.TokenDistribution.CLI ( runCommand ) where
+module Tokenomia.TokenDistribution.CLI
+    ( runCommand
+    ) where
 
-import Control.Applicative      ( (<**>) )
+import Control.Applicative                             ( (<**>) )
 
-import Tokenomia.TokenDistribution.CLI.Parameters
+import Tokenomia.TokenDistribution.CLI.Parameters      ( Parameters(..) )
 import Tokenomia.TokenDistribution.CLI.Parser qualified as Parser
 
-import Options.Applicative
-    ( Parser
-    , fullDesc
-    , header
-    , helper
-    , info
-    , progDesc
-    , execParser
-    )
+import Options.Applicative                             ( Parser, execParser, fullDesc, header, helper, info, progDesc )
 
 runCommand :: IO Parameters
 runCommand = execParser $

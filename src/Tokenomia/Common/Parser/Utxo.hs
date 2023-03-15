@@ -1,23 +1,16 @@
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE OverloadedStrings                         #-}
 
 module Tokenomia.Common.Parser.Utxo
     ( utxo
     ) where
 
-import Data.Attoparsec.Text
-    ( Parser
-    , skipSpace
-    )
+import Data.Attoparsec.Text                            ( Parser, skipSpace )
 
-import Plutus.V1.Ledger.Api
-    ( DatumHash
-    , TxOutRef
-    , Value
-    )
+import Plutus.V1.Ledger.Api                            ( DatumHash, TxOutRef, Value )
 
-import Tokenomia.Common.Parser.TxOutRef         ( txOutRef )
-import Tokenomia.Common.Parser.Value            ( value )
-import Tokenomia.Common.Parser.TxOutDatumHash   ( txOutDatumHash )
+import Tokenomia.Common.Parser.TxOutDatumHash          ( txOutDatumHash )
+import Tokenomia.Common.Parser.TxOutRef                ( txOutRef )
+import Tokenomia.Common.Parser.Value                   ( value )
 
 
 utxo :: Parser (TxOutRef, Value, Maybe DatumHash)

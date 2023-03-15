@@ -1,20 +1,20 @@
 # Token Distribution
 
 Distribute tokens to a list of addresses.
-  
+
 **USAGE**
 
 ```
 Usage: token-distribution [(-m|--mainnet) | (-t|--testnet MAGIC)]
-                          (-i|--distribution-file FILENAME) 
+                          (-i|--distribution-file FILENAME)
                           [-n|--recipient-per-tx SIZE] (-T|--token-wallet NAME)
-                          (-A|--ada-wallet NAME) (-C|--collateral-wallet NAME) 
-                          [-e|--min-lovelaces-per-utxo AMOUNT] [-y|--dry-run] 
+                          (-A|--ada-wallet NAME) (-C|--collateral-wallet NAME)
+                          [-e|--min-lovelaces-per-utxo AMOUNT] [-y|--dry-run]
                           [-v|--verbose]
 
 Available options:
   -m,--mainnet             Use the mainnet network
-  -t,--testnet MAGIC       Use this testnet magic id (default: 1097911063)
+  -t,--testnet MAGIC       Use this testnet magic id (default (preprod network): 1)
   -i,--distribution-file FILENAME
                            Recipient addresses and amounts to distribute
   -n,--recipient-per-tx SIZE
@@ -31,11 +31,11 @@ Available options:
   -v,--verbose             Show more details about build processes
   -h,--help                Show this help text
 ```
-  
+
 **INPUT FILE**
-  
+
 Provide a `JSON` file containing the list of address and associated amount of token in the following format.
-  
+
 ```json
 {
   "assetClass": {

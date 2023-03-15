@@ -1,33 +1,33 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -Wno-orphans                           #-}
 
 module Tokenomia.Script.UTxO
-    ( ScriptUTxO (..)
+    ( ScriptUTxO(..)
     ) where
 
-import Tokenomia.Common.Shell.InteractiveMenu
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..) )
 
-import qualified Data.Text as T
-import           Data.Text (Text)
-import           Data.List as L
-           
-import           Data.String
-import           Tokenomia.Common.Serialise
-import           Tokenomia.Common.Value 
-import           Ledger.Value
-import           Tokenomia.Common.TxOutRef 
-import           Tokenomia.Common.Hash
+import Data.List qualified as L
+import Data.String                                     ( IsString(fromString) )
+import Data.Text                                       ( Text )
+import Data.Text qualified as T
+import Ledger.Value                                    ( Value )
+import Tokenomia.Common.Hash                           ( Hash(..) )
+import Tokenomia.Common.Serialise                      ( FromCLI(..), ToCLI(..) )
+import Tokenomia.Common.TxOutRef                       ( TxOutRef(TxOutRef), showTxOutRef )
+import Tokenomia.Common.Value                          ( showValueUtf8 )
 
 data ScriptUTxO = ScriptUTxO
               { txOutRef :: TxOutRef
               , value :: Value
-              , datumHash :: Hash} deriving (Eq)
+              , datumHash :: Hash} deriving stock (Eq)
 
 
 instance Show ScriptUTxO where
@@ -54,12 +54,10 @@ instance FromCLI [ScriptUTxO] where
 
       tokenize :: Text ->  [(Text,Text,[Text])]
       tokenize
-          =  map (\a ->
+          =  map ((\a ->
                   ( L.head a
                   , a L.!! 1
-                  , (filterEmptyLines . L.drop 2) a ))
-          .  map T.words
-          .  (removeHeader . filterEmptyLines . T.lines)
+                  , (filterEmptyLines . L.drop 2) a )) . T.words) . removeHeader . filterEmptyLines . T.lines
 
       removeHeader :: [Text] -> [Text]
       removeHeader = L.drop 2

@@ -1,7 +1,10 @@
-module Tokenomia.TokenDistribution.CLI.Parameters ( Parameters (..) ) where
+{-# LANGUAGE DerivingStrategies                        #-}
+module Tokenomia.TokenDistribution.CLI.Parameters
+    ( Parameters(..)
+    ) where
 
-import Cardano.Api              ( NetworkId )
-import Tokenomia.Wallet.Type    ( WalletName )
+import Cardano.Api                                     ( NetworkId )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 data  Parameters
     = Parameters
@@ -15,4 +18,4 @@ data  Parameters
     , metadataFilePath :: Maybe FilePath
     , dryRun :: Bool
     , verbose :: Bool
-    } deriving (Show)
+    } deriving stock (Show)

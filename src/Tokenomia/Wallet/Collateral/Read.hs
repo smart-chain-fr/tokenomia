@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DisambiguateRecordFields                  #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
 
 
 module Tokenomia.Wallet.Collateral.Read
@@ -10,23 +10,24 @@ module Tokenomia.Wallet.Collateral.Read
     , filterWalletsWithCollateral
     ) where
 
-import           Control.Monad.Reader
+import Control.Monad.Reader                            ( MonadIO, MonadReader, filterM )
 
 
-import           Data.Maybe
-import           Data.List.NonEmpty
+import Data.List.NonEmpty                              ( NonEmpty, nonEmpty, toList )
+import Data.Maybe                                      ( isJust, isNothing )
 
 
-import           Tokenomia.Common.Value
+import Tokenomia.Common.Value                          ( containsCollateral )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment                    ( Environment )
 
-import           Tokenomia.Wallet.LocalRepository
-import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO hiding ( value )
-import           Tokenomia.Wallet.ChildAddress.ChainIndex
-import           Prelude hiding (print)
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
+import Prelude hiding                                  ( print )
+import Tokenomia.Wallet.ChildAddress.ChainIndex        ( queryUTxOsFilterBy )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef(ChildAddressRef) )
+import Tokenomia.Wallet.LocalRepository                ( fetchAll )
+import Tokenomia.Wallet.Type                           ( Wallet(Wallet, name) )
+import Tokenomia.Wallet.UTxO                           ( UTxO(value) )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO(utxo) )
 
 
 filterWalletsWithCollateral
@@ -52,8 +53,7 @@ fetchCollateral
      => ChildAddressRef
     -> m (Maybe WalletUTxO)
 fetchCollateral childAddressRef =
-    queryUTxOsFilterBy childAddressRef (containsCollateral . value . utxo)  
+    queryUTxOsFilterBy childAddressRef (containsCollateral . value . utxo)
     >>= \case
          [] -> return Nothing
          (x : _) -> (return . Just) x
-    

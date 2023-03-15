@@ -30,7 +30,13 @@ common lang
     ghc-options:
       -Wall -Wnoncanonical-monad-instances
       -Wincomplete-uni-patterns -Wincomplete-record-updates
-      -Wredundant-constraints -Widentities -rtsopts
+      -Wredundant-constraints -Widentities
+      -Wcompat -Wmissing-export-lists
+      -Wmissing-deriving-strategies
+      -Wno-orphans -Wunused-packages
+      -- Necessary to run tests with cardano-address binary
+      -- "Some of the features in Shh require that you use the threaded runtime. Please compile with the -threaded flag to avoid deadlocks."
+      -threaded
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     if flag(defer-plugin-errors)
@@ -39,161 +45,156 @@ common lang
 library
     import: lang
     exposed-modules:
-      Tokenomia.CLI
-      Tokenomia.Node.Status
-      Tokenomia.Token.CLAPStyle.Mint
-      Tokenomia.Token.CLAPStyle.Burn
-      Tokenomia.Token.CLAPStyle.MonetaryPolicy
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Command
-      Tokenomia.Script.LocalRepository
-      Tokenomia.Script.ChainIndex
-      Tokenomia.Script.UTxO
-      Tokenomia.Wallet.Type
-      Tokenomia.Common.TxOutRef
-      Tokenomia.Wallet.CLI
-      Tokenomia.Wallet.LocalRepository
-      Tokenomia.Wallet.LocalRepository.Folder
-      Tokenomia.Wallet.ChildAddress.ChainIndex
-      Tokenomia.Wallet.UTxO
-      Tokenomia.Wallet.WalletUTxO
-      Tokenomia.Wallet.Collateral.Write
-      Tokenomia.Wallet.Collateral.Read
-      Tokenomia.Wallet.ChildAddress.ChildAddressRef
-      Tokenomia.Wallet.ChildAddress.LocalRepository
       Tokenomia.Ada.Transfer
-      Tokenomia.Common.Error
-      Tokenomia.Token.Transfer
-      Tokenomia.Vesting.Contract
-      Tokenomia.Vesting.Repository
-      Tokenomia.Vesting.Vest
-      Tokenomia.Vesting.Retrieve
-      Tokenomia.Tokenomic.CLAP.Simulation
+      Tokenomia.CLI
+      Tokenomia.CardanoApi.Arbitrary.Slot
+      Tokenomia.CardanoApi.Arbitrary.Time
+      Tokenomia.CardanoApi.Fees
+      Tokenomia.CardanoApi.FromPlutus.Error
+      Tokenomia.CardanoApi.FromPlutus.Time
+      Tokenomia.CardanoApi.FromPlutus.Value
+      Tokenomia.CardanoApi.PParams
+      Tokenomia.CardanoApi.Query
+      Tokenomia.CardanoApi.Time
+      Tokenomia.CardanoApi.Value
+      Tokenomia.Common.Address
+      Tokenomia.Common.Aeson.AssetClass
+      Tokenomia.Common.Arbitrary.AssetClass
+      Tokenomia.Common.Arbitrary.Builtins
+      Tokenomia.Common.Arbitrary.Modifiers
+      Tokenomia.Common.Arbitrary.POSIXTime
+      Tokenomia.Common.Arbitrary.Slot
+      Tokenomia.Common.Arbitrary.Utils
+      Tokenomia.Common.Arbitrary.Value
+      Tokenomia.Common.Arbitrary.Wallet
+      Tokenomia.Common.Asset
       Tokenomia.Common.AssetClass
       Tokenomia.Common.Blockfrost
-      Tokenomia.Common.Value
-      Tokenomia.Common.Serialise
-      Tokenomia.Common.Node
-      Tokenomia.Common.Transacting
-      Tokenomia.Common.Folder
-      Tokenomia.Common.Shell.InteractiveMenu
-      Tokenomia.Common.Shell.Console
-      Tokenomia.Common.Environment
-      Tokenomia.Common.Datum
-      Tokenomia.Common.Address
-      Tokenomia.Common.Asset
-      Tokenomia.Common.Hash
-      Tokenomia.Common.Token 
-      Tokenomia.Common.PageNumber 
       Tokenomia.Common.Data.ByteString
       Tokenomia.Common.Data.Convertible
+      Tokenomia.Common.Data.Either.Extra
+      Tokenomia.Common.Data.List.Extra
       Tokenomia.Common.Data.List.NonEmpty
+      Tokenomia.Common.Datum
+      Tokenomia.Common.Environment
+      Tokenomia.Common.Environment.Query
+      Tokenomia.Common.Error
+      Tokenomia.Common.Folder
+      Tokenomia.Common.Hash
+      Tokenomia.Common.Node
+      Tokenomia.Common.PageNumber
       Tokenomia.Common.Parser
+      Tokenomia.Common.Parser.Address
       Tokenomia.Common.Parser.AssetClass
       Tokenomia.Common.Parser.MinRequiredUTxO
-      Tokenomia.Common.Parser.Value
       Tokenomia.Common.Parser.TxOutDatumHash
       Tokenomia.Common.Parser.TxOutRef
       Tokenomia.Common.Parser.Utxo
-      Tokenomia.TokenDistribution.Main
+      Tokenomia.Common.Parser.Value
+      Tokenomia.Common.Serialise
+      Tokenomia.Common.Shell.Console
+      Tokenomia.Common.Shell.InteractiveMenu
+      Tokenomia.Common.Time
+      Tokenomia.Common.Token
+      Tokenomia.Common.Transacting
+      Tokenomia.Common.TxOutRef
+      Tokenomia.Common.Value
+      Tokenomia.Node.Status
+      Tokenomia.Script.ChainIndex
+      Tokenomia.Script.LocalRepository
+      Tokenomia.Script.UTxO
+      Tokenomia.Token.CLAPStyle.Burn
+      Tokenomia.Token.CLAPStyle.Mint
+      Tokenomia.Token.CLAPStyle.MonetaryPolicy
+      Tokenomia.Token.Transfer
       Tokenomia.TokenDistribution.CLI
       Tokenomia.TokenDistribution.CLI.Parameters
       Tokenomia.TokenDistribution.CLI.Parser
-      Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.Distribution
+      Tokenomia.TokenDistribution.Main
+      Tokenomia.TokenDistribution.Parser.Address
       Tokenomia.TokenDistribution.PreValidation
-      Tokenomia.TokenDistribution.Transfer
       Tokenomia.TokenDistribution.Split.EstimateFees
-      Tokenomia.TokenDistribution.Split.SplitDistribution
       Tokenomia.TokenDistribution.Split.SplitAdaSource
+      Tokenomia.TokenDistribution.Split.SplitDistribution
       Tokenomia.TokenDistribution.Split.SplitTokenSource
+      Tokenomia.TokenDistribution.Transfer
       Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex
       Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
       Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-      Tokenomia.ICO.Status
-      Tokenomia.ICO.Round.Settings
-      Tokenomia.ICO.LocalRepository
-      Tokenomia.ICO.Balanceable
-      Tokenomia.ICO.Funds.Validation.Run
-      Tokenomia.ICO.Funds.Validation.Investor.Command
-      Tokenomia.ICO.Funds.Validation.Investor.Plan
-      Tokenomia.ICO.Funds.Validation.ChildAddress.State
-      Tokenomia.ICO.Funds.Validation.ChildAddress.Types
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Transact
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Datum
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Convert
-      Tokenomia.ICO.Funds.Validation.Simulation.Transfer
-      Tokenomia.ICO.Funds.Exchange.Run
-      Tokenomia.ICO.Funds.Exchange.ReceivedFunds
-      Tokenomia.ICO.Funds.Exchange.Command
-      Tokenomia.ICO.Funds.Exchange.Plan
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Command
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Convert
-      Tokenomia.ICO.Funds.Exchange.CardanoCLI.Transact
-      Tokenomia.ICO.Funds.WhiteListing.Repository
-      Tokenomia.ICO.Funds.WhiteListing.Types
-      Tokenomia.ICO.Funds.Exchange.Tokens
-      Tokenomia.ICO.Funds.Exchange.Plan.Settings
-      Tokenomia.ICO.Funds.Validation.Status
-      Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
-      Tokenomia.ICO.Funds.Validation.Investor.Plan.Settings
+      Tokenomia.Vesting.GenerateNative
+      Tokenomia.Vesting.Sendings
+      Tokenomia.Wallet.CLI
+      Tokenomia.Wallet.ChildAddress.ChainIndex
+      Tokenomia.Wallet.ChildAddress.ChildAddressRef
+      Tokenomia.Wallet.ChildAddress.LocalRepository
+      Tokenomia.Wallet.Collateral.Read
+      Tokenomia.Wallet.Collateral.Write
+      Tokenomia.Wallet.LocalRepository
+      Tokenomia.Wallet.LocalRepository.Folder
+      Tokenomia.Wallet.Type
+      Tokenomia.Wallet.UTxO
+      Tokenomia.Wallet.WalletUTxO
     build-depends:
-      base >= 4.9 && < 5,
-      base16-bytestring,
-      lens,
-      aeson,
-      async,
-      attoparsec,
-      composition,
-      composition-extra,
-      either,
-      memory,
-      text,
-      time,
-      mtl,
-      shh,
-      split,
-      directory,
-      random,
-      exceptions,
-      lifted-base,
-      utf8-string,
+      base,
       Unique,
-      freer-simple,
-      data-default,
-      iso8601-time,
-      unordered-containers,
-      ouroboros-consensus,
+      aeson,
+      attoparsec,
+      base16-bytestring,
+      blockfrost-api,
+      blockfrost-client,
+      blockfrost-client-core,
       bytestring,
-      containers,
       cardano-api,
-      cardano-cli,
       cardano-ledger-alonzo,
       cardano-ledger-byron,
-      plutus-ledger-api,
-      serialise,
-      freer-extras,
-      playground-common,
-      plutus-chain-index,
+      cardano-ledger-core,
+      cardano-ledger-shelley,
+      cardano-node-emulator,
+      cardano-slotting,
+      composition,
+      composition-extra,
+      containers,
+      data-default,
+      directory,
+      either,
+      errors,
+      filepath,
+      hex,
+      hex-text,
+      iso8601-time,
+      lens,
+      memory,
+      mtl,
+      nonempty-containers,
+      optparse-applicative,
+      ouroboros-consensus,
+      ouroboros-network,
+      plutus-chain-index-core,
       plutus-contract,
       plutus-core,
-      plutus-tx-plugin,
-      plutus-tx,
       plutus-ledger,
-      pretty-simple,
-      blockfrost-client,
-      blockfrost-api,
-      blockfrost-client-core,
-      blockfrost-pretty,
+      plutus-ledger-api,
+      plutus-ledger-api,
+      plutus-ledger-constraints,
+      plutus-script-utils,
+      plutus-tx,
+      plutus-tx-plugin,
       prettyprinter,
+      quickcheck-instances,
+      random,
       safe-money,
-      optparse-applicative,
-      ordered-containers,
-      nonempty-containers,
+      serialise,
+      shh,
+      split,
       streamly,
-      deepseq,
-      hashable,
-      hex-text
-    hs-source-dirs: src 
+      tasty-quickcheck,
+      text,
+      time,
+      transformers,
+      transformers-except,
+      utf8-string
+    hs-source-dirs: src
 
 test-suite tokenomia-tests
   import: lang
@@ -201,51 +202,55 @@ test-suite tokenomia-tests
   main-is: Spec.hs
   hs-source-dirs: test
   other-modules:
-    Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
-    Spec.Tokenomia.Vesting.Contract
-    Spec.Tokenomia.Wallet.UTxO
+    Spec.Tokenomia.CardanoApi.Fees
+    Spec.Tokenomia.CardanoApi.FromPlutus.Value
+    Spec.Tokenomia.Common.Arbitrary.Builtins
+    Spec.Tokenomia.Common.Arbitrary.Utils
+    Spec.Tokenomia.Common.Data.List.Extra
+    Spec.Tokenomia.Common.Parser.Address
+    Spec.Tokenomia.Common.Time
     Spec.Tokenomia.Common.Value
-    Spec.Tokenomia.ICO.Funds.Exchange.Plan
-    Spec.Tokenomia.ICO.Funds.Exchange.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.Investor.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.Investor.Plan
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.GenInputs
-    Spec.Tokenomia.ICO.Funds.Validation.CardanoCLI.Plan
+    Spec.Tokenomia.Token.CLAPStyle.MonetaryPolicy
+    Spec.Tokenomia.Vesting.GenerateNative
+    Spec.Tokenomia.Vesting.Sendings
+    Spec.Tokenomia.Wallet.UTxO
   build-depends:
     plutus-tx -any,
-    plutus-tx-plugin,
     plutus-contract -any,
     plutus-ledger -any,
     plutus-ledger-api,
-    tokenomia -any
+    tokenomia -any,
+    mtl
   build-depends:
-    base >=4.9 && <5,
+    base,
+    QuickCheck,
+    blockfrost-api,
+    blockfrost-client,
+    bytestring,
+    cardano-api,
+    composition-extra,
+    containers,
+    either,
+    freer-simple -any,
+    hex,
+    interpolatedstring-perl6,
+    nonempty-containers,
+    ouroboros-consensus,
+    safe-money,
     tasty -any,
     tasty-hunit -any,
-    tasty-hedgehog >=0.2.0.0,
     tasty-quickcheck,
-    quickcheck-instances,
-    QuickCheck,
-    random,
-    nonempty-containers,
-    freer-simple -any,
-    bytestring,
-    text,
-    ordered-containers,
-    interpolatedstring-perl6,
-    blockfrost-api,
-    safe-money,
-    data-default
+    text
 
 
-executable tokenomia-cli 
+executable tokenomia-cli
   import: lang
   main-is: Main.hs
   hs-source-dirs: app
   ghc-options:
     -threaded
   build-depends:
-    base >= 4.9 && < 5,
+    base,
     tokenomia
 
 executable token-distribution
@@ -255,5 +260,5 @@ executable token-distribution
   ghc-options:
     -threaded
   build-depends:
-    base >= 4.9 && < 5,
+    base,
     tokenomia

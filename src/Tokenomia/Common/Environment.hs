@@ -1,55 +1,54 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
 
 module Tokenomia.Common.Environment
-    ( getTestnetEnvironmment
-    , getMainnetEnvironmment
-    , getPreprodEnvironmment
-    , getNetworkEnvironmment
-    , readNetworkMagic
-    , Environment (..)
-    , toPosixTime
-    , toSlot
+    ( Environment(..)
+    , convertToExternalPosix
+    , convertToInternalPosix
+    , formatISO8601
     , getFirstShelleySlot
     , getFirstShelleySlotTime
-    , convertToInternalPosix
-    , convertToExternalPosix
-    , formatISO8601
-     ) where
+    , getMainnetEnvironmment
+    , getNetworkEnvironmment
+    , getPreprodEnvironmment
+    , getTestnetEnvironmment
+    , readNetworkMagic
+    , toPosixTime
+    , toSlot
+    ) where
 
-import Control.Monad.Reader ( MonadIO(..), MonadReader(ask) )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader(ask) )
 
 
-import           System.Environment (getEnv)
+import System.Environment                              ( getEnv )
 
 
 import Cardano.Api
-    ( executeLocalStateQueryExpr,
-      queryExpr,
-      LocalNodeConnectInfo(..),
-      CardanoMode,
-      ConsensusModeParams(CardanoModeParams),
-      QueryInMode(QuerySystemStart),
-      EpochSlots(EpochSlots),
-      NetworkMagic(NetworkMagic, unNetworkMagic),
-      NetworkId,
-      toNetworkMagic
+    ( CardanoMode
+    , ConsensusModeParams(CardanoModeParams)
+    , EpochSlots(EpochSlots)
+    , LocalNodeConnectInfo(..)
+    , NetworkId
+    , NetworkMagic(NetworkMagic, unNetworkMagic)
+    , QueryInMode(QuerySystemStart)
+    , executeLocalStateQueryExpr
+    , queryExpr
+    , toNetworkMagic
     )
 
-import Cardano.Api qualified
-    ( NetworkId (Testnet, Mainnet) )
+import Cardano.Api qualified                           ( NetworkId(Mainnet, Testnet) )
 
-import qualified Cardano.Api.Shelley  as Shelley
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types (SystemStart (..) )
-import Ledger ( Slot(Slot), POSIXTime(POSIXTime) )
+import Cardano.Api.Shelley qualified as Shelley
+import Ledger                                          ( POSIXTime(POSIXTime), Slot(Slot) )
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( SystemStart(..) )
 
-import Data.Coerce ( coerce )
-import qualified Data.Time.ISO8601 as ExternalPosix
-import qualified Data.Time.Clock.POSIX as ExternalPosix
-import qualified Data.Time.Clock as ExternalPosix
+import Data.Coerce                                     ( coerce )
+import Data.Time.Clock qualified as ExternalPosix
+import Data.Time.Clock.POSIX qualified as ExternalPosix
+import Data.Time.ISO8601 qualified as ExternalPosix
 
 data Environment = Testnet
                     { magicNumber :: Integer
@@ -57,6 +56,7 @@ data Environment = Testnet
                     , preShelleyEpochs :: Integer
                     , byronSlotsPerEpoch :: Integer
                     , byronSecondsPerSlot :: Integer
+                    , systemStart' :: SystemStart
                     , systemStart :: ExternalPosix.POSIXTime }
                 |  Mainnet
                     { magicNumber :: Integer
@@ -64,6 +64,7 @@ data Environment = Testnet
                     , preShelleyEpochs :: Integer
                     , byronSlotsPerEpoch :: Integer
                     , byronSecondsPerSlot :: Integer
+                    , systemStart' :: SystemStart
                     , systemStart :: ExternalPosix.POSIXTime }
 
 
@@ -78,6 +79,7 @@ getMainnetEnvironmment magicNumber = do
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Mainnet {..}
 
@@ -88,10 +90,11 @@ getPreprodEnvironmment magicNumber = do
                                         localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
                                         localNodeNetworkId       = Shelley.Testnet  (NetworkMagic (fromIntegral magicNumber)),
                                         localNodeSocketPath      = socketPath}
-        preShelleyEpochs = 208
+        preShelleyEpochs = 4
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Testnet {..}
 
@@ -106,6 +109,7 @@ getTestnetEnvironmment magicNumber = do
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
 
     return $ Testnet {..}
 
@@ -138,10 +142,10 @@ toPosixTime slot = do
     byronDurationInS <- getTotalByronDurationInS
     return $ systemStart environment + ExternalPosix.secondsToNominalDiffTime (fromIntegral (byronDurationInS + shelleyDurationInS))
 
-toSlot :: MonadReader Environment m  => ExternalPosix.UTCTime  -> m Slot 
+toSlot :: MonadReader Environment m  => ExternalPosix.UTCTime  -> m Slot
 toSlot timeGiven = do
     firstShelleyTime <- getFirstShelleySlotTime
-    let posixTime = ExternalPosix.utcTimeToPOSIXSeconds timeGiven 
+    let posixTime = ExternalPosix.utcTimeToPOSIXSeconds timeGiven
     let timeSpentInShelley  = truncate $ posixTime - firstShelleyTime
     return $ Slot timeSpentInShelley
 
@@ -176,4 +180,3 @@ convertToExternalPosix p = ExternalPosix.secondsToNominalDiffTime (fromIntegral 
 
 formatISO8601 :: ExternalPosix.POSIXTime -> String
 formatISO8601 = ExternalPosix.formatISO8601 . ExternalPosix.posixSecondsToUTCTime
-

@@ -1,7 +1,7 @@
 dist
 dist-*
 cabal-dev
-## cTags 
+## cTags
 tags
 ## Miscelleanous
 *.o
@@ -27,3 +27,8 @@ cabal.project.local~
 result*
 .envrc
 .vim
+testdata.json
+.node/
+tokenomia-setup.md
+ghcid.txt
+cardano-node/

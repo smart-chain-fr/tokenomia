@@ -1,14 +1,14 @@
 module Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( maxChildAddressIndexRequired
+    ( defaultCollateralAddressRef
     , defaultFeeAddressRef
-    , defaultCollateralAddressRef
+    , maxChildAddressIndexRequired
     ) where
 
-import Data.Composition         ( (.:) )
-import Data.List.NonEmpty       ( NonEmpty )
+import Data.Composition                                ( (.:) )
+import Data.List.NonEmpty                              ( NonEmpty )
 
-import Tokenomia.Wallet.Type                         ( WalletName )
-import Tokenomia.TokenDistribution.Distribution      ( Distribution )
+import Tokenomia.TokenDistribution.Distribution        ( Distribution )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef
     ( ChildAddressIndex(..)

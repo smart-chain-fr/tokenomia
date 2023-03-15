@@ -1,32 +1,26 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Wallet.LocalRepository.Folder
-    ( WalletFile (..)
-    , getWalletPath
+    ( WalletFile(..)
     , getWalletFilePath
+    , getWalletPath
     ) where
 
-import           Control.Monad.Reader
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment                    ( Environment )
 
-import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
+import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
 
-import           Tokenomia.Wallet.Type
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 
 data WalletFile
@@ -39,7 +33,7 @@ getWalletPath
     :: (MonadIO m, MonadReader Environment m)
     =>  WalletName
     ->  m FilePath
-getWalletPath name = (<> name <>"/" ) <$> getFolderPath Wallets
+getWalletPath walletName = (<> walletName <>"/" ) <$> getFolderPath Wallets
 
 getWalletFilePath
     :: (MonadIO m, MonadReader Environment m)
@@ -53,6 +47,3 @@ getWalletFilePath walletName file
         RootPrivateKeyTxt ->  (<> "root-private-key.txt")
         MnemonicsTxt      ->  (<> "mnemonics.txt")
     <$> getWalletPath walletName
-
-
-

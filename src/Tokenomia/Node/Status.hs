@@ -1,24 +1,27 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE TypeApplications                          #-}
 
 
 module Tokenomia.Node.Status
-  ( displayStatus,translateSlotToTime,translateTimeToSlot)
-  where
+    ( displayStatus
+    , translateSlotToTime
+    , translateTimeToSlot
+    ) where
 
-import Data.Time.Clock.POSIX
+import Data.Time.Clock.POSIX                           ( getPOSIXTime )
 
-import Control.Monad.Reader
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader )
 
-import Ledger hiding (getPOSIXTime)
-import Prelude hiding (print)
+import Ledger                                          ( Slot(Slot) )
+import Prelude hiding                                  ( print )
 
-import Tokenomia.Common.Environment
-import Tokenomia.Common.Node
-import Tokenomia.Common.Shell.Console
-import Tokenomia.Common.Shell.InteractiveMenu as I
-import Data.Time.ISO8601 (parseISO8601)
-import Data.Maybe
+import Data.Maybe                                      ( fromJust, isJust )
+import Data.Time.ISO8601                               ( parseISO8601 )
+import Tokenomia.Common.Environment                    ( Environment, formatISO8601, toPosixTime, toSlot )
+import Tokenomia.Common.Node                           ( getCurrentSlotSynced )
+import Tokenomia.Common.Shell.Console                  ( printLn )
+import Tokenomia.Common.Shell.InteractiveMenu
+    as I                                               ( ask, askStringFilterM )
 displayStatus
   ::( MonadIO m
     , MonadReader Environment m)

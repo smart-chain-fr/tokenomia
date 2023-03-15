@@ -1,47 +1,42 @@
-{-# LANGUAGE FlexibleContexts             #-}
+{-# LANGUAGE FlexibleContexts                          #-}
 
 module Tokenomia.TokenDistribution.Main
     ( main
     ) where
 
-import Control.Monad.Reader     ( MonadIO, MonadReader, runReaderT, liftIO )
-import Control.Monad.Except     ( MonadError, runExceptT )
+import Control.Monad.Except                            ( MonadError, runExceptT )
+import Control.Monad.Reader                            ( MonadIO, MonadReader, liftIO, runReaderT )
 
-import Data.Either.Validation   ( validationToEither )
+import Data.Either.Validation                          ( validationToEither )
 
-import Streamly.Prelude         ( MonadAsync )
+import Streamly.Prelude                                ( MonadAsync )
 
 import Tokenomia.Common.Error
     ( TokenomiaError(InvalidTransaction)
-    , whenNothingThrow
     , whenLeftThrow
+    , whenNothingThrow
     )
 
-import Tokenomia.Common.Environment
-    ( Environment
-    , getNetworkEnvironmment
-    )
+import Tokenomia.Common.Environment                    ( Environment, getNetworkEnvironmment )
 
-import Tokenomia.Wallet.CLI                                 ( selectBiggestStrictlyADAsNotCollateral )
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef        ( ChildAddressRef(..) )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef(..) )
+import Tokenomia.Wallet.CLI                            ( selectBiggestStrictlyADAsNotCollateral )
 
-import Tokenomia.TokenDistribution.CLI                      ( runCommand )
-import Tokenomia.TokenDistribution.CLI.Parameters           ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution             ( readDistributionFile )
-import Tokenomia.TokenDistribution.PreValidation            ( preValidation, tokenSourceProvisionedUTxO )
+import Tokenomia.TokenDistribution.CLI                 ( runCommand )
+import Tokenomia.TokenDistribution.CLI.Parameters      ( Parameters(..) )
+import Tokenomia.TokenDistribution.Distribution        ( readDistributionFile )
+import Tokenomia.TokenDistribution.PreValidation       ( preValidation, tokenSourceProvisionedUTxO )
 
-import Tokenomia.TokenDistribution.Split.EstimateFees       ( estimateFees )
-import Tokenomia.TokenDistribution.Split.SplitAdaSource     ( splitAdaSource )
-import Tokenomia.TokenDistribution.Split.SplitDistribution  ( splitDistribution )
-import Tokenomia.TokenDistribution.Split.SplitTokenSource   ( splitTokenSource )
+import Tokenomia.TokenDistribution.Split.EstimateFees  ( estimateFees )
+import Tokenomia.TokenDistribution.Split.SplitAdaSource ( splitAdaSource )
+import Tokenomia.TokenDistribution.Split.SplitDistribution ( splitDistribution )
+import Tokenomia.TokenDistribution.Split.SplitTokenSource ( splitTokenSource )
 
-import Tokenomia.TokenDistribution.Transfer                 ( transferTokenInParallel )
+import Tokenomia.TokenDistribution.Transfer            ( transferTokenInParallel )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
-    ( deriveMissingChildAddresses )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository ( deriveMissingChildAddresses )
 
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( maxChildAddressIndexRequired )
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef ( maxChildAddressIndexRequired )
 
 
 main :: IO ()

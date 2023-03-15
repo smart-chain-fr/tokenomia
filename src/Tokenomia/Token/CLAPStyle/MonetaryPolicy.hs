@@ -1,83 +1,87 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE MonoLocalBinds     #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE NoImplicitPrelude  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE ViewPatterns       #-}
+{-# LANGUAGE DataKinds                                 #-}
+{-# LANGUAGE DeriveAnyClass                            #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE MonoLocalBinds                            #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE NoImplicitPrelude                         #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# LANGUAGE TypeOperators                             #-}
+{-# LANGUAGE ViewPatterns                              #-}
 
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
+{-# LANGUAGE DeriveGeneric                             #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE MultiParamTypeClasses                     #-}
+{-# LANGUAGE NumericUnderscores                        #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# OPTIONS_GHC -fno-ignore-interface-pragmas          #-}
 
-module Tokenomia.Token.CLAPStyle.MonetaryPolicy(
-    MonetaryPolicySchema
+module Tokenomia.Token.CLAPStyle.MonetaryPolicy
+    ( AsCLAPMonetaryPolicyError(..)
     , CLAPMonetaryPolicyError(..)
-    , AsCLAPMonetaryPolicyError(..)
-    , Params (..)
-    , mkMonetaryPolicyScript
-    , mintContract
+    , MonetaryPolicySchema
+    , Params(..)
     , burnContract
+    , mintContract
+    , mkMonetaryPolicyScript
     ) where
 
 
-import Control.Lens ( makeClassyPrisms, review )
+import Control.Lens                                    ( makeClassyPrisms, review )
 import PlutusTx.Prelude
-    ( (>>),
-      (>>=),
-      (<),
-      Bool(..),
-      (.),
-      Eq((==)),
-      Applicative(pure),
-      (&&),
-      (||),
-      ($),
-      traceIfFalse )
+    ( Applicative(pure)
+    , Bool(..)
+    , Eq((==))
+    , traceIfFalse
+    , ($)
+    , (&&)
+    , (.)
+    , (<)
+    , (>>)
+    , (>>=)
+    , (||)
+    )
 
-import Plutus.Contract as Contract
-    ( awaitTxConfirmed,
-      submitTxConstraintsWith,
-      mapError,
-      utxosAt,
-      Endpoint,
-      type (.\/),
-      Contract,
-      AsContractError(_ContractError),
-      ContractError )
-import           Plutus.Contract.Wallet (getUnspentOutput)
+import Plutus.Contract
+    as Contract
+    ( AsContractError(_ContractError)
+    , Contract
+    , ContractError
+    , Endpoint
+    , awaitTxConfirmed
+    , mapError
+    , submitTxConstraintsWith
+    , type (.\/)
+    , utxosAt
+    )
+import Plutus.Contract.Wallet                          ( getUnspentOutput )
 
 import Ledger
-    ( TxOutRef(..),
-      scriptCurrencySymbol,
-      pubKeyHashAddress,
-      mkMintingPolicyScript,
-      PubKeyHash,
-      MintingPolicy,
-      CurrencySymbol,
-      getCardanoTxId )
-import qualified Ledger.Constraints     as Constraints
-import qualified Ledger.Contexts        as V
-import PlutusTx ( BuiltinData, applyCode, liftCode, compile )
+    ( CardanoAddress
+    , CurrencySymbol
+    , MintingPolicy
+    , TxOutRef(..)
+    , getCardanoTxId
+    , mkMintingPolicyScript
+    )
+import Ledger.Constraints qualified as Constraints
+import Plutus.Script.Utils.V1.Scripts                  ( scriptCurrencySymbol )
+import Plutus.V1.Ledger.Contexts qualified as V
+import PlutusTx                                        ( BuiltinData, applyCode, compile, liftCode )
 
-import qualified Ledger.Typed.Scripts   as Scripts
-import           Ledger.Value           (singleton,TokenName (..), valueOf)
+import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Value                                    ( TokenName(..), singleton, valueOf )
 
-import           Data.Aeson             (FromJSON, ToJSON)
-import           GHC.Generics           (Generic)
-import           Prelude                (Semigroup (..),Integer)
-import qualified Prelude                as Haskell
-import qualified PlutusTx
-import PlutusTx.Builtins.Internal ()
+import Data.Aeson                                      ( FromJSON, ToJSON )
+import GHC.Generics                                    ( Generic )
+import PlutusTx qualified
+import PlutusTx.Builtins.Internal                      ()
+import Prelude                                         ( Integer, Semigroup(..) )
+import Prelude qualified as Haskell
 
 
 
@@ -97,7 +101,7 @@ PlutusTx.makeLift ''Params
 
 mkMonetaryPolicyScript :: Params -> MintingPolicy
 mkMonetaryPolicyScript param = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \c -> Scripts.wrapMintingPolicy (monetaryPolicy c) ||])
+    $$(PlutusTx.compile [|| Scripts.mkUntypedMintingPolicy . monetaryPolicy ||])
         `PlutusTx.applyCode`
             PlutusTx.liftCode param
 
@@ -144,19 +148,19 @@ burnContract
     :: forall w s e.
     ( AsCLAPMonetaryPolicyError e
     )
-    => PubKeyHash
+    => CardanoAddress
     -> Params
     -> Integer
     -> Contract w s e ()
-burnContract burnerPK monetaryPolicyParams@Params {..} amountToBurn =
+burnContract addr monetaryPolicyParams@Params {..} amountToBurn =
     mapError (review _CLAPMonetaryPolicyError) $ do
     let policyHash = (scriptCurrencySymbol . mkMonetaryPolicyScript) monetaryPolicyParams
         monetaryPolicyScript = mkMonetaryPolicyScript monetaryPolicyParams
         valueToBurn = singleton policyHash tokenName amountToBurn
-    utxosInBurnerWallet <- Contract.utxosAt (pubKeyHashAddress burnerPK)
+    utxosInBurnerWallet <- utxosAt addr
     submitTxConstraintsWith
             @Scripts.Any
-            (Constraints.mintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInBurnerWallet)
+            (Constraints.plutusV1MintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInBurnerWallet)
             (Constraints.mustMintValue valueToBurn)
      >>= awaitTxConfirmed . getCardanoTxId
 
@@ -166,23 +170,21 @@ mintContract
     :: forall w s e.
     ( AsCLAPMonetaryPolicyError e
     )
-    => PubKeyHash
+    => CardanoAddress
     -> TokenName
     -> Integer
     -> Contract w s e (CurrencySymbol,Params)
-mintContract pk tokenName amount =
+mintContract addr tokenName amount =
     mapError (review _CLAPMonetaryPolicyError) $ do
     txOutRefToConsume <- getUnspentOutput
     let monetaryPolicyParams = Params {..}
         policyHash = (scriptCurrencySymbol . mkMonetaryPolicyScript) monetaryPolicyParams
         monetaryPolicyScript = mkMonetaryPolicyScript monetaryPolicyParams
         valueToMint = singleton policyHash tokenName amount
-    utxosInWallet <- utxosAt (pubKeyHashAddress pk)
+    utxosInWallet <- utxosAt addr
     submitTxConstraintsWith
             @Scripts.Any
-            (Constraints.mintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInWallet)
+            (Constraints.plutusV1MintingPolicy monetaryPolicyScript <> Constraints.unspentOutputs utxosInWallet)
             (Constraints.mustSpendPubKeyOutput txOutRefToConsume <> Constraints.mustMintValue valueToMint)
      >>= awaitTxConfirmed . getCardanoTxId
      >>  pure (policyHash,monetaryPolicyParams)
-
-

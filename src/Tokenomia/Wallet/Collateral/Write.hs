@@ -1,7 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DisambiguateRecordFields                  #-}
+{-# LANGUAGE FlexibleContexts                          #-}
 
 
 module Tokenomia.Wallet.Collateral.Write
@@ -9,56 +7,74 @@ module Tokenomia.Wallet.Collateral.Write
     , createCollateral'
     ) where
 
-import           Control.Monad.Reader
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
 
-import           Data.Maybe
-import           Data.List.NonEmpty
-import           Control.Monad.Except
+import Control.Monad.Except                            ( MonadError )
+import Data.List.NonEmpty                              ( NonEmpty((:|)) )
 
-import           Ledger.Ada
+import Ledger.Ada                                      ( adaValueOf )
 
-import           Tokenomia.Common.Transacting
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Transacting
+    ( TxBalance(Unbalanced)
+    , TxBuild(..)
+    , TxInFromWallet(FromWallet)
+    , TxOut(ToWallet)
+    , buildAndSubmit
+    )
 
-import           Tokenomia.Wallet.CLI as Wallet
-import           Tokenomia.Wallet.LocalRepository hiding (fetchById)
+import Tokenomia.Wallet.CLI
+    as Wallet
+    ( askToChooseAmongGivenWallets
+    , selectBiggestStrictlyADAsNotCollateral
+    )
+import Tokenomia.Wallet.LocalRepository                ( fetchAll )
 
-import           Tokenomia.Common.Error
-import           Tokenomia.Common.Shell.Console (printLn)
-import           Prelude hiding (print)
-import           Tokenomia.Wallet.Collateral.Read
-import           Tokenomia.Wallet.Type as Wallet
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef 
-import           Tokenomia.Wallet.ChildAddress.LocalRepository 
+import Prelude hiding                                  ( print )
+import Tokenomia.Common.Error
+    ( TokenomiaError(..)
+    , whenNothingThrow
+    , whenNullThrow
+    , whenSomethingThrow
+    )
+import Tokenomia.Common.Shell.Console                  ( printLn )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef(ChildAddressRef)
+    , FeeAddressRef(FeeAddressRef)
+    )
+import Tokenomia.Wallet.ChildAddress.LocalRepository   ( ChildAddress(ChildAddress, address), fetchById )
+import Tokenomia.Wallet.Collateral.Read                ( fetchCollateral, filterWalletsWithCollateral )
+import Tokenomia.Wallet.Type
+    as Wallet                                          ( Wallet(name), WalletName )
 
-createCollateral :: 
+createCollateral ::
     ( MonadIO m
     , MonadReader Environment m
     , MonadError TokenomiaError m )
     => m ()
 createCollateral = do
-    target <- fetchAll         
+    target <- fetchAll
                 >>= whenNullThrow    NoWalletRegistered
-                >>= filterWalletsWithCollateral  >>= whenNothingThrow NoWalletWithoutCollateral 
+                >>= filterWalletsWithCollateral  >>= whenNothingThrow NoWalletWithoutCollateral
                 >>= \wallets -> do
                     printLn "Select the wallet to receive the collateral"
-                    askToChooseAmongGivenWallets wallets 
-    
-    source <- fetchAll         
-                >>= whenNullThrow    NoWalletRegistered 
+                    askToChooseAmongGivenWallets wallets
+
+    source <- fetchAll
+                >>= whenNullThrow    NoWalletRegistered
                 >>= \wallets -> do
                         printLn "Select the source wallet containing ADAs "
                         askToChooseAmongGivenWallets wallets
 
-    createCollateral' (Wallet.name source) (Wallet.name target) 
+    createCollateral' (Wallet.name source) (Wallet.name target)
 
 createCollateral'
     :: ( MonadIO m
        , MonadReader Environment m
        , MonadError TokenomiaError m)
        => WalletName
-       -> WalletName 
+       -> WalletName
        -> m ()
 createCollateral' sourceWalletName targetWalletName = do
     let firstAddressSource = ChildAddressRef sourceWalletName 0
@@ -66,24 +82,21 @@ createCollateral' sourceWalletName targetWalletName = do
     assertCollateralNotAlreadyCreated firstAddressTarget
     ada <- selectBiggestStrictlyADAsNotCollateral firstAddressSource >>= whenNothingThrow NoADAsOnChildAddress
     ChildAddress {address = senderAddr} <- fetchById firstAddressTarget
-    buildAndSubmit  
+    buildAndSubmit
       (Unbalanced (FeeAddressRef firstAddressSource ))
       Nothing
       TxBuild
         { inputsFromWallet =  FromWallet ada :| []
         , inputsFromScript = Nothing
-        , outputs = ToWallet senderAddr (adaValueOf 2.0) Nothing :| [] 
+        , outputs = ToWallet senderAddr (adaValueOf 2.0) Nothing :| []
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , metadataMaybe = Nothing }
 
-assertCollateralNotAlreadyCreated :: 
+assertCollateralNotAlreadyCreated ::
     ( MonadIO m
     , MonadReader Environment m
-    , MonadError TokenomiaError m ) 
-    => ChildAddressRef 
+    , MonadError TokenomiaError m )
+    => ChildAddressRef
     -> m ()
-assertCollateralNotAlreadyCreated childAddressRef = fetchCollateral childAddressRef >>=  whenSomethingThrow (const AlreadyACollateral)
-
-
-
+assertCollateralNotAlreadyCreated ref = fetchCollateral ref >>=  whenSomethingThrow (const AlreadyACollateral)

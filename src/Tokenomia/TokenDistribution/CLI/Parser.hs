@@ -1,26 +1,21 @@
-{-# LANGUAGE ImportQualifiedPost          #-}
-
 module Tokenomia.TokenDistribution.CLI.Parser
-    ( networkId
+    ( adaWallet
+    , collateralWallet
     , distributionFilePath
+    , dryRun
+    , metadataFilePath
+    , minLovelaces
+    , networkId
     , recipientPerTx
     , tokenWallet
-    , adaWallet
-    , collateralWallet
-    , minLovelaces
-    , metadataFilePath
-    , dryRun
     , verbose
     ) where
 
-import Cardano.Api
-    ( NetworkId (Mainnet, Testnet)
-    , NetworkMagic (..)
-    )
+import Cardano.Api                                     ( NetworkId(Mainnet, Testnet), NetworkMagic(..) )
 
-import Control.Applicative      ( (<|>) )
+import Control.Applicative                             ( (<|>) )
 
-import Tokenomia.Wallet.Type    ( WalletName )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 import Options.Applicative
     ( Parser
@@ -53,7 +48,7 @@ networkId = mainnet <|> testnet
         <> long "testnet"
         <> help "Use this testnet magic id"
         <> showDefault
-        <> value 1097911063
+        <> value 1
         <> metavar "MAGIC"
 
 distributionFilePath :: Parser FilePath

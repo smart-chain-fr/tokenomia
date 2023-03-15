@@ -1,44 +1,39 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE RecordWildCards                           #-}
 
 module Tokenomia.TokenDistribution.Split.SplitTokenSource
     ( splitTokenSource
     ) where
 
-import Prelude           hiding ( repeat, zipWith3 )
+import Prelude hiding                                  ( repeat, zipWith3 )
 
-import Control.Monad.Reader     ( MonadIO, MonadReader )
-import Control.Monad.Except     ( MonadError )
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
-import Data.List.NonEmpty       ( NonEmpty((:|)), fromList, repeat )
-import Data.Maybe               ( fromJust )
+import Data.List.NonEmpty                              ( NonEmpty((:|)), fromList, repeat )
+import Data.Maybe                                      ( fromJust )
 
-import Ledger.Ada               ( lovelaceValueOf )
-import Ledger.Value
-    ( AssetClass
-    , Value
-    , assetClassValue
-    , assetClassValueOf
-    )
+import Ledger.Ada                                      ( lovelaceValueOf )
+import Ledger.Value                                    ( AssetClass, Value, assetClassValue, assetClassValueOf )
 
-import Tokenomia.Common.AssetClass  ( adaAssetClass )
-import Tokenomia.Common.Error       ( TokenomiaError )
-import Tokenomia.Common.Environment ( Environment )
-import Tokenomia.Wallet.WalletUTxO  ( WalletUTxO, value )
+import Tokenomia.Common.AssetClass                     ( adaAssetClass )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Error                          ( TokenomiaError )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO, value )
 
 import Tokenomia.Common.Transacting
-    ( TxInFromWallet(..)
-    , TxOut(ToWallet)
-    , TxBuild(..)
+    ( Metadata(..)
     , TxBalance(..)
-    , Metadata(..)
+    , TxBuild(..)
+    , TxInFromWallet(..)
+    , TxOut(ToWallet)
     , buildAndSubmit
     )
 
-import Tokenomia.Common.Data.List.NonEmpty          ( prependMaybe, singleton, zipWith3 )
+import Tokenomia.Common.Data.List.NonEmpty             ( prependMaybe, singleton, zipWith3 )
 
-import Tokenomia.TokenDistribution.CLI.Parameters   ( Parameters(..) )
-import Tokenomia.TokenDistribution.Distribution     ( Distribution(..), Recipient(..) )
+import Tokenomia.TokenDistribution.CLI.Parameters      ( Parameters(..) )
+import Tokenomia.TokenDistribution.Distribution        ( Distribution(..), Recipient(..) )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     ( fetchAddressByWalletAtIndex
@@ -46,7 +41,9 @@ import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     )
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef
-    ( defaultFeeAddressRef, defaultCollateralAddressRef )
+    ( defaultCollateralAddressRef
+    , defaultFeeAddressRef
+    )
 
 
 -- Let ε be the value corresponding to the minimum ada needed to create an UTxO.
