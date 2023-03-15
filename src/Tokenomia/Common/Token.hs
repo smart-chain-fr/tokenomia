@@ -1,21 +1,20 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# OPTIONS_GHC -fno-warn-orphans                      #-}
 
 module Tokenomia.Common.Token
-  ( Token (..)
-  , getMinimumUTxOAdaRequired) where
+    ( Token(..)
+    , getMinimumUTxOAdaRequired
+    ) where
 
-import Plutus.V1.Ledger.Value hiding (assetClass)
-import Ledger.Ada
+import Ledger.Ada                                      ( Ada )
+import Plutus.V1.Ledger.Value                          ( AssetClass )
 
 data Token
     = Token
       { assetClass :: AssetClass
       , amount     :: Integer
-      , minimumAdaRequired :: Ada} deriving (Eq,Ord,Show)
+      , minimumAdaRequired :: Ada} deriving stock (Eq,Ord,Show)
 
 
 getMinimumUTxOAdaRequired :: Ada

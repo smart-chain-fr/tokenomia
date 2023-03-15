@@ -1,31 +1,34 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-module Tokenomia.Common.Value 
-  ( getTokenFrom
-  , getTokensFrom
-  , assetClassValueOfWith
-  , containsAssetClass
-  , maximumAssetClassValueOf
-  , maximumByAssetClassValueOf
-  , maximumByAssetClassValueOf'
-  , containingOneToken
-  , containingGivenNativeToken
-  , containingOnlyGivenAssetClass
-  , containingStrictlyADAs
-  , containsCollateral
-  , showValueUtf8) where
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# OPTIONS_GHC -fno-warn-orphans                      #-}
+module Tokenomia.Common.Value
+    ( assetClassValueOfWith
+    , containingGivenNativeToken
+    , containingOneToken
+    , containingOnlyGivenAssetClass
+    , containingStrictlyADAs
+    , containsAssetClass
+    , containsCollateral
+    , getTokenFrom
+    , getTokensFrom
+    , maximumAssetClassValueOf
+    , maximumByAssetClassValueOf
+    , maximumByAssetClassValueOf'
+    , showValueUtf8
+    ) where
 
-import Tokenomia.Common.Serialise
+import Tokenomia.Common.Serialise                      ( FromCLI(..), ToCLI(..) )
 
-import Data.Function            ( on )
-import Data.List                ( intersperse )
-import Data.List.NonEmpty       ( NonEmpty )
+import Data.Function                                   ( on )
+import Data.List                                       ( intersperse )
+import Data.List.NonEmpty                              ( NonEmpty )
 
-import Text.Hex                 ( encodeHex )
+import Text.Hex                                        ( encodeHex )
 
+import Data.Foldable                                   ( Foldable(fold), maximumBy )
+import Data.Text qualified as Text
+import Ledger.Ada                                      ( adaSymbol, adaValueOf )
 import Plutus.V1.Ledger.Value
     ( AssetClass
     , CurrencySymbol
@@ -37,22 +40,21 @@ import Plutus.V1.Ledger.Value
     , symbols
     , toString
     )
-import Plutus.V1.Ledger.Value qualified as Ledger ( assetClass )
-import Ledger.Ada
-import Data.Foldable
-import qualified Data.Text                        as Text
+import Plutus.V1.Ledger.Value qualified
+    as Ledger                                          ( assetClass )
 
-import Data.Attoparsec.Text (parseOnly)
+import Data.Attoparsec.Text                            ( parseOnly )
 
-import Tokenomia.Common.Parser.Value qualified as Parser ( value )
-import Tokenomia.Common.Data.Convertible ( convert )
+import Tokenomia.Common.Data.Convertible               ( convert )
+import Tokenomia.Common.Parser.Value qualified
+    as Parser                                          ( value )
 
 
 getTokenFrom :: Value -> (CurrencySymbol,TokenName,Integer)
-getTokenFrom  = head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
+getTokenFrom  = head . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs)
 
 getTokensFrom :: Value -> Value
-getTokensFrom = mkValue . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs) 
+getTokensFrom = mkValue . filter (\(c,_,_) -> c /= adaSymbol ) .flattenValue  -- should contains only one native token (filtering ADAs)
 
 
 mkValue :: [(CurrencySymbol, TokenName, Integer)] -> Value
@@ -93,11 +95,11 @@ maximumByAssetClassValueOf' value xs assetClass =
     maximumBy (compare `on` flip assetClassValueOf assetClass . value) xs
 
 containsCollateral :: Value -> Bool
-containsCollateral = (adaValueOf 2.0 ==) 
+containsCollateral = (adaValueOf 2.0 ==)
 
 containingStrictlyADAs :: Value -> Bool
-containingStrictlyADAs value 
-    = symbols value == [adaSymbol] 
+containingStrictlyADAs value
+    = symbols value == [adaSymbol]
 
 instance ToCLI Value where
   toCLI =

@@ -1,24 +1,23 @@
-{-# LANGUAGE DerivingStrategies             #-}
-{-# LANGUAGE ImportQualifiedPost            #-}
-{-# LANGUAGE RankNTypes                     #-}
-{-# LANGUAGE RecordWildCards                #-}
-{-# LANGUAGE TypeFamilies                   #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TypeFamilies                              #-}
 
 module Tokenomia.CardanoApi.Fees
     ( HasDatumHash(..)
-    , calculateDefaultMinimumUTxOFromValue
-    , calculateMinimumUTxOFromValue
     , calculateDefaultMinimumUTxOFromAssetId
+    , calculateDefaultMinimumUTxOFromValue
     , calculateMinimumUTxOFromAssetId
+    , calculateMinimumUTxOFromValue
     , utxoEntrySize
-    )
-    where
+    ) where
 
 import Cardano.Api
-    ( ShelleyBasedEra(..)
-    , AssetId(..)
-    , Value
+    ( AssetId(..)
     , Lovelace(..)
+    , ShelleyBasedEra(..)
+    , Value
     , selectLovelace
     , valueFromList
     )
@@ -31,10 +30,10 @@ import Cardano.Api.Shelley
     )
 
 import Cardano.Ledger.Val qualified
-    as Value                                ( size )
+    as Value                                           ( size )
 
-import Tokenomia.CardanoApi.Value           ( unLovelace )
-import Tokenomia.CardanoApi.PParams         ( defaultCalculateMinimumUTxOParams )
+import Tokenomia.CardanoApi.PParams                    ( defaultCalculateMinimumUTxOParams )
+import Tokenomia.CardanoApi.Value                      ( unLovelace )
 
 
 data    HasDatumHash

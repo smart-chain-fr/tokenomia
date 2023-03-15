@@ -1,35 +1,31 @@
-{-# LANGUAGE ScopedTypeVariables            #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
 
 module Spec.Tokenomia.Common.Time
     ( tests
     ) where
 
-import Data.Either.Combinators              ( fromRight' )
+import Data.Either.Combinators                         ( fromRight' )
 
-import Control.Monad.Except                 ( ExceptT, runExceptT )
-import Control.Monad.Reader                 ( ReaderT, runReaderT )
+import Control.Monad.Except                            ( ExceptT, runExceptT )
+import Control.Monad.Reader                            ( ReaderT, runReaderT )
 
-import Test.QuickCheck.Monadic              ( PropertyM, monadicIO )
-import Test.Tasty.QuickCheck                ( Property, Testable, testProperty )
-import Test.Tasty                           ( TestTree, testGroup )
+import Test.QuickCheck.Monadic                         ( PropertyM, monadicIO )
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.QuickCheck                           ( Property, Testable, testProperty )
 
-import Cardano.Api                          ( SlotNo(..) )
+import Cardano.Api                                     ( SlotNo(..) )
 
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types
-    ( RelativeTime(..) )
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( RelativeTime(..) )
 
-import Tokenomia.CardanoApi.Arbitrary.Time  ( )
-import Tokenomia.CardanoApi.Arbitrary.Slot  ( )
-import Tokenomia.CardanoApi.Query           ( querySlotToWallclock', queryWallclockToSlot')
+import Tokenomia.CardanoApi.Arbitrary.Slot             ()
+import Tokenomia.CardanoApi.Arbitrary.Time             ()
+import Tokenomia.CardanoApi.Query                      ( querySlotToWallclock', queryWallclockToSlot' )
 
-import Tokenomia.Common.Error               ( TokenomiaError(QueryFailure) )
-import Tokenomia.Common.Environment         ( Environment(..), getTestnetEnvironmment )
-import Tokenomia.Common.Environment.Query   ( evalQuery )
+import Tokenomia.Common.Environment                    ( Environment(..), getTestnetEnvironmment )
+import Tokenomia.Common.Environment.Query              ( evalQuery )
+import Tokenomia.Common.Error                          ( TokenomiaError(QueryFailure) )
 
-import Tokenomia.Common.Time
-    ( slotAfterNextBeginRelativeTime
-    , toNextBeginRelativeTime
-    )
+import Tokenomia.Common.Time                           ( slotAfterNextBeginRelativeTime, toNextBeginRelativeTime )
 
 
 tests :: TestTree

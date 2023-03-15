@@ -1,18 +1,19 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts #-}
-
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE LambdaCase                                #-}
 
 module Tokenomia.Common.Node
     ( getCurrentSlotSynced
     ) where
 
-
-import Control.Monad.Reader ( MonadReader, MonadIO(..), asks )
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
 
 import Cardano.Api
-import Ledger 
-import Tokenomia.Common.Environment
-    
+    ( ChainTip(ChainTip, ChainTipAtGenesis)
+    , SlotNo(SlotNo)
+    , getLocalChainTip
+    )
+import Ledger                                          ( Slot(Slot) )
+import Tokenomia.Common.Environment                    ( Environment(localNodeConnectInfo) )
 
 getCurrentSlotSynced
     :: ( MonadIO m

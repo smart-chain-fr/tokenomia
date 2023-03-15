@@ -1,28 +1,23 @@
-{-# LANGUAGE ImportQualifiedPost            #-}
-{-# LANGUAGE ScopedTypeVariables            #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
 
 module Spec.Tokenomia.Common.Arbitrary.Builtins
     ( tests
     ) where
 
 import Data.ByteString qualified
-    as ByteString                           ( length )
-import PlutusTx.Builtins.Internal           ( BuiltinByteString(..) )
+    as ByteString                                      ( length )
+import PlutusTx.Builtins.Internal                      ( BuiltinByteString(..) )
 
-import Test.Tasty.QuickCheck                ( testProperty, getSize, shrink )
-import Test.Tasty                           ( TestTree, testGroup )
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.QuickCheck                           ( getSize, shrink, testProperty )
 
-import Test.QuickCheck.Modifiers            ( Positive(..) )
+import Test.QuickCheck.Modifiers                       ( Positive(..) )
 
-import Tokenomia.Common.Data.Convertible    ( convert )
-import Tokenomia.Common.Data.ByteString     ( encode )
-import Tokenomia.Common.Arbitrary.Utils     ( inBijection )
-import Tokenomia.Common.Arbitrary.Builtins
-    ( Hex(..)
-    , vectorOfHexBytes
-    , fromHexString
-    , toHexString
-    )
+import Tokenomia.Common.Arbitrary.Builtins             ( Hex(..), fromHexString, toHexString, vectorOfHexBytes )
+import Tokenomia.Common.Arbitrary.Utils                ( inBijection )
+import Tokenomia.Common.Data.ByteString                ( encode )
+import Tokenomia.Common.Data.Convertible               ( convert )
 
 
 tests :: TestTree

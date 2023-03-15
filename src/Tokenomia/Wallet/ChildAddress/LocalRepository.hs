@@ -1,63 +1,86 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 
 module Tokenomia.Wallet.ChildAddress.LocalRepository
-    ( fetchById
+    ( ChildAddress(..)
+    , Wallet(..)
+    , deriveChildAddress
+    , deriveChildAddressesWithingRange
+    , fetchByAddressStrict
+    , fetchByAddresses
+    , fetchById
     , fetchByWallet
+    , fetchByWalletIndexedAddress
     , fetchByWalletWithinIndexRange
     , fetchDerivedChildAddressIndexes
-    , deriveChildAddressesWithingRange
-    , deriveChildAddress
+    , getAddressIndexesPath
     , getChildAddressPath
     , getChildAddressesPath
-    , getAddressIndexesPath
-    , Wallet (..)
-    , ChildAddress (..)
-    , fetchByAddresses
-    , toIndexedAddress
-    , fetchByWalletIndexedAddress
     , retrieveAddressesFromWallet
-    , fetchByAddressStrict
+    , toIndexedAddress
     ) where
 
-import           Data.String
-import           Data.List.Split (splitOn)
-import qualified Data.ByteString.Lazy.Char8 as C
-import qualified Data.ByteString.Lazy.UTF8 as BLU
-import           Data.Set.NonEmpty as NES
-import qualified Data.Set as Set
-import qualified Data.List.NonEmpty as NEL
-import           Control.Monad.Reader
-import           Shh.Internal
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader, asks )
+import Data.ByteString.Lazy.Char8 qualified as C
+import Data.ByteString.Lazy.UTF8 qualified as BLU
+import Data.List.NonEmpty qualified as NEL
+import Data.List.Split                                 ( splitOn )
+import Data.Set qualified as Set
+import Data.Set.NonEmpty
+    as NES                                             ( NESet, fromList, toAscList )
+import Data.String                                     ( IsString(fromString) )
+import Shh.Internal
+    ( ExecReference(SearchPath)
+    , Stream(Truncate)
+    , capture
+    , captureTrim
+    , captureWords
+    , load
+    , (&>)
+    , (|>)
+    )
 
-import           Ledger.Crypto
+import Ledger.Crypto                                   ( PubKeyHash )
 
-import           Tokenomia.Common.Environment
+import Tokenomia.Common.Environment                    ( Environment(Mainnet, Testnet) )
 
-import           Tokenomia.Common.Address
+import Tokenomia.Common.Address                        ( Address(..) )
 
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Wallet.LocalRepository.Folder
-import           Data.Coerce
-import           System.Directory
-import           Tokenomia.Common.Error
-import           Control.Monad.Except
+import Control.Monad.Except                            ( MonadError(throwError) )
+import Data.Coerce                                     ( coerce )
+import System.Directory                                ( doesFileExist )
+import Tokenomia.Common.Error
+    ( TokenomiaError(ChildAddressNotIndexed, NoDerivedChildAddress)
+    , whenNothingThrow
+    )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressIndex(..)
+    , ChildAddressRef(..)
+    , IndexedAddress(..)
+    )
+import Tokenomia.Wallet.LocalRepository.Folder
+    ( WalletFile(RootPrivateKeyTxt, StakePublicKeyTxt)
+    , getWalletFilePath
+    , getWalletPath
+    )
+import Tokenomia.Wallet.Type                           ( Wallet(..), WalletName )
 
-import           Data.Maybe
+import Data.Maybe
 
 load SearchPath ["cat","mkdir","cardano-cli","awk","ls", "rm", "cardano-address","echo", "find" ]
 
@@ -65,7 +88,7 @@ data ChildAddress = ChildAddress
               { childAddressRef :: ChildAddressRef
               , address :: Address
               , extendedPrivateKeyJSONPath :: FilePath
-              , publicKeyHash :: PubKeyHash  } deriving Eq
+              , publicKeyHash :: PubKeyHash  } deriving  stock Eq
 
 
 toIndexedAddress :: ChildAddress -> IndexedAddress
@@ -144,8 +167,8 @@ fetchByAddressStrict
     => WalletName
     -> Address
     -> m IndexedAddress
-fetchByAddressStrict walletName address = 
-    fetchByAddress walletName address 
+fetchByAddressStrict walletName address =
+    fetchByAddress walletName address
     >>= whenNothingThrow (ChildAddressNotIndexed walletName address)
 
 
@@ -156,7 +179,7 @@ retrieveAddressesFromWallet
     -> NEL.NonEmpty Address
     -> m (Maybe (NEL.NonEmpty Address))
 retrieveAddressesFromWallet walletName addresses = do
-    maybeAddresses  <- mapM (\address ->  
+    maybeAddresses  <- mapM (\address ->
         fetchByAddress walletName address
          >>= (\case
                 Just _ -> (return . Just) address
@@ -171,11 +194,11 @@ fetchByAddress
     -> m (Maybe IndexedAddress)
 fetchByAddress walletName address = do
     addressIndexPath <- getAddressIndexPath walletName address
-    (liftIO $ doesFileExist addressIndexPath)
+    liftIO (doesFileExist addressIndexPath)
      >>= \case
-            False -> return Nothing 
+            False -> return Nothing
             True  -> do
-                index <- read @Integer . C.unpack <$> (liftIO $ cat addressIndexPath |> captureTrim)
+                index <- read @Integer . C.unpack <$> liftIO (cat addressIndexPath |> captureTrim)
                 return . Just $ IndexedAddress
                     { address = address
                     , childAddressRef = ChildAddressRef walletName (coerce index)}
@@ -184,24 +207,24 @@ fetchByAddress walletName address = do
 
 fetchByWalletIndexedAddress
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> m (NEL.NonEmpty IndexedAddress  )
-fetchByWalletIndexedAddress a = (fmap . fmap) toIndexedAddress (toAscList <$> fetchByWallet a) 
+fetchByWalletIndexedAddress a = (fmap . fmap) toIndexedAddress (toAscList <$> fetchByWallet a)
 
 
-fetchDerivedChildAddressIndexes 
+fetchDerivedChildAddressIndexes
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> m (NEL.NonEmpty ChildAddressIndex)
-fetchDerivedChildAddressIndexes  name = do 
+fetchDerivedChildAddressIndexes  name = do
     childAddressesPath <- getChildAddressesPath name
     liftIO $
         (fmap.fmap.fmap) (ChildAddressIndex . read @Integer . last . splitOn "/" . C.unpack)
-        NEL.nonEmpty . tail <$>  -- remove ./    
+        NEL.nonEmpty . tail <$>  -- remove ./
         (find childAddressesPath "-type" "d" |> captureWords) -- return ./ ./0 ./1
     >>= \case
         Nothing -> throwError NoDerivedChildAddress
@@ -210,24 +233,24 @@ fetchDerivedChildAddressIndexes  name = do
 
 fetchByWalletWithinIndexRange
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
-    => Int 
+    => Int
     -> Int
     -> WalletName
     -> m (Set.Set ChildAddress)
 fetchByWalletWithinIndexRange from to name = do
     indexes <- Prelude.take (to - from + 1) . NEL.drop from <$> fetchDerivedChildAddressIndexes name
     Set.fromList <$> mapM fetchById (ChildAddressRef name <$> indexes)
-    
+
 fetchByWallet
     :: ( MonadIO m
-       , MonadReader Environment m 
+       , MonadReader Environment m
        , MonadError  TokenomiaError m)
     => WalletName
     -> m (NESet ChildAddress)
 fetchByWallet name = do
-    fetchDerivedChildAddressIndexes name 
+    fetchDerivedChildAddressIndexes name
     >>= \indexes -> fromList <$> mapM fetchById (ChildAddressRef name <$> indexes)
 
 

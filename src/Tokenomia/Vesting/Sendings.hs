@@ -1,57 +1,74 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE ExplicitForAll #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Werror #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# LANGUAGE DeriveAnyClass                            #-}
+{-# LANGUAGE DeriveGeneric                             #-}
+{-# LANGUAGE DerivingVia                               #-}
+{-# LANGUAGE ExplicitForAll                            #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving                #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE KindSignatures                            #-}
+{-# LANGUAGE MultiParamTypeClasses                     #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE StandaloneDeriving                        #-}
+{-# LANGUAGE UndecidableInstances                      #-}
+{-# OPTIONS_GHC -Werror                                #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds                  #-}
 
-module Tokenomia.Vesting.Sendings (Sendings (Sendings), MonadRunBlockfrost (getAddressTransactions, getTxUtxos), checkMalformedAddr, jsonToSendings, verifySendings, verifySendings') where
+module Tokenomia.Vesting.Sendings
+    ( MonadRunBlockfrost(getAddressTransactions, getTxUtxos)
+    , Sendings(Sendings)
+    , checkMalformedAddr
+    , jsonToSendings
+    , verifySendings
+    , verifySendings'
+    ) where
 
-import Blockfrost.Client (
-  Address,
-  AddressTransaction,
-  Amount (AdaAmount, AssetAmount),
-  TransactionUtxos,
-  TxHash,
- )
+import Blockfrost.Client
+    ( Address
+    , AddressTransaction
+    , Amount(AdaAmount, AssetAmount)
+    , TransactionUtxos
+    , TxHash
+    )
 import Blockfrost.Client qualified as Client
-import Blockfrost.Lens (address, amount, outputs, txHash)
-import Blockfrost.Types (unAddress)
-import Control.Lens ((^.))
-import Control.Monad (unless, when)
-import Control.Monad.Except (MonadError (throwError), liftEither)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Identity (IdentityT (IdentityT))
-import Control.Monad.Reader (MonadReader)
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey, eitherDecode)
-import Data.Bifunctor (first)
+import Blockfrost.Lens                                 ( address, amount, outputs, txHash )
+import Blockfrost.Types                                ( unAddress )
+import Control.Lens                                    ( (^.) )
+import Control.Monad                                   ( unless, when )
+import Control.Monad.Except                            ( MonadError(throwError), liftEither )
+import Control.Monad.Identity                          ( IdentityT(IdentityT) )
+import Control.Monad.IO.Class                          ( MonadIO(liftIO) )
+import Control.Monad.Reader                            ( MonadReader )
+import Data.Aeson                                      ( FromJSON, FromJSONKey, ToJSON, ToJSONKey, eitherDecode )
+import Data.Bifunctor                                  ( first )
 import Data.ByteString.Lazy qualified as ByteString
-import Data.Default (def)
-import Data.Hex (unhex)
-import Data.Kind (Type)
-import Data.List (partition)
+import Data.Default                                    ( def )
+import Data.Hex                                        ( unhex )
+import Data.Kind                                       ( Type )
+import Data.List                                       ( partition )
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Map.NonEmpty (NEMap)
+import Data.Map.NonEmpty                               ( NEMap )
 import Data.Map.NonEmpty qualified as NEMap
-import Data.String (fromString)
-import Data.Text (unpack)
-import GHC.Generics (Generic)
-import Ledger.Value (AssetClass, CurrencySymbol, TokenName, Value, assetClass, assetClassValue, flattenValue, isZero)
+import Data.String                                     ( fromString )
+import Data.Text                                       ( unpack )
+import GHC.Generics                                    ( Generic )
+import Ledger.Value
+    ( AssetClass
+    , CurrencySymbol
+    , TokenName
+    , Value
+    , assetClass
+    , assetClassValue
+    , flattenValue
+    , isZero
+    )
 import Money qualified
-import Tokenomia.Common.Blockfrost (projectFromEnv'')
-import Tokenomia.Common.Environment (Environment)
-import Tokenomia.Common.Error (TokenomiaError (BlockFrostError, MalformedAddress, SendingsContainsZeroValue, SendingsJSONDecodingFailure, SendingsNoSuchTransactions, SendingsValueMismatch))
-import Tokenomia.TokenDistribution.Parser.Address (deserialiseCardanoAddress)
+import Tokenomia.Common.Blockfrost                     ( projectFromEnv'' )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Error
+    ( TokenomiaError(BlockFrostError, MalformedAddress, SendingsContainsZeroValue, SendingsJSONDecodingFailure, SendingsNoSuchTransactions, SendingsValueMismatch)
+    )
+import Tokenomia.TokenDistribution.Parser.Address      ( deserialiseCardanoAddress )
 
 data Sendings = Sendings
   { sendingsRecipientAddress :: Address
@@ -183,7 +200,7 @@ verifyTxs sendings =
             filter
               ((== sendingsRecipientAddress sendings) . (^. address))
               (bfTxUtxos ^. outputs)
-          bfAmts = concat ((^. amount) <$> treasAddrOutputs)
+          bfAmts = concatMap (^. amount) treasAddrOutputs
           bfVals = amountToAssetValue <$> bfAmts
 
           flatVal = fmap (\(c, t, i) -> (assetClass c t, i)) . flattenValue $ txValue

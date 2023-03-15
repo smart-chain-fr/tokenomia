@@ -1,63 +1,61 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE ExplicitForAll #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Werror #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# LANGUAGE DataKinds                                 #-}
+{-# LANGUAGE DerivingVia                               #-}
+{-# LANGUAGE ExplicitForAll                            #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE KindSignatures                            #-}
+{-# LANGUAGE MultiParamTypeClasses                     #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE StandaloneDeriving                        #-}
+{-# LANGUAGE UndecidableInstances                      #-}
+{-# OPTIONS_GHC -Werror                                #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds                  #-}
 
-module Spec.Tokenomia.Vesting.Sendings (tests, main) where
+module Spec.Tokenomia.Vesting.Sendings
+    ( main
+    , tests
+    ) where
 
-import Blockfrost.Client.Types (BlockfrostError (BlockfrostNotFound))
-import Blockfrost.Types (
-  Address (Address),
-  AddressTransaction (AddressTransaction),
-  Amount (AdaAmount, AssetAmount),
-  TransactionUtxos (TransactionUtxos),
-  TxHash (TxHash),
-  UtxoOutput (UtxoOutput),
- )
-import Control.Monad.Except (MonadError, liftEither, runExceptT)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Identity (Identity (runIdentity), IdentityT (IdentityT))
-import Control.Monad.State (MonadState, evalStateT, gets)
+import Blockfrost.Client.Types                         ( BlockfrostError(BlockfrostNotFound) )
+import Blockfrost.Types
+    ( Address(Address)
+    , AddressTransaction(AddressTransaction)
+    , Amount(AdaAmount, AssetAmount)
+    , TransactionUtxos(TransactionUtxos)
+    , TxHash(TxHash)
+    , UtxoOutput(UtxoOutput)
+    )
+import Control.Monad.Except                            ( MonadError, liftEither, runExceptT )
+import Control.Monad.Identity                          ( Identity(runIdentity), IdentityT(IdentityT) )
+import Control.Monad.IO.Class                          ( MonadIO(liftIO) )
+import Control.Monad.State                             ( MonadState, evalStateT, gets )
 import Data.ByteString.Lazy qualified as ByteString
-import Data.Either (isLeft, isRight)
-import Data.Either.Combinators (maybeToRight)
-import Data.Hex (hex)
-import Data.Kind (Type)
-import Data.List.NonEmpty (NonEmpty)
+import Data.Either                                     ( isLeft, isRight )
+import Data.Either.Combinators                         ( maybeToRight )
+import Data.Hex                                        ( hex )
+import Data.Kind                                       ( Type )
+import Data.List.NonEmpty                              ( NonEmpty )
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Map (Map)
+import Data.Map                                        ( Map )
 import Data.Map qualified as Map
 import Data.Map.NonEmpty qualified as NEMap
-import Data.Maybe (fromJust)
-import Data.String (IsString (fromString))
-import Data.Text (Text, pack)
-import Ledger (Value)
-import Ledger.Ada (lovelaceValueOf)
-import Ledger.Value (assetClass, assetClassValue)
-import Money (mkSomeDiscrete, scaleFromRational)
-import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.HUnit (assertBool, testCase)
-import Tokenomia.Common.Error (TokenomiaError (BlockFrostError))
-import Tokenomia.Vesting.Sendings (
-  MonadRunBlockfrost (getAddressTransactions, getTxUtxos),
-  Sendings (Sendings),
-  jsonToSendings,
-  verifySendings',
- )
+import Data.Maybe                                      ( fromJust )
+import Data.String                                     ( IsString(fromString) )
+import Data.Text                                       ( Text, pack )
+import Ledger                                          ( Value )
+import Ledger.Ada                                      ( lovelaceValueOf )
+import Ledger.Value                                    ( assetClass, assetClassValue )
+import Money                                           ( mkSomeDiscrete, scaleFromRational )
+import Test.Tasty                                      ( TestTree, defaultMain, testGroup )
+import Test.Tasty.HUnit                                ( assertBool, testCase )
+import Tokenomia.Common.Error                          ( TokenomiaError(BlockFrostError) )
+import Tokenomia.Vesting.Sendings
+    ( MonadRunBlockfrost(getAddressTransactions, getTxUtxos)
+    , Sendings(Sendings)
+    , jsonToSendings
+    , verifySendings'
+    )
 
 data BlockfrostMockData = BlockfrostMockData
   { addressTransactions :: [AddressTransaction]

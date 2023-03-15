@@ -2,21 +2,15 @@ module Tokenomia.Common.Parser.TxOutRef
     ( txOutRef
     ) where
 
-import Tokenomia.Common.Data.Convertible
-    ( convert )
+import Tokenomia.Common.Data.Convertible               ( convert )
 
-import Data.Attoparsec.Text
-    ( Parser
-    , decimal
-    , skipSpace
-    , takeWhile1
-    )
+import Data.Attoparsec.Text                            ( Parser, decimal, skipSpace, takeWhile1 )
 
-import Prelude           hiding ( take )
-import Data.Char                ( isSpace )
-import Data.String              ( fromString )
+import Data.Char                                       ( isSpace )
+import Data.String                                     ( fromString )
+import Prelude hiding                                  ( take )
 
-import Ledger                   ( TxOutRef(TxOutRef), TxId )
+import Ledger                                          ( TxId, TxOutRef(TxOutRef) )
 
 
 txOutRef :: Parser TxOutRef

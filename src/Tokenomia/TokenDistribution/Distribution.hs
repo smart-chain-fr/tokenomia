@@ -1,7 +1,7 @@
-{-# LANGUAGE DerivingStrategies             #-}
-{-# LANGUAGE FlexibleInstances              #-}
-{-# LANGUAGE ImportQualifiedPost            #-}
-{-# LANGUAGE OverloadedStrings              #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE OverloadedStrings                         #-}
 
 module Tokenomia.TokenDistribution.Distribution
     ( Distribution(..)
@@ -11,14 +11,10 @@ module Tokenomia.TokenDistribution.Distribution
     , readDistributionFile
     ) where
 
-import Cardano.Api              ( NetworkId )
-import Data.Text                ( pack, unpack )
-import Data.ByteString.Lazy     ( readFile )
-import Data.String              ( IsString(fromString) )
-import Data.Aeson.Types         ( Parser, parseJSON )
+import Cardano.Api                                     ( NetworkId )
 import Data.Aeson
     ( FromJSON
-    , ToJSON (toJSON)
+    , ToJSON(toJSON)
     , Value
     , eitherDecode
     , object
@@ -26,19 +22,22 @@ import Data.Aeson
     , (.:)
     , (.=)
     )
-import Data.Either.Combinators  ( fromRight' )
+import Data.Aeson.Types                                ( Parser, parseJSON )
+import Data.ByteString.Lazy                            ( readFile )
+import Data.Either.Combinators                         ( fromRight' )
+import Data.String                                     ( IsString(fromString) )
+import Data.Text                                       ( pack, unpack )
 
-import Prelude           hiding ( readFile, lines )
+import Prelude hiding                                  ( lines, readFile )
 
-import Ledger.Address                   ( Address(..) )
-import Ledger.Value                     ( AssetClass )
-import Ledger.Value qualified as Ledger ( assetClass )
+import Ledger.Address                                  ( Address(..) )
+import Ledger.Value                                    ( AssetClass )
+import Ledger.Value qualified
+    as Ledger                                          ( assetClass )
 import Plutus.V1.Ledger.Value qualified as Value
 
-import Tokenomia.TokenDistribution.CLI.Parameters
-   ( Parameters(..) )
-import Tokenomia.TokenDistribution.Parser.Address
-   ( deserialiseCardanoAddress, serialiseCardanoAddress )
+import Tokenomia.TokenDistribution.CLI.Parameters      ( Parameters(..) )
+import Tokenomia.TokenDistribution.Parser.Address      ( deserialiseCardanoAddress, serialiseCardanoAddress )
 
 data  Recipient
     = Recipient

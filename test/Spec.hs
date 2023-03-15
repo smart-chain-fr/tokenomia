@@ -1,19 +1,22 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Main(main) where
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE OverloadedStrings                         #-}
 
+module Main
+    ( main
+    ) where
 
-import qualified Spec.Tokenomia.Vesting.GenerateNative
-import qualified Spec.Tokenomia.CardanoApi.FromPlutus.Value
-import qualified Spec.Tokenomia.CardanoApi.Fees
-import qualified Spec.Tokenomia.Common.Arbitrary.Builtins
-import qualified Spec.Tokenomia.Common.Arbitrary.Utils
-import qualified Spec.Tokenomia.Common.Data.List.Extra
-import qualified Spec.Tokenomia.Common.Time
-import qualified Spec.Tokenomia.Wallet.UTxO
-import qualified Spec.Tokenomia.Common.Value
-import qualified Spec.Tokenomia.Common.Parser.Address
-import qualified Spec.Tokenomia.Vesting.Sendings
-import Test.Tasty ( TestTree, defaultMain, testGroup )
+import Spec.Tokenomia.CardanoApi.Fees qualified
+import Spec.Tokenomia.CardanoApi.FromPlutus.Value qualified
+import Spec.Tokenomia.Common.Arbitrary.Builtins qualified
+import Spec.Tokenomia.Common.Arbitrary.Utils qualified
+import Spec.Tokenomia.Common.Data.List.Extra qualified
+import Spec.Tokenomia.Common.Parser.Address qualified
+import Spec.Tokenomia.Common.Time qualified
+import Spec.Tokenomia.Common.Value qualified
+import Spec.Tokenomia.Vesting.GenerateNative qualified
+import Spec.Tokenomia.Vesting.Sendings qualified
+import Spec.Tokenomia.Wallet.UTxO qualified
+import Test.Tasty                                      ( TestTree, defaultMain, testGroup )
 
 main :: IO ()
 main = defaultMain tests

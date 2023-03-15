@@ -1,10 +1,10 @@
 module Tokenomia.Common.Data.List.Extra
-  ( mapLastWith
-  , para
-  , transpose
-  ) where
+    ( mapLastWith
+    , para
+    , transpose
+    ) where
 
-import Control.Applicative ( ZipList(..) )
+import Control.Applicative                             ( ZipList(..) )
 
 
 -- | map different functions on elements of a list depending on their position.

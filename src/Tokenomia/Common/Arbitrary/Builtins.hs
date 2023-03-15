@@ -1,6 +1,6 @@
-{-# LANGUAGE DerivingStrategies             #-}
-{-# LANGUAGE FlexibleInstances              #-}
-{-# OPTIONS_GHC -Wno-orphans                #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# OPTIONS_GHC -Wno-orphans                           #-}
 
 module Tokenomia.Common.Arbitrary.Builtins
     ( Hex(..)
@@ -10,24 +10,16 @@ module Tokenomia.Common.Arbitrary.Builtins
     ) where
 
 
-import Data.List.Split                      ( chunksOf )
+import Data.List.Split                                 ( chunksOf )
 
-import PlutusTx.Builtins.Internal           ( BuiltinByteString(..) )
+import PlutusTx.Builtins.Internal                      ( BuiltinByteString(..) )
 
-import Tokenomia.Common.Arbitrary.Utils     ( shrinkListStructure )
-import Tokenomia.Common.Data.Convertible    ( convert )
-import Tokenomia.Common.Data.ByteString     ( unsafeDecodeHex, encode )
+import Tokenomia.Common.Arbitrary.Utils                ( shrinkListStructure )
+import Tokenomia.Common.Data.ByteString                ( encode, unsafeDecodeHex )
+import Tokenomia.Common.Data.Convertible               ( convert )
 
-import Test.QuickCheck.Instances.ByteString ()
-import Test.Tasty.QuickCheck
-    ( Arbitrary
-    , Gen
-    , arbitrary
-    , elements
-    , listOf
-    , shrink
-    , vectorOf
-    )
+import Test.QuickCheck.Instances.ByteString            ()
+import Test.Tasty.QuickCheck                           ( Arbitrary, Gen, arbitrary, elements, listOf, shrink, vectorOf )
 
 
 newtype Hex a

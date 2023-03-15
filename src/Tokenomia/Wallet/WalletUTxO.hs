@@ -1,43 +1,40 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE DuplicateRecordFields                     #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# OPTIONS_GHC -Wno-name-shadowing                    #-}
+{-# OPTIONS_GHC -Wno-orphans                           #-}
 
 module Tokenomia.Wallet.WalletUTxO
-    ( WalletUTxO (..)
+    ( WalletUTxO(..)
     , getAdas
+    , getDatumHashAndAdaMaybe
     , value
     ) where
 
-import Tokenomia.Common.Shell.InteractiveMenu
-    ( DisplayMenuItem(..) )
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..) )
 
-import           Prelude as P
-import           Data.Maybe
-import           Data.List ( intercalate )
-import           Ledger.Ada
-import           Control.Monad.Except
-import           Tokenomia.Common.Error
-import           Ledger.Value ( Value )
-import           Tokenomia.Common.TxOutRef ( showTxOutRef ) 
-import           Tokenomia.Wallet.Type () 
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Common.Hash    
-import           Tokenomia.Common.Value    
-import qualified Data.List.NonEmpty as NEL
-import           Tokenomia.Wallet.UTxO hiding  ( value )
-import qualified Tokenomia.Wallet.UTxO as UTxO ( value )
+import Data.List                                       ( intercalate )
+import Ledger.Ada                                      ( Ada, fromValue )
+import Ledger.Value                                    ( Value )
+import Prelude as P
+import Tokenomia.Common.Hash                           ( Hash )
+import Tokenomia.Common.TxOutRef                       ( showTxOutRef )
+import Tokenomia.Common.Value                          ( containingStrictlyADAs, showValueUtf8 )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef )
+import Tokenomia.Wallet.Type                           ()
+import Tokenomia.Wallet.UTxO                           ( UTxO(UTxO, maybeDatumHash, txOutRef) )
+import Tokenomia.Wallet.UTxO qualified
+    as UTxO                                            ( value )
 
 data  WalletUTxO
     = WalletUTxO
-    { childAddressRef :: ChildAddressRef 
+    { childAddressRef :: ChildAddressRef
     , utxo :: UTxO
-    } deriving ( Eq )
+    } deriving stock ( Eq )
 
 value :: WalletUTxO -> Value
 value = UTxO.value . utxo
@@ -55,7 +52,7 @@ instance Ord WalletUTxO where
 -- | Intercalate non-null elements.
 sepBy :: [a] -> [[a]] -> [a]
 sepBy sep xs = intercalate sep $ filter (not . null) xs
- 
+
 showWalletUTxO :: WalletUTxO -> String
 showWalletUTxO walletUTxO  = sepBy " : " $
         [ showTxOutRef . txOutRef . utxo
@@ -70,7 +67,7 @@ showDatumHash walletUTxO =
 showWalletUTxOWithDatumHash :: WalletUTxO -> String
 showWalletUTxOWithDatumHash walletUTxO = sepBy " | " $
         [ showWalletUTxO
-        , showDatumHash 
+        , showDatumHash
         ]
     <*> pure walletUTxO
 

@@ -1,42 +1,42 @@
-{-# LANGUAGE ImportQualifiedPost            #-}
-{-# LANGUAGE TupleSections                  #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE TupleSections                             #-}
 
 module Tokenomia.CardanoApi.FromPlutus.Value
-    ( currencySymbolAsPolicyId
-    , tokenNameAsAssetName
-    , assetClassAsAssetId
+    ( assetClassAsAssetId
+    , currencySymbolAsPolicyId
     , fromPlutusValue
+    , tokenNameAsAssetName
     ) where
 
-import Data.Either.Combinators              ( maybeToRight )
-import Data.Functor                         ( (<&>) )
-import Tokenomia.Common.Data.Either.Extra   ( toEither )
+import Data.Either.Combinators                         ( maybeToRight )
+import Data.Functor                                    ( (<&>) )
+import Tokenomia.Common.Data.Either.Extra              ( toEither )
 
 import Cardano.Api
-    ( PolicyId
-    , AssetName
+    ( AsType(..)
     , AssetId(..)
-    , AsType(..)
+    , AssetName
+    , PolicyId
     , Quantity(..)
     , Value
     , deserialiseFromRawBytes
     , valueFromList
     )
 
-import PlutusTx.Builtins                    ( fromBuiltin )
-import Plutus.V1.Ledger.Value               ( adaSymbol, adaToken )
-import Plutus.V1.Ledger.Value qualified
-    as Plutus                               ( Value )
 import Plutus.V1.Ledger.Value
     ( AssetClass(..)
     , CurrencySymbol(..)
     , TokenName(..)
-    , flattenValue
+    , adaSymbol
+    , adaToken
     , assetClass
+    , flattenValue
     )
+import Plutus.V1.Ledger.Value qualified
+    as Plutus                                          ( Value )
+import PlutusTx.Builtins                               ( fromBuiltin )
 
-import Tokenomia.CardanoApi.FromPlutus.Error
-    ( FromPlutusError(..) )
+import Tokenomia.CardanoApi.FromPlutus.Error           ( FromPlutusError(..) )
 
 
 -- | Convert a CurrencySymbol to a PolicyId
@@ -66,7 +66,7 @@ assetClassAsAssetId (AssetClass (cs, tn))
 -- | Convert a Plutus Value to a Cardano.Api Value
 fromPlutusValue :: Plutus.Value -> Either FromPlutusError Value
 fromPlutusValue value =
-    valueFromList <$> sequence (fromPlutusSingleton <$> flattenValue value)
+    valueFromList <$> mapM fromPlutusSingleton (flattenValue value)
   where
     fromPlutusSingleton (cs, tn, x) =
         assetClassAsAssetId (assetClass cs tn) <&> (, Quantity x)

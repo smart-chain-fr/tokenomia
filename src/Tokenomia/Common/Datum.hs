@@ -1,43 +1,56 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TupleSections #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE ExtendedDefaultRules                      #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE LambdaCase                                #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TemplateHaskell                           #-}
+{-# LANGUAGE TupleSections                             #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
+{-# OPTIONS_GHC -fno-warn-orphans                      #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
-module Tokenomia.Common.Datum 
-  ( getDataHash
-  , registerDatum
-  ) where
+module Tokenomia.Common.Datum
+    ( getDataHash
+    , registerDatum
+    ) where
 
-import           Data.Aeson as Json ( encode )
-import           Data.String
-import qualified Data.ByteString.Lazy.Char8 as C
-import           Data.ByteString.Lazy.UTF8 as BLU ( toString ) 
-import           Data.Coerce
+import Data.Aeson
+    as Json                                            ( encode )
+import Data.ByteString.Lazy.Char8 qualified as C
+import Data.ByteString.Lazy.UTF8
+    as BLU                                             ( toString )
+import Data.Coerce                                     ( coerce )
+import Data.String                                     ( IsString(fromString) )
 
-import qualified PlutusTx
-import           PlutusTx.IsData.Class ( ToData )
- 
-import           Control.Monad.Reader
+import PlutusTx qualified
+import PlutusTx.IsData.Class                           ( ToData )
 
-import           Shh.Internal
+import Control.Monad.Reader                            ( MonadIO(..), MonadReader )
+
+import Shh.Internal
+    ( ExecReference(SearchPath)
+    , Stream(Truncate)
+    , capture
+    , load
+    , (&>)
+    , (|>)
+    )
 
 
-import           Cardano.Api.Shelley ( fromPlutusData )
-import           Cardano.Api hiding (Testnet,Mainnet,Address,Hash)
+import Cardano.Api
+    ( ScriptDataJsonSchema(ScriptDataJsonDetailedSchema)
+    , scriptDataToJson
+    )
+import Cardano.Api.Shelley                             ( fromPlutusData )
 
-import           Tokenomia.Common.Environment
-import           Tokenomia.Common.Folder (getFolderPath,Folder (..))
-import           Tokenomia.Common.Hash
-import           System.Random
+import System.Random                                   ( randomIO )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
+import Tokenomia.Common.Hash                           ( Hash(..) )
 
 load SearchPath ["cat","cardano-cli", "echo" ]
 
@@ -57,7 +70,7 @@ getDataHash a = do
     liftIO $ echo  (dataToJSONString a) &> (Truncate . fromString) filePath
     liftIO $ Hash . init . C.unpack  <$>  (cardano_cli "transaction" "hash-script-data" "--script-data-file" filePath |> capture)
 
-registerDatum 
+registerDatum
   :: ( MonadIO m
      , MonadReader Environment m
      , ToData a) => a -> m FilePath
@@ -67,5 +80,3 @@ registerDatum a = do
     let filePath = datumFolder <> coerce datumHash <> ".datum"
     liftIO $ echo  (dataToJSONString a) &> (Truncate . fromString) filePath
     return filePath
-
-    

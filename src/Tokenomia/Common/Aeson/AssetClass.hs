@@ -1,17 +1,17 @@
-{-# LANGUAGE OverloadedStrings              #-}
+{-# LANGUAGE OverloadedStrings                         #-}
 
 module Tokenomia.Common.Aeson.AssetClass
     ( assetClassFromJSON
     , assetClassToJSON
     ) where
 
-import Control.Arrow                        ( (***) )
+import Control.Arrow                                   ( (***) )
 
-import Data.Aeson.Types                     ( Parser )
-import Data.Aeson                           ( Value, object, withObject, (.:), (.=) )
-import Data.String                          ( IsString(..) )
+import Data.Aeson                                      ( Value, object, withObject, (.:), (.=) )
+import Data.Aeson.Types                                ( Parser )
+import Data.String                                     ( IsString(..) )
 
-import Plutus.V1.Ledger.Value               ( AssetClass(..), assetClass, toString )
+import Plutus.V1.Ledger.Value                          ( AssetClass(..), assetClass, toString )
 
 
 -- | Alternative AssetClass Parser to the FromJSON instance

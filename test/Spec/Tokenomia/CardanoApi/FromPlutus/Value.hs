@@ -2,24 +2,24 @@ module Spec.Tokenomia.CardanoApi.FromPlutus.Value
     ( tests
     ) where
 
-import Data.Either                          ( isRight )
+import Data.Either                                     ( isRight )
 
-import Ledger.Ada                           ( adaSymbol )
-import Plutus.V1.Ledger.Value               ( CurrencySymbol(..) )
+import Ledger.Ada                                      ( adaSymbol )
+import Plutus.V1.Ledger.Value                          ( CurrencySymbol(..) )
 
-import Test.Tasty.QuickCheck                ( testProperty, shrink )
-import Test.Tasty                           ( TestTree, testGroup )
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.QuickCheck                           ( shrink, testProperty )
 
-import Tokenomia.Common.Arbitrary.AssetClass()
-import Tokenomia.Common.Arbitrary.Builtins  ()
-import Tokenomia.Common.Arbitrary.Modifiers ( Restricted(..) )
-import Tokenomia.Common.Arbitrary.Value     ()
+import Tokenomia.Common.Arbitrary.AssetClass           ()
+import Tokenomia.Common.Arbitrary.Builtins             ()
+import Tokenomia.Common.Arbitrary.Modifiers            ( Restricted(..) )
+import Tokenomia.Common.Arbitrary.Value                ()
 
 import Tokenomia.CardanoApi.FromPlutus.Value
     ( assetClassAsAssetId
     , currencySymbolAsPolicyId
-    , tokenNameAsAssetName
     , fromPlutusValue
+    , tokenNameAsAssetName
     )
 
 

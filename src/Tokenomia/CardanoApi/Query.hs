@@ -1,5 +1,5 @@
-{-# LANGUAGE DerivingStrategies             #-}
-{-# LANGUAGE TypeFamilies                   #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE TypeFamilies                              #-}
 
 module Tokenomia.CardanoApi.Query
     ( QueryFailure(..)
@@ -16,21 +16,19 @@ module Tokenomia.CardanoApi.Query
     , queryWallclockToSlot'
     ) where
 
-import Control.Monad                        ( join )
-import Control.Monad.Reader                 ( MonadIO(..) )
-import Control.Monad.Trans.Except           ( ExceptT )
-import Control.Monad.Trans.Except.Extra     ( newExceptT, firstExceptT, secondExceptT )
-import Control.Lens                         ( (^.), _1 )
+import Control.Lens                                    ( _1, (^.) )
+import Control.Monad                                   ( join )
+import Control.Monad.Reader                            ( MonadIO(..) )
+import Control.Monad.Trans.Except                      ( ExceptT )
+import Control.Monad.Trans.Except.Extra                ( firstExceptT, newExceptT, secondExceptT )
 
-import Data.Bifunctor                       ( first )
-import Data.Composition                     ( (.:) )
-import Data.Set                             ( Set )
-import Data.Time.Clock                      ( NominalDiffTime )
+import Data.Bifunctor                                  ( first )
+import Data.Composition                                ( (.:) )
+import Data.Set                                        ( Set )
+import Data.Time.Clock                                 ( NominalDiffTime )
 
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types
-    ( RelativeTime, SlotLength, SystemStart )
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras
-    ( EraMismatch )
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( RelativeTime, SlotLength, SystemStart )
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ( EraMismatch )
 import Ouroboros.Consensus.HardFork.History.Qry
     ( PastHorizonException
     , Qry
@@ -50,9 +48,9 @@ import Cardano.Api.Shelley
     , GenesisParameters
     , LocalNodeConnectInfo
     , QueryInEra(QueryInShelleyBasedEra)
-    , QueryInMode(QueryEraHistory, QueryInEra, QueryCurrentEra, QuerySystemStart)
+    , QueryInMode(QueryCurrentEra, QueryEraHistory, QueryInEra, QuerySystemStart)
     , QueryInShelleyBasedEra(QueryGenesisParameters, QueryUTxO)
-    , QueryUTxOFilter(QueryUTxOByTxIn, QueryUTxOByAddress)
+    , QueryUTxOFilter(QueryUTxOByAddress, QueryUTxOByTxIn)
     , ShelleyBasedEra(ShelleyBasedEraShelley)
     , ShelleyEra
     , SlotNo
@@ -62,7 +60,7 @@ import Cardano.Api.Shelley
     , queryExpr
     )
 
-import Tokenomia.CardanoApi.Time            ( nominalDiffTimeToRelativeTime, relativeTimeToNominalDiffTime )
+import Tokenomia.CardanoApi.Time                       ( nominalDiffTimeToRelativeTime, relativeTimeToNominalDiffTime )
 
 
 data    QueryFailure

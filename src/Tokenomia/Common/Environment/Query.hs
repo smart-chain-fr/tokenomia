@@ -1,21 +1,20 @@
-{-# LANGUAGE FlexibleContexts               #-}
-{-# LANGUAGE RecordWildCards                #-}
+{-# LANGUAGE FlexibleContexts                          #-}
 
 module Tokenomia.Common.Environment.Query
     ( evalQuery
     , evalQueryWithSystemStart
     ) where
 
-import Data.Bifunctor                       ( first )
+import Data.Bifunctor                                  ( first )
 
-import Control.Monad.Except                 ( MonadError, liftEither )
-import Control.Monad.Reader                 ( MonadReader, asks )
-import Control.Monad.Trans.Except           ( ExceptT, runExceptT )
+import Control.Monad.Except                            ( MonadError, liftEither )
+import Control.Monad.Reader                            ( MonadReader, asks )
+import Control.Monad.Trans.Except                      ( ExceptT, runExceptT )
 
-import Cardano.Api.Shelley                  ( LocalNodeConnectInfo, CardanoMode )
-import Cardano.Slotting.Time                ( SystemStart )
+import Cardano.Api.Shelley                             ( CardanoMode, LocalNodeConnectInfo )
+import Cardano.Slotting.Time                           ( SystemStart )
 
-import Tokenomia.Common.Environment         ( Environment(..) )
+import Tokenomia.Common.Environment                    ( Environment(localNodeConnectInfo, systemStart') )
 
 
 -- | Lift an ExceptT into a MonadError

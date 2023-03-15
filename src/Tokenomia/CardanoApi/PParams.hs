@@ -1,19 +1,18 @@
-{-# LANGUAGE ImportQualifiedPost            #-}
-{-# LANGUAGE RankNTypes                     #-}
-{-# LANGUAGE TypeFamilies                   #-}
+{-# LANGUAGE RankNTypes                                #-}
+{-# LANGUAGE TypeFamilies                              #-}
 
 module Tokenomia.CardanoApi.PParams
     ( defaultCalculateMinimumUTxOParams
     , withCalculateMinimumUTxOParams
     ) where
 
-import Cardano.Api                          ( ShelleyBasedEra(..), fromLedgerPParams )
-import Cardano.Api.Shelley                  ( ProtocolParameters, ShelleyLedgerEra )
-import Cardano.Ledger.Coin                  ( Coin (..) )
-import Cardano.Ledger.Core                  ( PParams )
-import Cardano.Ledger.Alonzo.PParams        ( PParams'(..) )
-import Cardano.Ledger.Shelley.PParams       ( PParams'(..) )
-import Data.Default                         ( def )
+import Cardano.Api                                     ( ShelleyBasedEra(..), fromLedgerPParams )
+import Cardano.Api.Shelley                             ( ProtocolParameters, ShelleyLedgerEra )
+import Cardano.Ledger.Alonzo.PParams                   ( PParams'(..) )
+import Cardano.Ledger.Coin                             ( Coin(..) )
+import Cardano.Ledger.Core                             ( PParams )
+import Cardano.Ledger.Shelley.PParams                  ( PParams'(..) )
+import Data.Default                                    ( def )
 
 
 -- | Update the right parameters necessary to calculateMinimumUTxO

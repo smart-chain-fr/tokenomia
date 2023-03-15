@@ -1,7 +1,10 @@
-module Main (main) where
+{-# LANGUAGE ImportQualifiedPost                       #-}
 
-import  qualified Tokenomia.CLI as Tokenomia
+module Main
+    ( main
+    ) where
+
+import Tokenomia.CLI qualified as Tokenomia
 
 main :: IO ()
 main = Tokenomia.main
-

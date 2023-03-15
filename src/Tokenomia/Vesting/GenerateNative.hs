@@ -1,23 +1,23 @@
-{-# LANGUAGE DeriveAnyClass                 #-}
-{-# LANGUAGE DeriveGeneric                  #-}
-{-# LANGUAGE DerivingStrategies             #-}
-{-# LANGUAGE FlexibleContexts               #-}
-{-# LANGUAGE FlexibleInstances              #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving     #-}
-{-# LANGUAGE ImportQualifiedPost            #-}
-{-# LANGUAGE KindSignatures                 #-}
-{-# LANGUAGE NamedFieldPuns                 #-}
-{-# LANGUAGE OverloadedStrings              #-}
-{-# LANGUAGE RecordWildCards                #-}
-{-# LANGUAGE ScopedTypeVariables            #-}
-{-# LANGUAGE TypeApplications               #-}
+{-# LANGUAGE DeriveAnyClass                            #-}
+{-# LANGUAGE DeriveGeneric                             #-}
+{-# LANGUAGE DerivingStrategies                        #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE FlexibleInstances                         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving                #-}
+{-# LANGUAGE ImportQualifiedPost                       #-}
+{-# LANGUAGE KindSignatures                            #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE OverloadedStrings                         #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TypeApplications                          #-}
 
 module Tokenomia.Vesting.GenerateNative
     ( Allocation
     , DatabaseOutput(..)
     , InvestorAddress(..)
     , NativeScript(..)
-    , NativeScriptInfo (..)
+    , NativeScriptInfo(..)
     , PrivateSale(..)
     , PrivateSaleTranche(..)
     , TrancheProperties(..)
@@ -43,93 +43,83 @@ module Tokenomia.Vesting.GenerateNative
     , validateTranchesProportions
     ) where
 
-import Control.Error.Safe                   ( assertErr )
-import Control.Monad                        ( join )
-import Control.Monad.Except                 ( MonadError, liftEither )
-import Control.Monad.IO.Class               ( MonadIO, liftIO )
-import Control.Monad.Reader                 ( MonadReader, asks )
-import Data.Bifunctor                       ( first )
-import Data.Either.Combinators              ( maybeToRight )
-import Data.Foldable                        ( traverse_ )
-import Data.Functor.Syntax                  ( (<$$>) )
-import Data.Kind                            ( Type )
-import Data.Ratio                           ( Ratio, (%), numerator, denominator )
-import Data.String                          ( fromString )
-import Data.Text                            ( Text )
-import Data.Time.Clock                      ( NominalDiffTime )
+import Control.Error.Safe                              ( assertErr )
+import Control.Monad                                   ( join )
+import Control.Monad.Except                            ( MonadError, liftEither )
+import Control.Monad.IO.Class                          ( MonadIO, liftIO )
+import Control.Monad.Reader                            ( MonadReader, asks )
+import Data.Bifunctor                                  ( first )
+import Data.Either.Combinators                         ( maybeToRight )
+import Data.Foldable                                   ( traverse_ )
+import Data.Functor.Syntax                             ( (<$$>) )
+import Data.Kind                                       ( Type )
+import Data.Ratio                                      ( Ratio, denominator, numerator, (%) )
+import Data.String                                     ( fromString )
+import Data.Text                                       ( Text )
+import Data.Time.Clock                                 ( NominalDiffTime )
 
-import Data.List.NonEmpty                   ( NonEmpty((:|)), (<|) )
+import Data.List.NonEmpty                              ( NonEmpty((:|)), (<|) )
 import Data.List.NonEmpty qualified
-    as NEList                               ( fromList, head, toList, zip )
+    as NEList                                          ( fromList, head, toList, zip )
 
-import Data.Map.NonEmpty                    ( NEMap, traverseWithKey )
+import Data.Map.NonEmpty                               ( NEMap, traverseWithKey )
 import Data.Map.NonEmpty qualified
-    as NEMap                                ( elems, fromAscList, keys )
+    as NEMap                                           ( elems, fromAscList, keys )
 
-import GHC.Generics                         ( Generic )
-import GHC.Natural                          ( Natural, naturalFromInteger, naturalToInteger )
+import GHC.Generics                                    ( Generic )
+import GHC.Natural                                     ( Natural, naturalFromInteger, naturalToInteger )
 
-import Ledger                               ( PubKeyHash, toPubKeyHash )
-import Ledger.Address                       ( Address )
-import Ledger.Value                         ( AssetClass(..) )
-import System.FilePath                      ( replaceFileName )
+import Ledger                                          ( PubKeyHash, toPubKeyHash )
+import Ledger.Address                                  ( Address )
+import Ledger.Value                                    ( AssetClass(..) )
+import System.FilePath                                 ( replaceFileName )
 
 import Data.Aeson
     ( FromJSON(..)
-    , ToJSON(..)
     , FromJSONKey
+    , ToJSON(..)
     , ToJSONKey
-    , (.=)
     , eitherDecodeFileStrict
     , encodeFile
     , object
+    , (.=)
     )
 
 import Cardano.Api
     ( NetworkMagic(..)
     , PaymentCredential(PaymentCredentialByScript)
-    , ShelleyBasedEra(..)
     , Script(SimpleScript)
-    , SimpleScript
-        ( RequireAllOf
-        , RequireSignature
-        , RequireTimeAfter
-        )
-    , SimpleScriptVersion(SimpleScriptV2)
+    , ShelleyBasedEra(..)
+    , SimpleScript(RequireAllOf, RequireSignature, RequireTimeAfter)
     , SimpleScriptV2
+    , SimpleScriptVersion(SimpleScriptV2)
     , SlotNo
     , StakeAddressReference(NoStakeAddress)
     , TimeLocksSupported(TimeLocksInSimpleScriptV2)
     , hashScript
     , makeShelleyAddress
     , serialiseToBech32
- )
+    )
 
 import Cardano.Api qualified
-    as Api                                  ( NetworkId(..) )
+    as Api                                             ( NetworkId(..) )
 
-import Tokenomia.CardanoApi.Fees            ( calculateDefaultMinimumUTxOFromAssetId )
-import Tokenomia.Common.Aeson.AssetClass    ( assetClassToJSON )
-import Tokenomia.Common.AssetClass          ( adaAssetClass )
-import Tokenomia.Common.Data.List.Extra     ( mapLastWith, transpose )
-import Tokenomia.Common.Environment         ( Environment(..) )
-import Tokenomia.Common.Environment.Query   ( evalQueryWithSystemStart )
-import Tokenomia.Common.Error               ( TokenomiaError(InvalidPrivateSale, MalformedAddress) )
-import Tokenomia.Common.Time                ( toNextBeginNominalDiffTime )
+import Tokenomia.CardanoApi.Fees                       ( calculateDefaultMinimumUTxOFromAssetId )
+import Tokenomia.Common.Aeson.AssetClass               ( assetClassToJSON )
+import Tokenomia.Common.AssetClass                     ( adaAssetClass )
+import Tokenomia.Common.Data.List.Extra                ( mapLastWith, transpose )
+import Tokenomia.Common.Environment                    ( Environment(..) )
+import Tokenomia.Common.Environment.Query              ( evalQueryWithSystemStart )
+import Tokenomia.Common.Error                          ( TokenomiaError(InvalidPrivateSale, MalformedAddress) )
+import Tokenomia.Common.Time                           ( toNextBeginNominalDiffTime )
 
-import Tokenomia.CardanoApi.Query           ( QueryFailure, queryNominalDiffTimeToSlot )
+import Tokenomia.CardanoApi.Query                      ( QueryFailure, queryNominalDiffTimeToSlot )
 
-import Tokenomia.CardanoApi.FromPlutus.Value
-    ( assetClassAsAssetId )
+import Tokenomia.CardanoApi.FromPlutus.Value           ( assetClassAsAssetId )
 
-import Tokenomia.TokenDistribution.Parser.Address
-    ( deserialiseCardanoAddress )
+import Tokenomia.TokenDistribution.Parser.Address      ( deserialiseCardanoAddress )
 
-import Tokenomia.TokenDistribution.Distribution
-    ( Distribution(..)
-    , Recipient(..)
-    , WithNetworkId(..)
-    )
+import Tokenomia.TokenDistribution.Distribution        ( Distribution(..), Recipient(..), WithNetworkId(..) )
 
 
 --------------------------------------------------------------------------------

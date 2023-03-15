@@ -1,40 +1,36 @@
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE FlexibleContexts                          #-}
 
 module Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository
     ( deriveMissingChildAddresses
-    , fetchAddressesByWallet
     , fetchAddressByWalletAtIndex
+    , fetchAddressesByWallet
     , fetchAddressesByWalletAtIndexes
     , fetchAddressesByWalletWithIndexFilter
-    , fetchAddressesByWalletWithNonZeroIndex
     , fetchAddressesByWalletWithIndexInRange
+    , fetchAddressesByWalletWithNonZeroIndex
     ) where
 
-import Control.Monad.Reader     ( MonadIO, MonadReader )
-import Control.Monad.Except     ( MonadError )
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
 
-import Data.List.NonEmpty       ( NonEmpty, filter, toList )
-import Data.List                ( (\\) )
-import Data.Maybe               ( listToMaybe )
+import Data.List                                       ( (\\) )
+import Data.List.NonEmpty                              ( NonEmpty, filter, toList )
+import Data.Maybe                                      ( listToMaybe )
 
-import Prelude           hiding ( filter, max )
+import Prelude hiding                                  ( filter, max )
 
-import Tokenomia.Common.Address     ( Address )
-import Tokenomia.Common.Error       ( TokenomiaError )
-import Tokenomia.Common.Environment ( Environment )
+import Tokenomia.Common.Address                        ( Address )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Error                          ( TokenomiaError )
 
-import Tokenomia.Wallet.Type        ( WalletName )
-import Tokenomia.Wallet.ChildAddress.ChildAddressRef
-    ( ChildAddressRef(..)
-    , ChildAddressIndex(..)
-    )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressIndex(..), ChildAddressRef(..) )
 import Tokenomia.Wallet.ChildAddress.LocalRepository
     ( ChildAddress(..)
-    , fetchDerivedChildAddressIndexes
-    , fetchById
     , deriveChildAddress
+    , fetchById
+    , fetchDerivedChildAddressIndexes
     )
+import Tokenomia.Wallet.Type                           ( WalletName )
 
 
 missingChildAddressIndex ::
@@ -75,16 +71,16 @@ fetchAddressByChildAddressRef ::
     , MonadReader Environment m
     )
     => ChildAddressRef -> m Address
-fetchAddressByChildAddressRef childAddressRef =
-    address <$> fetchById childAddressRef
+fetchAddressByChildAddressRef ref =
+    address <$> fetchById ref
 
 fetchAddressByWalletAtIndex ::
     ( MonadIO m
     , MonadReader Environment m
     )
     => ChildAddressIndex -> WalletName -> m (Maybe Address)
-fetchAddressByWalletAtIndex index walletName =
-    listToMaybe <$> fetchAddressesByWalletAtIndexes [index] walletName
+fetchAddressByWalletAtIndex walletIndex walletName =
+    listToMaybe <$> fetchAddressesByWalletAtIndexes [walletIndex] walletName
 
 fetchAddressesByWalletAtIndexes ::
     ( MonadIO m

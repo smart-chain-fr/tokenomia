@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingStrategies             #-}
+{-# LANGUAGE DerivingStrategies                        #-}
 
 module Tokenomia.CardanoApi.FromPlutus.Error
     ( FromPlutusError(..)

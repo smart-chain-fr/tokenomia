@@ -1,25 +1,22 @@
-{-# LANGUAGE ImportQualifiedPost            #-}
-
 module Tokenomia.CardanoApi.FromPlutus.Time
     ( fromPlutusSlot
-    , posixTimeToNominalDiffTime
     , nominalDiffTimeToPosixTime
+    , posixTimeToNominalDiffTime
     , posixTimeToRelativeTime
     , relativeTimeToPosixTime
     ) where
 
-import Data.Composition                     ( (.:) )
-import Data.Time.Clock                      ( NominalDiffTime, secondsToNominalDiffTime )
+import Data.Composition                                ( (.:) )
+import Data.Time.Clock                                 ( NominalDiffTime, secondsToNominalDiffTime )
 
-import Ledger                               ( POSIXTime(..), Slot (..) )
+import Ledger                                          ( POSIXTime(..), Slot(..) )
 
-import Cardano.Api                          ( SlotNo(..) )
-import Cardano.Slotting.Time                ( SystemStart )
+import Cardano.Api                                     ( SlotNo(..) )
+import Cardano.Slotting.Time                           ( SystemStart )
 
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types
-    ( RelativeTime(..) )
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( RelativeTime(..) )
 
-import Tokenomia.CardanoApi.Time            ( relativeTimeToNominalDiffTime, nominalDiffTimeToRelativeTime )
+import Tokenomia.CardanoApi.Time                       ( nominalDiffTimeToRelativeTime, relativeTimeToNominalDiffTime )
 
 
 -- | Convert from Plutus to Cardano slot representation

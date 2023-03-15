@@ -1,19 +1,19 @@
-{-# LANGUAGE ScopedTypeVariables            #-}
-{-# LANGUAGE TypeApplications               #-}
-{-# LANGUAGE ViewPatterns                   #-}
+{-# LANGUAGE ScopedTypeVariables                       #-}
+{-# LANGUAGE TypeApplications                          #-}
+{-# LANGUAGE ViewPatterns                              #-}
 
 module Spec.Tokenomia.Common.Data.List.Extra
     ( tests
     ) where
 
-import Data.Function                        ( (&) )
+import Data.Function                                   ( (&) )
 
-import Test.QuickCheck.Function             ( apply )
-import Test.QuickCheck.Modifiers            ( NonEmptyList(..) )
-import Test.Tasty.QuickCheck                ( testProperty )
-import Test.Tasty                           ( TestTree, testGroup )
+import Test.QuickCheck.Function                        ( apply )
+import Test.QuickCheck.Modifiers                       ( NonEmptyList(..) )
+import Test.Tasty                                      ( TestTree, testGroup )
+import Test.Tasty.QuickCheck                           ( testProperty )
 
-import Tokenomia.Common.Data.List.Extra     ( mapLastWith, transpose )
+import Tokenomia.Common.Data.List.Extra                ( mapLastWith, transpose )
 
 
 tests :: TestTree

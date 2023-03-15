@@ -1,34 +1,46 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE NamedFieldPuns                            #-}
+{-# LANGUAGE RecordWildCards                           #-}
+{-# LANGUAGE TypeApplications                          #-}
 
 module Tokenomia.Ada.Transfer
     ( transfer
-    , transfer' ) where
+    , transfer'
+    ) where
 
-import           Prelude
-import           Control.Monad.Reader hiding (ask)
-import           Control.Monad.Except
+import Control.Monad.Except                            ( MonadError )
+import Control.Monad.Reader                            ( MonadIO, MonadReader )
+import Data.List.NonEmpty                              ( NonEmpty((:|)) )
+import Ledger.Ada                                      ( lovelaceValueOf )
+import Tokenomia.Common.Address                        ( Address(..) )
+import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Error                          ( TokenomiaError(..), whenNothingThrow, whenNullThrow )
+import Tokenomia.Common.Shell.Console                  ( printLn )
+import Tokenomia.Common.Shell.InteractiveMenu          ( ask, askString, askStringLeaveBlankOption )
+import Tokenomia.Common.Transacting
+    ( Metadata(..)
+    , TxBalance(..)
+    , TxBuild(..)
+    , TxInFromWallet(..)
+    , TxOut(..)
+    , buildAndSubmit
+    , createMetadataFile
+    )
+import Tokenomia.Common.Value                          ( showValueUtf8 )
+import Tokenomia.Wallet.ChildAddress.ChildAddressRef
+    ( ChildAddressRef(..)
+    , CollateralAddressRef(..)
+    , FeeAddressRef(..)
+    )
+import Tokenomia.Wallet.CLI
+    ( askToChooseAmongGivenWallets
+    , selectBiggestStrictlyADAsNotCollateral
+    )
+import Tokenomia.Wallet.Collateral.Read                ( fetchWalletsWithCollateral )
+import Tokenomia.Wallet.Type                           ( Wallet(..), WalletName )
+import Tokenomia.Wallet.UTxO                           ( UTxO(..) )
+import Tokenomia.Wallet.WalletUTxO                     ( WalletUTxO(..) )
 
-import           Tokenomia.Common.Environment
-import           Tokenomia.Common.Transacting
-
-import Data.List.NonEmpty as NEL
-import           Ledger.Ada as Ada
-import           Tokenomia.Wallet.UTxO
-import           Tokenomia.Wallet.WalletUTxO
-import           Tokenomia.Wallet.LocalRepository
-import           Tokenomia.Common.Error
-import           Tokenomia.Wallet.Collateral.Read
-import           Tokenomia.Wallet.CLI
-import           Tokenomia.Common.Shell.Console (printLn)
-import           Tokenomia.Common.Shell.InteractiveMenu (askString, ask, askStringLeaveBlankOption)
-import           Tokenomia.Common.Value
-import           Tokenomia.Wallet.Type
-import           Tokenomia.Wallet.ChildAddress.ChildAddressRef
-import           Tokenomia.Common.Address
 
 transfer ::
     ( MonadIO m
@@ -75,4 +87,3 @@ transfer' senderWallet receiverAddr amount labelMaybe = do
         , validitySlotRangeMaybe = Nothing
         , tokenSupplyChangesMaybe = Nothing
         , ..}
-

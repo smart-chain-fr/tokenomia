@@ -102,3 +102,7 @@ nhenin@ubuntu ~/d/tokenomia (main)> nix develop
 ...
 [nix-shell:~/dev/tokenomia]$ cabal run tokenomia-cli
 ```
+
+### Dev tips
+
+See [haskdogs.md](doc/dev/haskdogs.md) to setup `jump to definition` feature in Cardano dependencies (Cardano.API, Cardano.Ledger,...).

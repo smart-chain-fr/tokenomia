@@ -1,9 +1,8 @@
 module Tokenomia.CardanoApi.Arbitrary.Slot
-    () where
+    (
+    ) where
 
-import Cardano.Api
-    ( SlotNo(..) )
-
+import Cardano.Api                                     ( SlotNo(..) )
 import Test.Tasty.QuickCheck
     ( Arbitrary
     , Small(..)
