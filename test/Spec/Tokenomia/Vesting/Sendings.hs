@@ -144,6 +144,9 @@ invalidInputTests =
           [AdaAmount 10000000]
           Nothing
           0
+          False
+          Nothing
+          Nothing
       ]
 
 -- Missing Tx hash tests
@@ -183,6 +186,9 @@ validTxHashTests =
           [AdaAmount 10000000]
           Nothing
           0
+          False
+          Nothing
+          Nothing
       ]
 
 -- Malformed address
@@ -244,6 +250,9 @@ valueCheckTests =
           ]
           Nothing
           0
+          False
+          Nothing
+          Nothing
       ]
     wxyzOutUtxos =
       [ UtxoOutput
@@ -251,6 +260,9 @@ valueCheckTests =
           [AdaAmount 10000000]
           Nothing
           0
+          False
+          Nothing
+          Nothing
       ]
 
 testAddress :: Text
