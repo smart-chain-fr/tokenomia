@@ -23,7 +23,7 @@ runCommand = execParser $
     parser :: Parser Parameters
     parser =
             Parameters
-        <$> Parser.networkId
+        <$> Parser.network
         <*> Parser.distributionFilePath
         <*> Parser.recipientPerTx
         <*> Parser.tokenWallet
