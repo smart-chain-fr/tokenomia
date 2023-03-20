@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies                        #-}
 {-# LANGUAGE FlexibleContexts                          #-}
 {-# LANGUAGE ImportQualifiedPost                       #-}
 {-# LANGUAGE LambdaCase                                #-}
@@ -6,23 +7,20 @@
 
 module Tokenomia.Common.Environment
     ( Environment(..)
+    , TokenomiaNetwork(..)
     , convertToExternalPosix
     , convertToInternalPosix
     , formatISO8601
     , getFirstShelleySlot
     , getFirstShelleySlotTime
-    , getMainnetEnvironmment
-    , getNetworkEnvironmment
-    , getPreprodEnvironmment
-    , getTestnetEnvironmment
+    , getNetworkEnvironment
+    , networkMagicNumber
     , readNetworkMagic
     , toPosixTime
     , toSlot
     ) where
 
 import Control.Monad.Reader                            ( MonadIO(..), MonadReader(ask) )
-
-
 import System.Environment                              ( getEnv )
 
 
@@ -40,8 +38,6 @@ import Cardano.Api
     )
 
 import Cardano.Api qualified                           ( NetworkId(Mainnet, Testnet) )
-
-import Cardano.Api.Shelley qualified as Shelley
 import Ledger                                          ( POSIXTime(POSIXTime), Slot(Slot) )
 import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( SystemStart(..) )
 
@@ -50,31 +46,55 @@ import Data.Time.Clock qualified as ExternalPosix
 import Data.Time.Clock.POSIX qualified as ExternalPosix
 import Data.Time.ISO8601 qualified as ExternalPosix
 
-data Environment = Testnet
-                    { magicNumber :: Integer
-                    , localNodeConnectInfo :: LocalNodeConnectInfo CardanoMode
-                    , preShelleyEpochs :: Integer
-                    , byronSlotsPerEpoch :: Integer
-                    , byronSecondsPerSlot :: Integer
-                    , systemStart' :: SystemStart
-                    , systemStart :: ExternalPosix.POSIXTime }
-                |  Mainnet
-                    { magicNumber :: Integer
-                    , localNodeConnectInfo :: LocalNodeConnectInfo CardanoMode
-                    , preShelleyEpochs :: Integer
-                    , byronSlotsPerEpoch :: Integer
-                    , byronSecondsPerSlot :: Integer
-                    , systemStart' :: SystemStart
-                    , systemStart :: ExternalPosix.POSIXTime }
+
+data TokenomiaNetwork =
+        MainnetNetwork
+    |   TestnetNetwork
+    |   PreprodNetwork
+    deriving stock (Show)
+
+data Environment =
+    Testnet
+        { magicNumber :: Integer
+        , localNodeConnectInfo :: LocalNodeConnectInfo CardanoMode
+        , preShelleyEpochs :: Integer
+        , byronSlotsPerEpoch :: Integer
+        , byronSecondsPerSlot :: Integer
+        , systemStart' :: SystemStart
+        , systemStart :: ExternalPosix.POSIXTime }
+    |  Mainnet
+        { magicNumber :: Integer
+        , localNodeConnectInfo :: LocalNodeConnectInfo CardanoMode
+        , preShelleyEpochs :: Integer
+        , byronSlotsPerEpoch :: Integer
+        , byronSecondsPerSlot :: Integer
+        , systemStart' :: SystemStart
+        , systemStart :: ExternalPosix.POSIXTime }
 
 
-getMainnetEnvironmment :: MonadIO m => Integer -> m Environment
-getMainnetEnvironmment magicNumber = do
+networkMagicNumber :: TokenomiaNetwork -> Integer
+networkMagicNumber = \case
+    MainnetNetwork -> readNetworkMagic Cardano.Api.Mainnet
+    TestnetNetwork -> 1097911063
+    PreprodNetwork -> 1
+
+
+getNetworkEnvironment :: MonadIO m => TokenomiaNetwork -> m Environment
+getNetworkEnvironment = \case
+    MainnetNetwork     -> getMainnetEnvironment
+    TestnetNetwork     -> getTestnetEnvironment
+    PreprodNetwork     -> getPreprodEnvironment
+
+
+getMainnetEnvironment :: MonadIO m => m Environment
+getMainnetEnvironment = do
     socketPath <- liftIO $ getEnv "CARDANO_NODE_SOCKET_PATH"
-    let localNodeConnectInfo = LocalNodeConnectInfo {
-                                        localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
-                                        localNodeNetworkId       = Shelley.Mainnet,
-                                        localNodeSocketPath      = socketPath}
+    let magicNumber = readNetworkMagic Cardano.Api.Mainnet
+        localNodeConnectInfo = LocalNodeConnectInfo
+            { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
+            , localNodeNetworkId       = Cardano.Api.Mainnet
+            , localNodeSocketPath      = socketPath
+            }
         preShelleyEpochs = 208
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
@@ -83,13 +103,16 @@ getMainnetEnvironmment magicNumber = do
 
     return $ Mainnet {..}
 
-getPreprodEnvironmment :: MonadIO m => Integer -> m Environment
-getPreprodEnvironmment magicNumber = do
+
+getPreprodEnvironment :: MonadIO m => m Environment
+getPreprodEnvironment = do
     socketPath <- liftIO $ getEnv "CARDANO_NODE_SOCKET_PATH"
-    let localNodeConnectInfo = LocalNodeConnectInfo {
-                                        localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
-                                        localNodeNetworkId       = Shelley.Testnet  (NetworkMagic (fromIntegral magicNumber)),
-                                        localNodeSocketPath      = socketPath}
+    let magicNumber = networkMagicNumber PreprodNetwork
+        localNodeConnectInfo = LocalNodeConnectInfo
+            { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
+            , localNodeNetworkId       = Cardano.Api.Testnet  (NetworkMagic (fromIntegral magicNumber))
+            , localNodeSocketPath      = socketPath
+            }
         preShelleyEpochs = 4
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
@@ -98,13 +121,16 @@ getPreprodEnvironmment magicNumber = do
 
     return $ Testnet {..}
 
-getTestnetEnvironmment :: MonadIO m => Integer -> m Environment
-getTestnetEnvironmment magicNumber = do
+
+getTestnetEnvironment :: MonadIO m => m Environment
+getTestnetEnvironment = do
     socketPath <- liftIO $ getEnv "CARDANO_NODE_SOCKET_PATH"
-    let localNodeConnectInfo = LocalNodeConnectInfo {
-                                        localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
-                                        localNodeNetworkId       = Shelley.Testnet  (NetworkMagic (fromIntegral magicNumber)),
-                                        localNodeSocketPath      = socketPath}
+    let magicNumber = networkMagicNumber TestnetNetwork
+        localNodeConnectInfo = LocalNodeConnectInfo
+            { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
+            , localNodeNetworkId       = Cardano.Api.Testnet  (NetworkMagic (fromIntegral magicNumber))
+            , localNodeSocketPath      = socketPath
+            }
         preShelleyEpochs = 74
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
@@ -113,17 +139,10 @@ getTestnetEnvironmment magicNumber = do
 
     return $ Testnet {..}
 
+
 readNetworkMagic :: NetworkId -> Integer
 readNetworkMagic = read . show . unNetworkMagic . toNetworkMagic
 
-getNetworkEnvironmment :: MonadIO m => NetworkId -> m Environment
-getNetworkEnvironmment networkId =
-    (getMainnetOrTestnetEnvironmment networkId . readNetworkMagic) networkId
-  where
-    getMainnetOrTestnetEnvironmment :: MonadIO m => NetworkId -> (Integer -> m Environment)
-    getMainnetOrTestnetEnvironmment = \case
-        Cardano.Api.Mainnet   -> getMainnetEnvironmment
-        Cardano.Api.Testnet _ -> getTestnetEnvironmment
 
 -- N.H : This is not neccessary because the transactions are handling PosixTime directly and not Slot
 -- as I was thinking initially... I won't delete the code from now, but it will be eventually...

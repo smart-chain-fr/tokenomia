@@ -3,12 +3,12 @@ module Tokenomia.TokenDistribution.CLI.Parameters
     ( Parameters(..)
     ) where
 
-import Cardano.Api                                     ( NetworkId )
+import Tokenomia.Common.Environment                    ( TokenomiaNetwork )
 import Tokenomia.Wallet.Type                           ( WalletName )
 
 data  Parameters
     = Parameters
-    { networkId :: NetworkId
+    { network :: TokenomiaNetwork
     , distributionFilePath :: FilePath
     , recipientPerTx :: Int
     , tokenWallet :: WalletName

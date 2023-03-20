@@ -60,7 +60,11 @@ import Tokenomia.Common.Arbitrary.Wallet               ( PaymentAddress(..), gen
 
 import Tokenomia.Common.Data.Convertible               ( convert )
 import Tokenomia.Common.Data.List.Extra                ( transpose )
-import Tokenomia.Common.Environment                    ( Environment(..), getPreprodEnvironmment )
+import Tokenomia.Common.Environment
+    ( Environment
+    , TokenomiaNetwork(PreprodNetwork)
+    , getNetworkEnvironment
+    )
 import Tokenomia.Common.Environment.Query              ( evalQueryWithSystemStart )
 import Tokenomia.Common.Error                          ( TokenomiaError )
 import Tokenomia.Common.Time                           ( toNextBeginNominalDiffTime )
@@ -395,7 +399,7 @@ propertiesTrancheNativeScriptInfos =
                 withMaxSuccess 1 $ mapSize (const 7)
                     ( \(Restricted ps :: Restricted PrivateSale) ->
                             monadicIO $ do
-                                env <- getPreprodEnvironmment 1
+                                env <- getNetworkEnvironment PreprodNetwork
                                 validPrivateSale <- useValidAddresses ps
                                 and <$>
                                     traverse
@@ -495,7 +499,7 @@ propertiesToDatabaseOutput =
                 withMaxSuccess 1 $ mapSize (const 7)
                     ( \(Restricted ps :: Restricted PrivateSale) ->
                             monadicIO $ do
-                                env <- getPreprodEnvironmment 1
+                                env <- getNetworkEnvironment PreprodNetwork
                                 validPrivateSale <- useValidAddresses ps
                                 let tranches = splitInTranches validPrivateSale
                                 runToDatabaseOutput env tranches
@@ -524,7 +528,7 @@ propertiesToDistribution =
                 withMaxSuccess 1 $ mapSize (const 7)
                     ( \(Restricted ps :: Restricted PrivateSale) ->
                             monadicIO $ do
-                                env <- getPreprodEnvironmment 1
+                                env <- getNetworkEnvironment PreprodNetwork
                                 validPrivateSale <- useValidAddresses ps
                                 let tranches = splitInTranches validPrivateSale
                                 runToDistribution env tranches

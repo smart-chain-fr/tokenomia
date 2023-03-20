@@ -17,7 +17,7 @@ import Tokenomia.Common.Error
     , whenNothingThrow
     )
 
-import Tokenomia.Common.Environment                    ( Environment, getNetworkEnvironmment )
+import Tokenomia.Common.Environment                    ( Environment, getNetworkEnvironment )
 
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef(..) )
 import Tokenomia.Wallet.CLI                            ( selectBiggestStrictlyADAsNotCollateral )
@@ -42,7 +42,7 @@ import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef ( maxChil
 main :: IO ()
 main = do
     parameters  <- runCommand
-    environment <- getNetworkEnvironmment (networkId parameters)
+    environment <- getNetworkEnvironment (network parameters)
 
     result      <- runExceptT $ runReaderT
         (run parameters)

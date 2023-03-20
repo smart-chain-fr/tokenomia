@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables                       #-}
 {-# LANGUAGE TemplateHaskell                           #-}
 {-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns               #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults                #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
@@ -23,12 +24,7 @@ import Data.List.NonEmpty
 import Shh                                             ( ExecReference(SearchPath), load )
 import Streamly.Prelude qualified as S
 import Tokenomia.Ada.Transfer qualified as Ada
-import Tokenomia.Common.Environment
-    ( Environment
-    , getMainnetEnvironmment
-    , getPreprodEnvironmment
-    , getTestnetEnvironmment
-    )
+import Tokenomia.Common.Environment                    ( Environment, TokenomiaNetwork(..), getNetworkEnvironment )
 import Tokenomia.Common.Error                          ( TokenomiaError(..) )
 import Tokenomia.Common.Shell.Console                  ( clearConsole, printLn, printOpt )
 import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..), askMenu )
@@ -67,9 +63,9 @@ selectNetwork = do
   printLn "  Select a network"
   printLn "----------------------"
   environment <- liftIO $ askMenu networks >>= \case
-      SelectMainnet     -> getMainnetEnvironmment 764824073
-      SelectPreprod     -> getPreprodEnvironmment 1
-      SelectTestnet     -> getTestnetEnvironmment 1097911063
+      SelectMainnet     -> getNetworkEnvironment MainnetNetwork
+      SelectPreprod     -> getNetworkEnvironment PreprodNetwork
+      SelectTestnet     -> getNetworkEnvironment TestnetNetwork
   clearConsole
   result :: Either TokenomiaError () <- runExceptT $ runReaderT recursiveMenu environment
   case result of
