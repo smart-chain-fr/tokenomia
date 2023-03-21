@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds                                 #-}
 {-# LANGUAGE ExtendedDefaultRules                      #-}
 {-# LANGUAGE FlexibleContexts                          #-}
 {-# LANGUAGE ImportQualifiedPost                       #-}
@@ -8,7 +9,6 @@
 {-# LANGUAGE ScopedTypeVariables                       #-}
 {-# LANGUAGE TemplateHaskell                           #-}
 {-# LANGUAGE TypeApplications                          #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns               #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults                #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
@@ -23,11 +23,18 @@ import Data.List.NonEmpty
     as NonEmpty                                        ( NonEmpty, fromList )
 import Shh                                             ( ExecReference(SearchPath), load )
 import Streamly.Prelude qualified as S
+
 import Tokenomia.Ada.Transfer qualified as Ada
-import Tokenomia.Common.Environment                    ( Environment, TokenomiaNetwork(..), getNetworkEnvironment )
+import Tokenomia.Common.Environment
+    ( CustomNetworkArgs(..)
+    , Environment
+    , TokenomiaNetwork(..)
+    , getNetworkEnvironment
+    , readCustomNetworkArgsFile
+    )
 import Tokenomia.Common.Error                          ( TokenomiaError(..) )
 import Tokenomia.Common.Shell.Console                  ( clearConsole, printLn, printOpt )
-import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..), askMenu )
+import Tokenomia.Common.Shell.InteractiveMenu          ( DisplayMenuItem(..), askMenu, askString )
 import Tokenomia.Node.Status qualified as Node
 import Tokenomia.Token.CLAPStyle.Burn qualified as Token
 import Tokenomia.Token.CLAPStyle.Mint qualified as Token
@@ -39,64 +46,87 @@ import Tokenomia.Wallet.Collateral.Write qualified as Wallet
 
 load SearchPath ["cardano-cli"]
 
-main ::  IO ()
+main :: IO ()
 main = do
     clearConsole
     printLn "#############################"
     printLn "#   Welcome to Tokenomia    #"
     printLn "#############################"
     printLn ""
-    selectNetwork
+    network <- liftIO selectNetwork
+    environment <- getNetworkEnvironment network
+    clearConsole
+    runExceptT (runReaderT recursiveMenu environment) >>= \case
+        Left e -> printLn $ "An unexpected error occured :" <> show e
+        Right _ -> return ()
 
     printLn "#############################"
     printLn "#   End of Tokenomia        #"
     printLn "#############################"
 
-waitAndClear :: IO()
-waitAndClear = do
-   _ <- printOpt "-n" "> press enter to continue..."  >>  getLine
-   clearConsole
 
-selectNetwork :: IO()
+selectNetwork :: IO TokenomiaNetwork
 selectNetwork = do
-  printLn "----------------------"
-  printLn "  Select a network"
-  printLn "----------------------"
-  environment <- liftIO $ askMenu networks >>= \case
-      SelectMainnet     -> getNetworkEnvironment MainnetNetwork
-      SelectPreprod     -> getNetworkEnvironment PreprodNetwork
-      SelectTestnet     -> getNetworkEnvironment TestnetNetwork
-  clearConsole
-  result :: Either TokenomiaError () <- runExceptT $ runReaderT recursiveMenu environment
-  case result of
-          Left e -> printLn $ "An unexpected error occured :" <> show e
-          Right _ -> return ()
+    printLn "----------------------"
+    printLn "  Select a network"
+    printLn "----------------------"
+    askMenu networks >>= \case
+        SelectMainnet -> pure MainnetNetwork
+        SelectPreprod -> pure PreprodNetwork
+        SelectTestnet -> pure TestnetNetwork
+        SelectCustom  -> CustomNetwork <$> inputCustomNetworkArgs
 
+
+inputCustomNetworkArgs :: IO CustomNetworkArgs
+inputCustomNetworkArgs = do
+    clearConsole
+    printLn "--------------------------------------------"
+    printLn "  Enter custom network arguments file path"
+    printLn "--------------------------------------------"
+    path <- askString "- File path : "
+    readCustomNetworkArgsFile path >>= \case
+        Right args -> pure args
+        Left e -> do
+            printLn ""
+            printLn $ "Invalid custom network arguments :" <> e
+            printLn ""
+            waitAndClear
+            inputCustomNetworkArgs
 
 
 networks :: NonEmpty SelectEnvironment
-networks = NonEmpty.fromList [
-  SelectMainnet,
-  SelectPreprod,
-  SelectTestnet
+networks = NonEmpty.fromList
+  [ SelectMainnet
+  , SelectPreprod
+  , SelectTestnet
+  , SelectCustom
   ]
 
 data SelectEnvironment
   = SelectMainnet
   | SelectPreprod
   | SelectTestnet
+  | SelectCustom
 
 instance DisplayMenuItem SelectEnvironment where
   displayMenuItem item = case item of
     SelectMainnet   -> "Mainnet (magicNumber 764824073)"
     SelectPreprod   -> "Preprod (magicNumber 1)"
     SelectTestnet   -> "`Old` Testnet (magicNumber 1097911063)"
+    SelectCustom    -> "Use a custom network"
 
 
-recursiveMenu
-  :: ( S.MonadAsync m
-     , MonadReader Environment m
-     , MonadError TokenomiaError m) =>  m ()
+waitAndClear :: IO ()
+waitAndClear = do
+    _ <- printOpt "-n" "> press enter to continue..."  >>  getLine
+    clearConsole
+
+
+recursiveMenu ::
+  ( S.MonadAsync m
+  , MonadReader Environment m
+  , MonadError TokenomiaError m
+  ) =>  m ()
 recursiveMenu = do
   printLn "----------------------"
   printLn "  Select an action"
@@ -105,6 +135,7 @@ recursiveMenu = do
   runAction action
     `catchError`
       (\case
+        NetworkNotSupported errorMsg ->     printLn $ "Network not supported : " <> errorMsg
         NoWalletRegistered ->        printLn "Register a Wallet First..."
         NoWalletWithoutCollateral -> printLn "All Wallets contain collateral..."
         NoWalletWithCollateral    -> printLn "No Wallets with collateral..."

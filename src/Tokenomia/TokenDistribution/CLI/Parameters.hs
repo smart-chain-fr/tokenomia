@@ -8,7 +8,7 @@ import Tokenomia.Wallet.Type                           ( WalletName )
 
 data  Parameters
     = Parameters
-    { network :: TokenomiaNetwork
+    { network :: Either TokenomiaNetwork FilePath
     , distributionFilePath :: FilePath
     , recipientPerTx :: Int
     , tokenWallet :: WalletName

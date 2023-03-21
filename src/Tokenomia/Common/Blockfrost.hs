@@ -1,15 +1,7 @@
-{-# LANGUAGE DuplicateRecordFields                     #-}
-{-# LANGUAGE ExtendedDefaultRules                      #-}
 {-# LANGUAGE FlexibleContexts                          #-}
-{-# LANGUAGE FlexibleInstances                         #-}
 {-# LANGUAGE ImportQualifiedPost                       #-}
 {-# LANGUAGE LambdaCase                                #-}
-{-# LANGUAGE RankNTypes                                #-}
 {-# LANGUAGE RecordWildCards                           #-}
-{-# LANGUAGE ScopedTypeVariables                       #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns               #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
-{-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
 module Tokenomia.Common.Blockfrost
     ( projectFromEnv''
@@ -37,6 +29,7 @@ projectFromEnv'' = do
                 -> Right "BLOCKFROST_TOKEN_PREPROD_PATH"
             Testnet {..} | magicNumber == networkMagicNumber TestnetNetwork
                 -> Left "Blockfrost does not support the legacy Testnet anymore"
+            _   -> Left "Blockfrost only supports Mainnet, Preprod and Preview networks"
         )
     case environmentPath of
         Left err -> throwError (NetworkNotSupported err)

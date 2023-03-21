@@ -32,26 +32,32 @@ import Options.Applicative
     )
 import Tokenomia.Common.Environment                    ( TokenomiaNetwork(..) )
 
-network :: Parser TokenomiaNetwork
-network = mainnet <|> testnet <|> preprod
+network :: Parser (Either TokenomiaNetwork FilePath)
+network = mainnet <|> testnet <|> preprod <|> custom
   where
-    mainnet :: Parser TokenomiaNetwork
-    mainnet = flag' MainnetNetwork $
+    mainnet :: Parser (Either TokenomiaNetwork FilePath)
+    mainnet = flag' (Left MainnetNetwork) $
            short 'm'
         <> long "mainnet"
         <> help "Use the mainnet network"
 
-    testnet :: Parser TokenomiaNetwork
-    testnet = flag' TestnetNetwork $
+    testnet :: Parser (Either TokenomiaNetwork FilePath)
+    testnet = flag' (Left TestnetNetwork) $
            short 't'
         <> long "testnet"
         <> help "Use the legacy testnet network"
 
-    preprod :: Parser TokenomiaNetwork
-    preprod = flag' PreprodNetwork $
+    preprod :: Parser (Either TokenomiaNetwork FilePath)
+    preprod = flag' (Left PreprodNetwork) $
            short 'p'
         <> long "preprod"
         <> help "Use the test preprod network"
+
+    custom :: Parser (Either TokenomiaNetwork FilePath)
+    custom = fmap Right $ strOption $
+           long "custom-network-parameters-file"
+        <> help "Use a custom network"
+        <> metavar "FILENAME"
 
 distributionFilePath :: Parser FilePath
 distributionFilePath = strOption $

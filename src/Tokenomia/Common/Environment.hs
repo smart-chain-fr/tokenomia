@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass                            #-}
+{-# LANGUAGE DeriveGeneric                             #-}
 {-# LANGUAGE DerivingStrategies                        #-}
 {-# LANGUAGE FlexibleContexts                          #-}
 {-# LANGUAGE ImportQualifiedPost                       #-}
@@ -6,7 +8,8 @@
 {-# LANGUAGE ScopedTypeVariables                       #-}
 
 module Tokenomia.Common.Environment
-    ( Environment(..)
+    ( CustomNetworkArgs(..)
+    , Environment(..)
     , TokenomiaNetwork(..)
     , convertToExternalPosix
     , convertToInternalPosix
@@ -15,12 +18,14 @@ module Tokenomia.Common.Environment
     , getFirstShelleySlotTime
     , getNetworkEnvironment
     , networkMagicNumber
+    , readCustomNetworkArgsFile
     , readNetworkMagic
     , toPosixTime
     , toSlot
     ) where
 
 import Control.Monad.Reader                            ( MonadIO(..), MonadReader(ask) )
+import Prelude hiding                                  ( readFile )
 import System.Environment                              ( getEnv )
 
 
@@ -41,17 +46,20 @@ import Cardano.Api qualified                           ( NetworkId(Mainnet, Test
 import Ledger                                          ( POSIXTime(POSIXTime), Slot(Slot) )
 import Ouroboros.Consensus.BlockchainTime.WallClock.Types ( SystemStart(..) )
 
+import Data.Aeson                                      ( FromJSON, eitherDecode )
+import Data.ByteString.Lazy                            ( readFile )
 import Data.Coerce                                     ( coerce )
 import Data.Time.Clock qualified as ExternalPosix
 import Data.Time.Clock.POSIX qualified as ExternalPosix
 import Data.Time.ISO8601 qualified as ExternalPosix
-
+import GHC.Generics                                    ( Generic )
 
 data TokenomiaNetwork =
         MainnetNetwork
     |   TestnetNetwork
     |   PreprodNetwork
-    deriving stock (Show)
+    |   CustomNetwork CustomNetworkArgs
+    deriving stock (Show, Eq)
 
 data Environment =
     Testnet
@@ -74,9 +82,23 @@ data Environment =
 
 networkMagicNumber :: TokenomiaNetwork -> Integer
 networkMagicNumber = \case
-    MainnetNetwork -> readNetworkMagic Cardano.Api.Mainnet
-    TestnetNetwork -> 1097911063
-    PreprodNetwork -> 1
+    MainnetNetwork      -> readNetworkMagic Cardano.Api.Mainnet
+    TestnetNetwork      -> 1097911063
+    PreprodNetwork      -> 1
+    CustomNetwork args  -> _magicNumber args
+
+data CustomNetworkArgs = CustomNetworkArgs
+    { _magicNumber :: Integer
+    , _epochSlots  :: Integer
+    , _preShelleyEpochs :: Integer
+    , _byronSlotsPerEpoch :: Integer
+    , _byronSecondsPerSlot :: Integer
+    }
+    deriving stock (Generic, Show, Eq)
+    deriving anyclass (FromJSON)
+
+readCustomNetworkArgsFile :: FilePath -> IO (Either String CustomNetworkArgs)
+readCustomNetworkArgsFile path = eitherDecode <$> readFile path
 
 
 getNetworkEnvironment :: MonadIO m => TokenomiaNetwork -> m Environment
@@ -84,6 +106,7 @@ getNetworkEnvironment = \case
     MainnetNetwork     -> getMainnetEnvironment
     TestnetNetwork     -> getTestnetEnvironment
     PreprodNetwork     -> getPreprodEnvironment
+    CustomNetwork args -> getCustomEnvironment args
 
 
 getMainnetEnvironment :: MonadIO m => m Environment
@@ -134,6 +157,23 @@ getTestnetEnvironment = do
         preShelleyEpochs = 74
         byronSlotsPerEpoch = 21600
         byronSecondsPerSlot = 20
+    systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
+    systemStart' <- getSystemStart' localNodeConnectInfo
+
+    return $ Testnet {..}
+
+
+getCustomEnvironment :: MonadIO m => CustomNetworkArgs -> m Environment
+getCustomEnvironment customNetworkArgs = do
+    socketPath <- liftIO $ getEnv "CARDANO_NODE_SOCKET_PATH"
+    let magicNumber = _magicNumber customNetworkArgs
+        localNodeConnectInfo = LocalNodeConnectInfo {
+                                        localConsensusModeParams = CardanoModeParams (EpochSlots (fromIntegral $ _epochSlots customNetworkArgs)),
+                                        localNodeNetworkId       = Cardano.Api.Testnet  (NetworkMagic (fromIntegral $ _magicNumber customNetworkArgs)),
+                                        localNodeSocketPath      = socketPath}
+        preShelleyEpochs = _preShelleyEpochs customNetworkArgs
+        byronSlotsPerEpoch = _byronSlotsPerEpoch customNetworkArgs
+        byronSecondsPerSlot = _byronSecondsPerSlot customNetworkArgs
     systemStart <- ExternalPosix.utcTimeToPOSIXSeconds . coerce <$> getSystemStart' localNodeConnectInfo
     systemStart' <- getSystemStart' localNodeConnectInfo
 
