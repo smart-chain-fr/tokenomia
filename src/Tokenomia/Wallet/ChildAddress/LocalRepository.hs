@@ -12,6 +12,7 @@
 {-# LANGUAGE TemplateHaskell                           #-}
 {-# LANGUAGE TupleSections                             #-}
 {-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns               #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
@@ -57,7 +58,7 @@ import Shh.Internal
 
 import Ledger.Crypto                                   ( PubKeyHash )
 
-import Tokenomia.Common.Environment                    ( Environment(Mainnet, Testnet) )
+import Tokenomia.Common.Environment                    ( Environment(..), TokenomiaNetwork(..), networkMagicNumber )
 
 import Tokenomia.Common.Address                        ( Address(..) )
 
@@ -305,48 +306,53 @@ generateChildAddressFile
        , MonadReader Environment m )
     => ChildAddressRef ->  ChildAddressFile -> m ()
 generateChildAddressFile childAddressRef@ChildAddressRef{name,index = (ChildAddressIndex indexInteger)} fileType = do
-  let getFilePath = getChildAddressFilePath childAddressRef
-  netWorkTag <- asks (\case
-                    Testnet {} -> "testnet"
-                    Mainnet {} -> "mainnet")
-
-  case fileType of
-    AddressTxt -> getFilePath AddressTxt >>= \path -> do
-        extendedPublicKeyTxtPath <- getFilePath ExtendedPublicKeyTxt
-        stakePublicKey <- getWalletFilePath name StakePublicKeyTxt >>= \stakeKeyPath -> C.unpack <$> liftIO (cat stakeKeyPath |> capture)
-        liftIO $ (cat extendedPublicKeyTxtPath
-                    |> cardano_address "address" "payment" "--network-tag" netWorkTag
-                    |> cardano_address "address" "delegation" stakePublicKey)
-                &> (Truncate . fromString) path
-    ExtendedPublicKeyJSON -> getFilePath ExtendedPublicKeyJSON >>= \path -> do
-        extendedPrivateKeyJSONPath <- getFilePath ExtendedPrivateKeyJSON
-        liftIO $ cardano_cli
-                    "key" "verification-key"
-                    "--signing-key-file" extendedPrivateKeyJSONPath
-                    "--verification-key-file" path
-    ExtendedPublicKeyTxt -> getFilePath ExtendedPublicKeyTxt >>= \path -> do
-        extendedPrivateKeyTxtPath <- getFilePath ExtendedPrivateKeyTxt
-        liftIO $ (cat extendedPrivateKeyTxtPath |> cardano_address "key" "public" "--with-chain-code")
-                &> (Truncate . fromString) path
-    ExtendedPrivateKeyJSON -> getFilePath ExtendedPrivateKeyJSON >>= \path -> do
-        extendedPrivateKeyTxtPath <- getFilePath ExtendedPrivateKeyTxt
-        liftIO $ cardano_cli
-                    "key"
-                    "convert-cardano-address-key"
-                    "--shelley-payment-key"
-                    "--signing-key-file" extendedPrivateKeyTxtPath
-                    "--out-file" path
-    ExtendedPrivateKeyTxt -> getFilePath ExtendedPrivateKeyTxt >>= \path -> do
-        let derivationPath = "1852H/1815H/0H/0/" <> show indexInteger
-        rootPrivateKeyTxtPath <- getWalletFilePath name RootPrivateKeyTxt
-        liftIO $ (cat rootPrivateKeyTxtPath
-                    |> cardano_address "key" "child" derivationPath)
-                &> (Truncate . fromString) path
-    PubKeyHashTxt -> getFilePath PubKeyHashTxt >>= \path -> do
-        extendedPublicKeyJSONpATH <- getFilePath ExtendedPublicKeyJSON
-        liftIO $ cardano_cli
-                    "address"
-                    "key-hash"
-                    "--payment-verification-key-file" extendedPublicKeyJSONpATH
+    let getFilePath = getChildAddressFilePath childAddressRef
+    netWorkTag <- asks
+        (\case
+            Mainnet {}
+                -> "mainnet"
+            Testnet {..} | magicNumber == networkMagicNumber TestnetNetwork
+                -> "testnet"
+            Testnet {..} | magicNumber == networkMagicNumber PreprodNetwork
+                -> "preprod"
+        )
+    case fileType of
+        AddressTxt -> getFilePath AddressTxt >>= \path -> do
+            extendedPublicKeyTxtPath <- getFilePath ExtendedPublicKeyTxt
+            stakePublicKey <- getWalletFilePath name StakePublicKeyTxt >>= \stakeKeyPath -> C.unpack <$> liftIO (cat stakeKeyPath |> capture)
+            liftIO $ (cat extendedPublicKeyTxtPath
+                        |> cardano_address "address" "payment" "--network-tag" netWorkTag
+                        |> cardano_address "address" "delegation" stakePublicKey)
                     &> (Truncate . fromString) path
+        ExtendedPublicKeyJSON -> getFilePath ExtendedPublicKeyJSON >>= \path -> do
+            extendedPrivateKeyJSONPath <- getFilePath ExtendedPrivateKeyJSON
+            liftIO $ cardano_cli
+                        "key" "verification-key"
+                        "--signing-key-file" extendedPrivateKeyJSONPath
+                        "--verification-key-file" path
+        ExtendedPublicKeyTxt -> getFilePath ExtendedPublicKeyTxt >>= \path -> do
+            extendedPrivateKeyTxtPath <- getFilePath ExtendedPrivateKeyTxt
+            liftIO $ (cat extendedPrivateKeyTxtPath |> cardano_address "key" "public" "--with-chain-code")
+                    &> (Truncate . fromString) path
+        ExtendedPrivateKeyJSON -> getFilePath ExtendedPrivateKeyJSON >>= \path -> do
+            extendedPrivateKeyTxtPath <- getFilePath ExtendedPrivateKeyTxt
+            liftIO $ cardano_cli
+                        "key"
+                        "convert-cardano-address-key"
+                        "--shelley-payment-key"
+                        "--signing-key-file" extendedPrivateKeyTxtPath
+                        "--out-file" path
+        ExtendedPrivateKeyTxt -> getFilePath ExtendedPrivateKeyTxt >>= \path -> do
+            let derivationPath = "1852H/1815H/0H/0/" <> show indexInteger
+            rootPrivateKeyTxtPath <- getWalletFilePath name RootPrivateKeyTxt
+            liftIO $ (cat rootPrivateKeyTxtPath
+                        |> cardano_address "key" "child" derivationPath)
+                    &> (Truncate . fromString) path
+        PubKeyHashTxt -> getFilePath PubKeyHashTxt >>= \path -> do
+            extendedPublicKeyJSONpATH <- getFilePath ExtendedPublicKeyJSON
+            liftIO $ cardano_cli
+                        "address"
+                        "key-hash"
+                        "--payment-verification-key-file" extendedPublicKeyJSONpATH
+                        &> (Truncate . fromString) path
 

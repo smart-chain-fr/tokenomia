@@ -11,6 +11,7 @@
 {-# LANGUAGE TemplateHaskell                           #-}
 {-# LANGUAGE TupleSections                             #-}
 {-# LANGUAGE TypeApplications                          #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns               #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures           #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds             #-}
 
@@ -39,7 +40,7 @@ import Shh.Internal
 import System.Directory                                ( doesDirectoryExist )
 
 
-import Tokenomia.Common.Environment                    ( Environment(Mainnet, Testnet) )
+import Tokenomia.Common.Environment                    ( Environment(..), TokenomiaNetwork(..), networkMagicNumber )
 
 import Tokenomia.Common.Address                        ( Address(Address) )
 import Tokenomia.Common.Folder                         ( Folder(..), getFolderPath )
@@ -120,30 +121,36 @@ generateWalletFile
        , MonadReader Environment m )
     => WalletName -> WalletFile -> m ()
 generateWalletFile name fileType =  do
-  netWorkTag <- asks (\case
-                Testnet {} -> "testnet"
-                Mainnet {} -> "mainnet")
-  case fileType of
-    StakePublicKeyTxt -> do
-        rootPrivateKeyPath <- getWalletFilePath name RootPrivateKeyTxt
-        getWalletFilePath name StakePublicKeyTxt >>= \path ->
-            liftIO $ (cat rootPrivateKeyPath |> cardano_address "key" "child" "1852H/1815H/0H/2/0")
-                        |> cardano_address "key" "public" "--with-chain-code"
-                        &> (Truncate . fromString) path
-    StakeAddressTxt    -> do
-        stakePublicKeyTxtPath <- getWalletFilePath name StakePublicKeyTxt
-        getWalletFilePath name StakeAddressTxt >>= \path ->
-            liftIO $ (cat stakePublicKeyTxtPath |> cardano_address "address" "stake" "--network-tag" netWorkTag)
-                        &> (Truncate . fromString) path
-    RootPrivateKeyTxt  -> do
-        mnemonicsPath <- getWalletFilePath name MnemonicsTxt
-        getWalletFilePath name RootPrivateKeyTxt >>= \path ->
-                liftIO $ (cat mnemonicsPath |> cardano_address "key" "from-recovery-phrase" "Shelley")
-                        &> (Truncate . fromString) path
-    MnemonicsTxt ->
-        getWalletFilePath name MnemonicsTxt >>= \path ->
-            liftIO $ cardano_address "recovery-phrase" "generate" "--size" "24"
-                        &> (Truncate . fromString) path
+    netWorkTag <- asks
+        (\case
+            Mainnet {}
+                -> "mainnet"
+            Testnet {..} | magicNumber == networkMagicNumber TestnetNetwork
+                -> "testnet"
+            Testnet {..} | magicNumber == networkMagicNumber PreprodNetwork
+                -> "preprod"
+        )
+    case fileType of
+        StakePublicKeyTxt -> do
+            rootPrivateKeyPath <- getWalletFilePath name RootPrivateKeyTxt
+            getWalletFilePath name StakePublicKeyTxt >>= \path ->
+                liftIO $ (cat rootPrivateKeyPath |> cardano_address "key" "child" "1852H/1815H/0H/2/0")
+                            |> cardano_address "key" "public" "--with-chain-code"
+                            &> (Truncate . fromString) path
+        StakeAddressTxt    -> do
+            stakePublicKeyTxtPath <- getWalletFilePath name StakePublicKeyTxt
+            getWalletFilePath name StakeAddressTxt >>= \path ->
+                liftIO $ (cat stakePublicKeyTxtPath |> cardano_address "address" "stake" "--network-tag" netWorkTag)
+                            &> (Truncate . fromString) path
+        RootPrivateKeyTxt  -> do
+            mnemonicsPath <- getWalletFilePath name MnemonicsTxt
+            getWalletFilePath name RootPrivateKeyTxt >>= \path ->
+                    liftIO $ (cat mnemonicsPath |> cardano_address "key" "from-recovery-phrase" "Shelley")
+                            &> (Truncate . fromString) path
+        MnemonicsTxt ->
+            getWalletFilePath name MnemonicsTxt >>= \path ->
+                liftIO $ cardano_address "recovery-phrase" "generate" "--size" "24"
+                            &> (Truncate . fromString) path
 
 
 remove ::

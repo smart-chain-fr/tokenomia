@@ -5,13 +5,11 @@ module Tokenomia.TokenDistribution.CLI.Parser
     , dryRun
     , metadataFilePath
     , minLovelaces
-    , networkId
+    , network
     , recipientPerTx
     , tokenWallet
     , verbose
     ) where
-
-import Cardano.Api                                     ( NetworkId(Mainnet, Testnet), NetworkMagic(..) )
 
 import Control.Applicative                             ( (<|>) )
 
@@ -32,24 +30,34 @@ import Options.Applicative
     , switch
     , value
     )
+import Tokenomia.Common.Environment                    ( TokenomiaNetwork(..) )
 
-networkId :: Parser NetworkId
-networkId = mainnet <|> testnet
+network :: Parser (Either TokenomiaNetwork FilePath)
+network = mainnet <|> testnet <|> preprod <|> custom
   where
-    mainnet :: Parser NetworkId
-    mainnet = flag' Mainnet $
+    mainnet :: Parser (Either TokenomiaNetwork FilePath)
+    mainnet = flag' (Left MainnetNetwork) $
            short 'm'
         <> long "mainnet"
         <> help "Use the mainnet network"
 
-    testnet :: Parser NetworkId
-    testnet = fmap (Testnet . NetworkMagic) $ option auto $
+    testnet :: Parser (Either TokenomiaNetwork FilePath)
+    testnet = flag' (Left TestnetNetwork) $
            short 't'
         <> long "testnet"
-        <> help "Use this testnet magic id"
-        <> showDefault
-        <> value 1
-        <> metavar "MAGIC"
+        <> help "Use the legacy testnet network"
+
+    preprod :: Parser (Either TokenomiaNetwork FilePath)
+    preprod = flag' (Left PreprodNetwork) $
+           short 'p'
+        <> long "preprod"
+        <> help "Use the test preprod network"
+
+    custom :: Parser (Either TokenomiaNetwork FilePath)
+    custom = fmap Right $ strOption $
+           long "custom-network-parameters-file"
+        <> help "Use a custom network"
+        <> metavar "FILENAME"
 
 distributionFilePath :: Parser FilePath
 distributionFilePath = strOption $

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts                          #-}
+{-# LANGUAGE LambdaCase                                #-}
 
 module Tokenomia.TokenDistribution.Main
     ( main
@@ -17,7 +18,14 @@ import Tokenomia.Common.Error
     , whenNothingThrow
     )
 
-import Tokenomia.Common.Environment                    ( Environment, getNetworkEnvironmment )
+import Tokenomia.Common.Environment
+    ( CustomNetworkArgs
+    , Environment
+    , TokenomiaNetwork(..)
+    , getNetworkEnvironment
+    , readCustomNetworkArgsFile
+    )
+import Tokenomia.Common.Shell.Console                  ( printLn )
 
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressRef(..) )
 import Tokenomia.Wallet.CLI                            ( selectBiggestStrictlyADAsNotCollateral )
@@ -36,13 +44,15 @@ import Tokenomia.TokenDistribution.Transfer            ( transferTokenInParallel
 
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository ( deriveMissingChildAddresses )
 
+import System.Directory.Internal.Prelude               ( exitFailure )
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef ( maxChildAddressIndexRequired )
 
 
 main :: IO ()
 main = do
     parameters  <- runCommand
-    environment <- getNetworkEnvironmment (networkId parameters)
+    tokenomiaNetwork <- liftIO $ selectNetwork (network parameters)
+    environment <- getNetworkEnvironment tokenomiaNetwork
 
     result      <- runExceptT $ runReaderT
         (run parameters)
@@ -107,3 +117,21 @@ step title computation = do
     result <- computation
     liftIO . putStr $ "\r[*] " <> title <> " done\n"
     return result
+
+
+selectNetwork :: Either TokenomiaNetwork FilePath -> IO TokenomiaNetwork
+selectNetwork = \case
+        Left tn | tn == MainnetNetwork -> pure MainnetNetwork
+        Left tn | tn == PreprodNetwork -> pure PreprodNetwork
+        Left tn | tn == TestnetNetwork -> pure TestnetNetwork
+        Right path                     -> CustomNetwork <$> inputCustomNetworkArgs path
+        Left _                         -> printLn "An unexpected error occured : Unknown network" >> exitFailure
+
+
+inputCustomNetworkArgs :: FilePath -> IO CustomNetworkArgs
+inputCustomNetworkArgs path = do
+    readCustomNetworkArgsFile path >>= \case
+        Right args -> pure args
+        Left e -> do
+            printLn $ "Invalid custom network arguments :" <> e
+            exitFailure

@@ -42,6 +42,7 @@ data TokenomiaError
     | MalformedAddress
     | InvalidPrivateSale String
     | QueryFailure String
+    | NetworkNotSupported String
     deriving stock Show
 
 whenNullThrow :: MonadError e m => e -> [a]  -> m (NonEmpty a)

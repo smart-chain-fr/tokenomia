@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts                          #-}
 {-# LANGUAGE RecordWildCards                           #-}
-
 module Tokenomia.TokenDistribution.Transfer
     ( distributionOutputs
     , transferTokenInParallel
@@ -8,7 +7,7 @@ module Tokenomia.TokenDistribution.Transfer
 
 import Control.Monad                                   ( void )
 import Control.Monad.Except                            ( MonadError )
-import Control.Monad.Reader                            ( MonadIO, MonadReader, liftIO )
+import Control.Monad.Reader                            ( MonadIO, MonadReader, asks, liftIO )
 
 import Data.Functor.Syntax                             ( (<$$>) )
 import Data.List.NonEmpty                              ( NonEmpty((:|)), fromList, toList, (<|) )
@@ -23,7 +22,7 @@ import Streamly.Prelude                                ( MonadAsync, drain, from
 
 import Tokenomia.Common.Address                        ( Address(..) )
 import Tokenomia.Common.AssetClass                     ( adaAssetClass )
-import Tokenomia.Common.Environment                    ( Environment )
+import Tokenomia.Common.Environment                    ( Environment(magicNumber) )
 import Tokenomia.Common.Error                          ( TokenomiaError )
 
 import Tokenomia.Common.Data.Convertible               ( convert )
@@ -46,13 +45,11 @@ import Tokenomia.Common.Transacting
 import Tokenomia.Wallet.ChildAddress.ChildAddressRef   ( ChildAddressIndex(..), ChildAddressRef(..) )
 
 import Tokenomia.TokenDistribution.Parser.Address      ( unsafeSerialiseCardanoAddress )
-
-import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef ( defaultCollateralAddressRef )
-
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChainIndex ( fetchProvisionedUTxO )
-
+import Tokenomia.TokenDistribution.Wallet.ChildAddress.ChildAddressRef ( defaultCollateralAddressRef )
 import Tokenomia.TokenDistribution.Wallet.ChildAddress.LocalRepository ( fetchAddressByWalletAtIndex )
 
+import Cardano.Api                                     ( NetworkMagic(NetworkMagic), fromNetworkMagic )
 
 transferTokenInParallel ::
     ( MonadIO m
@@ -129,7 +126,9 @@ distributionOutputs ::
     , MonadReader Environment m
     )
     => Parameters -> Distribution -> m (NonEmpty TxOut)
-distributionOutputs Parameters{..} distribution@Distribution{..} =
+distributionOutputs Parameters{..} distribution@Distribution{..} = do
+    magicN <- asks magicNumber
+    let networkId = fromNetworkMagic $ NetworkMagic $ fromIntegral magicN
     withChangeTxOut . fromList $ zipWith3 ToWallet
         (Address . convert . unsafeSerialiseCardanoAddress networkId . address <$> recipients)
         (addε . assetClassValue assetClass . amount <$> recipients)

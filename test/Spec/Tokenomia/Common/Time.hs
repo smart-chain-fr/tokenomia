@@ -21,7 +21,11 @@ import Tokenomia.CardanoApi.Arbitrary.Slot             ()
 import Tokenomia.CardanoApi.Arbitrary.Time             ()
 import Tokenomia.CardanoApi.Query                      ( querySlotToWallclock', queryWallclockToSlot' )
 
-import Tokenomia.Common.Environment                    ( Environment(..), getTestnetEnvironmment )
+import Tokenomia.Common.Environment
+    ( Environment
+    , TokenomiaNetwork(PreprodNetwork)
+    , getNetworkEnvironment
+    )
 import Tokenomia.Common.Environment.Query              ( evalQuery )
 import Tokenomia.Common.Error                          ( TokenomiaError(QueryFailure) )
 
@@ -41,7 +45,7 @@ runTest ::
 runTest test =
     monadicIO $
         do
-            env <- getTestnetEnvironmment 1
+            env <- getNetworkEnvironment PreprodNetwork
             fromRight' <$> runExceptT (runReaderT test env)
 
 propertiesQueryWallclockToSlot' :: [TestTree]
